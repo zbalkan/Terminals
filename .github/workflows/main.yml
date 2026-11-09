@@ -49,6 +49,17 @@ jobs:
           }
       - name: Build solution
         run: msbuild ${{ env.SLN_FILE_PATH }} -t:rebuild -property:Configuration=Release
+      - name: Verify generated MSTSC COM wrappers
+        shell: pwsh
+        run: |
+          $dir = Join-Path $PWD 'Build/Generated/Mstsc'
+          foreach ($name in @('MSTSCLib.dll', 'AxInterop.MSTSCLib.dll')) {
+            $path = Join-Path $dir $name
+            if (-not (Test-Path -LiteralPath $path)) { throw "Expected generated COM wrapper: $path" }
+            Write-Host "Generated: $path"
+          }
+          if (Test-Path 'Resources/Libraries/mstsc/MSTSCLib.dll') { throw 'Vendored MSTSC wrapper still present' }
+          if (Test-Path 'Resources/Libraries/mstsc/AxInterop.MSTSCLib.dll') { throw 'Vendored ActiveX wrapper still present' }
       - name: Locate VSTest in Visual Studio
         shell: pwsh
         run: |

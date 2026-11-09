@@ -1,0 +1,27 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Use exactly one shared set of generated RDP interop assemblies across projects. -->
+  <PropertyGroup>
+    <MstscInteropOutputDir>$(MSBuildThisFileDirectory)Generated\Mstsc\</MstscInteropOutputDir>
+    <MstscInteropScript>$(MSBuildThisFileDirectory)Generate-MstscInterop.ps1</MstscInteropScript>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="MSTSCLib">
+      <HintPath>$(MstscInteropOutputDir)MSTSCLib.dll</HintPath>
+      <Private>True</Private>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="AxInterop.MSTSCLib">
+      <HintPath>$(MstscInteropOutputDir)AxInterop.MSTSCLib.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+  <Target Name="GenerateMstscInterop" BeforeTargets="ResolveAssemblyReferences"
+          Condition="'$(DesignTimeBuild)' != 'true'">
+    <GetFrameworkSdkPath>
+      <Output TaskParameter="Path" PropertyName="_MstscSdkToolsDirectory" />
+    </GetFrameworkSdkPath>
+    <Exec Command="powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MstscInteropScript)&quot; -OutputDirectory &quot;$(MstscInteropOutputDir).&quot; -SdkToolsDirectory &quot;$(_MstscSdkToolsDirectory).&quot;" />
+    <Error Condition="!Exists('$(MstscInteropOutputDir)MSTSCLib.dll') Or !Exists('$(MstscInteropOutputDir)AxInterop.MSTSCLib.dll')"
+           Text="MSTSC interop generation failed; check Windows SDK tlbimp.exe/aximp.exe availability." />
+  </Target>
+</Project>

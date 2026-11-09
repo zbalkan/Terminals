@@ -57,10 +57,6 @@
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="AxInterop.MSTSCLib">
-      <HintPath>..\..\Resources\Libraries\mstsc\AxInterop.MSTSCLib.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="AxInterop.VMRCClientControlLib">
       <HintPath>..\..\Resources\Libraries\VMRC\AxInterop.VMRCClientControlLib.dll</HintPath>
     </Reference>
@@ -70,11 +66,6 @@
       <Reference Include="Interop.VMRCClientControlLib">
       <HintPath>..\..\Resources\Libraries\VMRC\Interop.VMRCClientControlLib.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
-    </Reference>
-            <Reference Include="MSTSCLib">
-      <HintPath>..\..\Resources\Libraries\mstsc\MSTSCLib.dll</HintPath>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
       <Reference Include="System.ComponentModel.DataAnnotations" />
@@ -252,14 +243,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\..\Resources\Libraries\mstsc\AxInterop.MSTSCLib.dll">
-      <Link>AxInterop.MSTSCLib.dll</Link>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\..\Resources\Libraries\mstsc\MSTSCLib.dll">
-      <Link>MSTSCLib.dll</Link>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="..\..\Resources\TestData\EmptyCredentials.xml">
       <Link>EmptyCredentials.xml</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -330,6 +313,7 @@
     <Folder Include="Data\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="..\..\Build\MstscInterop.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

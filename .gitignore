@@ -367,3 +367,6 @@ launchsettings.json
 /installer/installer-output
 /Source/Metro/Docs/Metro.xml
 /Build/Output
+
+# Generated COM wrappers (BIN-06)
+/Build/Generated/
