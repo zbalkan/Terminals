@@ -31,7 +31,10 @@ foreach (var entity in typeMapper.GetItemsToGenerate<EntityType>(itemCollection)
     var collectionNavigationProperties = typeMapper.GetCollectionNavigationProperties(entity);
     var complexProperties = typeMapper.GetComplexProperties(entity);
 
-    if (propertiesWithDefaultValues.Any() || collectionNavigationProperties.Any() || complexProperties.Any())
+    // DbFavorite's constructor belongs to FavoriteLogic.cs. Generating another
+    // constructor would collide with its initialization of favorites and details.
+    if (entity.Name != "DbFavorite" &&
+        (propertiesWithDefaultValues.Any() || collectionNavigationProperties.Any() || complexProperties.Any()))
     {
 #>
     public <#=code.Escape(entity)#>()
@@ -63,7 +66,11 @@ foreach (var entity in typeMapper.GetItemsToGenerate<EntityType>(itemCollection)
 <#
     }
 
-    var simpleProperties = typeMapper.GetSimpleProperties(entity);
+    // FavoriteLogic.cs owns these DbFavorite properties to maintain their
+    // custom side effects (including the GUID mapping in Id's setter).
+    var simpleProperties = typeMapper.GetSimpleProperties(entity)
+        .Where(property => entity.Name != "DbFavorite" ||
+            (property.Name != "Id" && property.Name != "Protocol"));
     if (simpleProperties.Any())
     {
         foreach (var edmProperty in simpleProperties)

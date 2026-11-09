@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
+using System.Data.Entity.Core;
 using Microsoft.CSharp;
 using System.CodeDom;
 using System.CodeDom.Compiler;
+using System.Data;
 
 namespace Terminals.Network.WMI
 {

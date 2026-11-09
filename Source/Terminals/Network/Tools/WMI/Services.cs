@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
+using System.Data.Entity.Core;
 using System.Text;
 using System.Windows.Forms;
 using System.Management;
+using System.Data;
 
 namespace Terminals.Network.WMI
 {
@@ -40,7 +41,7 @@ namespace Terminals.Network.WMI
                 searcher = new System.Management.ManagementObjectSearcher(query);
             }
 
-            System.Data.DataTable dt = new DataTable();
+            DataTable dt = new DataTable();
             bool needsSchema = true;
             int length = 0;
             object[] values = null;

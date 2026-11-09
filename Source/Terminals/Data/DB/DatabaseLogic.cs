@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
+using System.Data.Entity.Core;
 using System.Data.Common;
 using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
-using System.Data.Objects;
+using System.Data.Entity.Core.Objects;
 using System.Linq;
 using Terminals.Common.Connections;
 
@@ -60,7 +60,7 @@ namespace Terminals.Data.DB
         private IEnumerable<DbFavorite> GetChangedOrAddedFavorites()
         {
             return this.ChangeTracker.Entries<DbFavorite>()
-                .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified)
+                .Where(e => e.State == System.Data.Entity.EntityState.Added || e.State == System.Data.Entity.EntityState.Modified)
                 .Select(change => change.Entity)
                 .ToList();
         }
