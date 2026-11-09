@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ '*' ]
+    branches: [ '**' ]
   pull_request:
     branches: [ '*' ]
 
@@ -32,8 +32,8 @@ jobs:
         uses: microsoft/setup-msbuild@v3
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v3
-      - name: Restore Packages
-        run: nuget restore ${{ env.SLN_FILE_PATH }}
+      - name: Restore packages.config and PackageReference dependencies
+        run: msbuild ${{ env.SLN_FILE_PATH }} -t:Restore -property:RestorePackagesConfig=true -property:Configuration=Release
       - name: Ensure .NET Framework 4.8.1 targeting assemblies
         shell: pwsh
         run: |
@@ -76,7 +76,11 @@ jobs:
           TEST_FILTER: ${{ matrix.filter }}
           TERMINALS_TEST_SQL_CONNECTION_STRING: ${{ matrix.suite == 'database' && 'Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TERMINALS;Integrated Security=True;' || '' }}
         run: |
-          vstest.console.exe "Source\Tests\bin\Release\Tests.dll" "/TestCaseFilter:$env:TEST_FILTER" '/logger:trx;LogFileName=test_results.trx'
+          $adapterRoot = Join-Path $env:USERPROFILE '.nuget/packages/mstest.testadapter/4.5.2'
+          $adapter = Get-ChildItem -LiteralPath $adapterRoot -Filter MSTest.TestAdapter.dll -Recurse -File |
+            Where-Object { $_.FullName -match '[\\/]net462[\\/]' } | Select-Object -First 1
+          if (-not $adapter) { throw "MSTest adapter for .NET Framework not found under $adapterRoot" }
+          vstest.console.exe "Source\Tests\bin\Release\Tests.dll" "/TestAdapterPath:$($adapter.DirectoryName)" "/TestCaseFilter:$env:TEST_FILTER" '/logger:trx;LogFileName=test_results.trx'
           exit $LASTEXITCODE
       - name: Test Report
         uses: dorny/test-reporter@v3
