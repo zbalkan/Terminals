@@ -39,7 +39,6 @@ return ("AWSSDK.dll",
 "ToolStrip.settings.config",
 "wpcap.dll",
 "ZedGraph.dll",
-"ZedGraph.xml",
 "Newtonsoft.Json.dll",
 "Newtonsoft.Json.xml"
 );

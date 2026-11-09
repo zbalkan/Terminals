@@ -27,10 +27,7 @@
         <File Source="$(var.TabControl.TargetPath)" KeyPath="yes" Checksum="yes"/>
       </Component>
       <Component Id="ZedGraphDll" Guid="AA750DC1-73E6-4EEE-9BA4-E4CE495FA721">
-        <File Source="..\..\Resources\Libraries\ZedGraph\ZedGraph.dll" KeyPath="yes" Checksum="yes"/>
-      </Component>
-      <Component Id="ZedGraphxml" Guid="5FA61E24-3D81-4FB5-9F1C-815364D02844">
-        <File Source="..\..\Resources\Libraries\ZedGraph\ZedGraph.xml" KeyPath="yes" Checksum="yes"/>
+        <File Source="$(var.Terminals.TargetDir)ZedGraph.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
       <Component Id="AWSSDKDll" Guid="DBF4B812-5D46-4A8A-9777-13E21FA92C8A">
         <File Source="..\..\Resources\Libraries\AmazonS3\AWSSDK.dll" KeyPath="yes" Checksum="yes"/>

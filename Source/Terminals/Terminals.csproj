@@ -113,6 +113,7 @@
     <PackageReference Include="SharpPcap" Version="6.3.1" />
     <PackageReference Include="PacketDotNet" Version="1.4.8" />
     <PackageReference Include="Be.Windows.Forms.HexBox.Net8" Version="2.1.0" />
+    <PackageReference Include="ZedGraph" Version="5.2.1" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="MSTSCLib">
@@ -144,9 +145,6 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
-    <Reference Include="ZedGraph">
-      <HintPath>..\..\Resources\Libraries\ZedGraph\ZedGraph.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\FavoriteConfigurationSecurity.cs" />
