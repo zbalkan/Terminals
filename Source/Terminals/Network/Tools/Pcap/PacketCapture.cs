@@ -1,23 +1,28 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows.Forms;
-using Tamir.IPLib;
-using Tamir.IPLib.Packets;
+using SharpPcap;
+using SharpPcap.LibPcap;
 using Terminals.Services;
 
 namespace Terminals
 {
     public partial class PacketCapture : UserControl
     {
+        private readonly List<CapturedPacket> packets = new List<CapturedPacket>();
+        private readonly List<CapturedPacket> pendingPackets = new List<CapturedPacket>();
+        private LibPcapLiveDeviceList devices;
+        private LibPcapLiveDevice device;
+        private CaptureFileWriterDevice writer;
+        private MethodInvoker updater;
+
+        private const string DumpFile = @"c:\Terminals.dump";
+
         public PacketCapture()
         {
             InitializeComponent();
         }
-        MethodInvoker updater;
-        MethodInvoker stopUpdater;
-        PcapDeviceList devices;
-        PcapDevice dev;
 
         private void PacketCapture_Load(object sender, EventArgs e)
         {
@@ -29,34 +34,21 @@ namespace Terminals
                 AmberPicture.Visible = true;
                 GreenPicture.Visible = false;
                 RedPicture.Visible = false;
-                updater = new MethodInvoker(UpdateUI);
-                stopUpdater = new MethodInvoker(PcapStopped);
-                devices = SharpPcap.GetAllDevices();
-                foreach (PcapDevice device in devices)
-                {
-                    comboBox1.Items.Add(device.PcapDescription);
-                }
-                if (devices.Count > 0) comboBox1.SelectedIndex = 1;
-                this.webBrowser1.DocumentStream = new System.IO.MemoryStream(ASCIIEncoding.Default.GetBytes(Properties.Resources.Filtering));
+                updater = UpdateUI;
+                devices = LibPcapLiveDeviceList.Instance;
+                comboBox1.Items.Clear();
+                foreach (LibPcapLiveDevice captureDevice in devices)
+                    comboBox1.Items.Add(captureDevice.Description ?? captureDevice.Name);
+                if (devices.Count > 0)
+                    comboBox1.SelectedIndex = 0;
+                this.webBrowser1.DocumentStream = new System.IO.MemoryStream(
+                    Encoding.Default.GetBytes(Properties.Resources.Filtering));
             }
-            catch (Exception exc)
+            catch (Exception exception)
             {
-
                 this.Enabled = false;
-                if (exc is BadImageFormatException)
-                {
-                    Logging.Info("Terminals Packet Capture is not configured to work with this system (Bad Image Format Exception)", exc);
-                    MessageBox.Show("Terminals Packet Capture is not configured to work with this system (Bad Image Format Exception)");
-                }
-                else if (exc is DllNotFoundException)
-                {
-                    Logging.Info("WinpPcap was not installed", exc);
-                    ExternalLinks.ShowWinPCapPage();
-                }
-                else
-                {
-                    Logging.Info("WinpPcap was not installed correctly", exc);
-                }
+                Logging.Info("Packet capture device enumeration failed. Install a supported Npcap driver.", exception);
+                MessageBox.Show("Unable to enumerate packet capture devices. Verify that Npcap is installed.");
             }
             this.PacketCapture_Resize(null, null);
         }
@@ -64,58 +56,141 @@ namespace Terminals
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
             int index = comboBox1.SelectedIndex;
-            dev = devices[index];
-            this.propertyGrid1.SelectedObject = (dev as NetworkDevice);
-
+            if (index < 0 || devices == null || index >= devices.Count)
+                return;
+            device = devices[index];
+            propertyGrid1.SelectedObject = device;
         }
-
-        private void StartCapture(object state)
-        {
-            PcapDevice dev = (PcapDevice)state;
-            dev.PcapOpen(promiscuousCheckbox.Checked);
-            if (DumpToFileCheckbox.Checked)
-            {
-                dev.PcapDumpOpen(DumpFile);
-            }
-            try
-            {
-                dev.PcapSetFilter(this.FilterTextBox.Text);
-            }
-            catch (Exception exc)
-            {
-                MessageBox.Show("Failed to set the filter: " + this.FilterTextBox.Text);
-                Logging.Info("Failed to set the filter: " + this.FilterTextBox.Text, exc);
-            }
-            dev.PcapStartCapture();
-
-        }
-        private string DumpFile = @"c:\Terminals.dump";
 
         private void CaptureButton_Click(object sender, EventArgs e)
         {
+            if (device == null)
+            {
+                MessageBox.Show("Select a packet capture device.");
+                return;
+            }
+
+            var selectedDevice = device;
+            bool promiscuous = promiscuousCheckbox.Checked;
+            bool saveToFile = DumpToFileCheckbox.Checked;
+            string filter = FilterTextBox.Text;
+
             DumpToFileCheckbox.Enabled = false;
             promiscuousCheckbox.Enabled = false;
+            comboBox1.Enabled = false;
             CaptureButton.Enabled = false;
-            StopCaptureButton.Enabled = true;
+            // Enable stop only after the worker has successfully opened the device.
+            StopCaptureButton.Enabled = false;
             AmberPicture.Visible = false;
             GreenPicture.Visible = true;
             RedPicture.Visible = false;
-            this.listBox1.Items.Clear();
+            listBox1.Items.Clear();
             lock (packets)
             {
-                packets = new List<Packet>();
-                newpackets = new List<Packet>();
-                dev.PcapOnPacketArrival += new SharpPcap.PacketArrivalEvent(dev_PcapOnPacketArrival);
-                dev.PcapOnCaptureStopped += new SharpPcap.PcapCaptureStoppedEvent(dev_PcapOnCaptureStopped);
+                packets.Clear();
+                pendingPackets.Clear();
             }
-            System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(StartCapture), dev);
+
+            System.Threading.ThreadPool.QueueUserWorkItem(state =>
+            {
+                try
+                {
+                    selectedDevice.Open(
+                        promiscuous ? DeviceModes.Promiscuous : DeviceModes.None, 1000);
+                    if (!string.IsNullOrWhiteSpace(filter))
+                        selectedDevice.Filter = filter;
+                    if (saveToFile)
+                    {
+                        writer = new CaptureFileWriterDevice(DumpFile);
+                        writer.Open(new DeviceConfiguration());
+                    }
+                    selectedDevice.OnPacketArrival += OnPacketArrival;
+                    selectedDevice.StartCapture();
+                    if (!IsDisposed && IsHandleCreated)
+                        BeginInvoke(new MethodInvoker(() => StopCaptureButton.Enabled = true));
+                }
+                catch (Exception exception)
+                {
+                    Logging.Info("Failed to start packet capture.", exception);
+                    try { selectedDevice.Close(); } catch (Exception) { }
+                    if (!IsDisposed && IsHandleCreated)
+                        BeginInvoke(new MethodInvoker(() =>
+                        {
+                            MessageBox.Show("Unable to start capture: " + exception.Message);
+                            CaptureStopped();
+                        }));
+                }
+            });
         }
 
-        void dev_PcapOnCaptureStopped(object sender, bool error)
+        private void OnPacketArrival(object sender, SharpPcap.PacketCapture capture)
         {
-            this.Invoke(stopUpdater);
+            RawCapture raw = capture.GetPacket();
+            var entry = new CapturedPacket(raw);
+            lock (packets)
+            {
+                packets.Add(entry);
+                pendingPackets.Add(entry);
+                if (writer != null)
+                    writer.Write(raw);
+            }
+            if (!IsDisposed && IsHandleCreated)
+                BeginInvoke(updater);
         }
-        void PcapStopped()
+
+        private void UpdateUI()
+        {
+            lock (packets)
+            {
+                foreach (CapturedPacket packet in pendingPackets)
+                    listBox1.Items.Add(packet);
+                pendingPackets.Clear();
+            }
+        }
+
+        private void StopCaptureButton_Click(object sender, EventArgs e)
+        {
+            CaptureButton.Enabled = false;
+            StopCaptureButton.Enabled = false;
+            RedPicture.Visible = true;
+            GreenPicture.Visible = false;
+            AmberPicture.Visible = false;
+            var selectedDevice = device;
+            bool saved = DumpToFileCheckbox.Checked;
+            System.Threading.ThreadPool.QueueUserWorkItem(state =>
+            {
+                try
+                {
+                    selectedDevice.StopCapture();
+                    selectedDevice.OnPacketArrival -= OnPacketArrival;
+                    selectedDevice.Close();
+                    lock (packets)
+                    {
+                        if (writer != null)
+                        {
+                            writer.Close();
+                            writer = null;
+                        }
+                    }
+                }
+                catch (Exception exception)
+                {
+                    Logging.Info("Failed to stop packet capture.", exception);
+                }
+                finally
+                {
+                    if (!IsDisposed && IsHandleCreated)
+                        BeginInvoke(new MethodInvoker(() =>
+                        {
+                            CaptureStopped();
+                            if (saved)
+                                ExternalLinks.OpenFileInNotepad(DumpFile);
+                        }));
+                }
+            });
+        }
+
+        private void CaptureStopped()
         {
             CaptureButton.Enabled = true;
             StopCaptureButton.Enabled = false;
@@ -124,100 +199,49 @@ namespace Terminals
             AmberPicture.Visible = true;
             DumpToFileCheckbox.Enabled = true;
             promiscuousCheckbox.Enabled = true;
-        }
-        void UpdateUI()
-        {
-            lock (packets)
-            {
-                GreenPicture.Visible = false;
-                Application.DoEvents();
-                foreach (Packet packet in newpackets)
-                {
-                    this.listBox1.Items.Add(packet);
-                    newpackets = new List<Packet>();
-                }
-                Application.DoEvents();
-                GreenPicture.Visible = true;
-            }
-        }
-
-        List<Packet> packets = new List<Packet>();
-        List<Packet> newpackets = new List<Packet>();
-
-        void dev_PcapOnPacketArrival(object sender, Packet packet)
-        {
-            lock (packets)
-            {
-                packets.Add(packet);
-                newpackets.Add(packet);
-            }
-            if (dev.PcapDumpOpened)
-            {
-                dev.PcapDump(packet);
-            }
-            this.Invoke(updater);
-        }
-        private void StopCapture(object state)
-        {
-            PcapDevice dev = (PcapDevice)state;
-            dev.PcapStopCapture();
-            dev.PcapClose();
-            dev.PcapDumpFlush();
-            dev.PcapDumpClose();
-        }
-        private void StopCaptureButton_Click(object sender, EventArgs e)
-        {
-            CaptureButton.Enabled = false;
-            StopCaptureButton.Enabled = false;
-            RedPicture.Visible = true;
-            GreenPicture.Visible = false;
-            AmberPicture.Visible = false;
-            DumpToFileCheckbox.Enabled = true;
-            promiscuousCheckbox.Enabled = true;
-            System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback(StopCapture), dev);
-            if (DumpToFileCheckbox.Checked)
-            {
-                ExternalLinks.OpenFileInNotepad(this.DumpFile);
-            }
+            comboBox1.Enabled = true;
         }
 
         private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (listBox1.SelectedIndex > 0)
+            int index = listBox1.SelectedIndex;
+            lock (packets)
             {
-                Packet packet = packets[listBox1.SelectedIndex];
-                Be.Windows.Forms.DynamicByteProvider provider = new Be.Windows.Forms.DynamicByteProvider(packet.Data);
-                this.hexBox1.ByteProvider = provider;
-                this.textBox1.Text = ASCIIEncoding.Default.GetString(packet.Data);
-                this.treeView1.Nodes.Clear();
-                TreeNode header = this.treeView1.Nodes.Add("Header");
-                header.Nodes.Add(string.Format("Length:{0}", packet.Header.Length));
-                StringBuilder sb = new StringBuilder();
-                foreach (byte b in packet.Header)
-                {
-                    sb.Append(b.ToString("00"));
-                    sb.Append(" ");
-                }
-                header.Nodes.Add(string.Format("Data:{0}", sb));
-                header.Nodes.Add(string.Format("Capture Length:{0}", packet.PcapHeader.CaptureLength.ToString()));
-                header.Nodes.Add(string.Format("Packet Length:{0}", packet.PcapHeader.PacketLength.ToString()));
-                header.Nodes.Add(string.Format("Date:{0}", packet.PcapHeader.Date.ToString()));
-                header.Nodes.Add(string.Format("Microseconds:{0}", packet.PcapHeader.MicroSeconds.ToString()));
-                header.Nodes.Add(string.Format("Seconds:{0}", packet.PcapHeader.Seconds.ToString()));
-
-                this.treeView1.ExpandAll();
+                if (index < 0 || index >= packets.Count)
+                    return;
+                CapturedPacket packet = packets[index];
+                hexBox1.ByteProvider = new Be.Windows.Forms.DynamicByteProvider(packet.Data);
+                textBox1.Text = Encoding.Default.GetString(packet.Data);
+                treeView1.Nodes.Clear();
+                TreeNode header = treeView1.Nodes.Add("Capture");
+                header.Nodes.Add("Length: " + packet.Data.Length);
+                header.Nodes.Add("Date: " + packet.Timestamp);
+                header.Nodes.Add("Link layer: " + packet.LinkLayer);
+                treeView1.ExpandAll();
             }
         }
 
         private void PacketCapture_Resize(object sender, EventArgs e)
         {
-            if (hexBox1.Width > 640)
+            hexBox1.BytesPerLine = hexBox1.Width > 640 ? 16 : 8;
+        }
+
+        private sealed class CapturedPacket
+        {
+            public readonly byte[] Data;
+            public readonly DateTime Timestamp;
+            public readonly string LinkLayer;
+
+            public CapturedPacket(RawCapture capture)
             {
-                hexBox1.BytesPerLine = 16;
+                Data = capture.Data;
+                Timestamp = capture.Timeval.Date;
+                LinkLayer = capture.LinkLayerType.ToString();
             }
-            else
+
+            public override string ToString()
             {
-                hexBox1.BytesPerLine = 8;
+                return Timestamp.ToString("HH:mm:ss.fff") + "  " + Data.Length + " bytes";
             }
         }
     }

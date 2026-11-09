@@ -18,7 +18,13 @@
         <File Source="$(var.Metro.TargetPath)" KeyPath="yes" Checksum="yes"/>
       </Component>
       <Component Id="SharpPcapDll" Guid="29188BD1-307E-4CD0-9750-BF294FD0E902">
-        <File Source="$(var.SharpPcap.TargetPath)" KeyPath="yes" Checksum="yes"/>
+        <File Source="$(var.Terminals.TargetDir)SharpPcap.dll" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="PacketDotNetDll" Guid="A6897CDA-879C-4611-9533-8F270431DA3E">
+        <File Source="$(var.Terminals.TargetDir)PacketDotNet.dll" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="EncodingCodePagesDll" Guid="4CCB9673-87D5-4CA9-B41A-6EA676BC8532">
+        <File Source="$(var.Terminals.TargetDir)System.Text.Encoding.CodePages.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
       <Component Id="TabControlDll" Guid="97B4B57A-C0D8-49D2-B75F-9B2B8F253A65">
         <File Source="$(var.TabControl.TargetPath)" KeyPath="yes" Checksum="yes"/>
@@ -61,9 +67,6 @@
       </Component>
       <Component Id="TransPort2006Design" Guid="299E6518-5760-4C45-8E88-34B2B8ADA50A">
         <File Source="..\..\Resources\Libraries\TransPort2006\TransPort2006.Design.dll" KeyPath="yes" Checksum="yes"/>
-      </Component>
-      <Component Id="Wpcapdll" Guid="F01CBCE4-5C1A-4FFB-A48D-1ECA1B933B92">
-        <File Source="..\..\Resources\Libraries\wpcap\wpcap.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
       <Component Id="Terminalslog4netConfig" Guid="EA925B16-4657-44BC-8ED8-895D2098CFA9">
         <File Source="..\Terminals\Terminals.log4net.config" KeyPath="yes"/>
