@@ -41,7 +41,7 @@ jobs:
         shell: pwsh
         run: |
           $patterns = 'System\.Data\.Objects', 'System\.Data\.EntityClient', 'EntityFramework\.5\.0\.0', 'EntityFramework, Version=4\.4\.0\.0'
-          $paths = @('Source/Terminals/Data/DB', 'Source/Terminals/Terminals.csproj', 'Source/Terminals/packages.config', 'Source/Terminals/app.config')
+          $paths = @('Source/Terminals/Data/DB', 'Source/Terminals/Terminals.csproj', 'Source/Terminals/packages.config', 'Source/Terminals/app.config', 'Source/Tests/Tests.csproj', 'Source/Tests/packages.config')
           $files = Get-ChildItem $paths -File -Recurse | Where-Object { $_.Extension -in '.cs', '.tt', '.config', '.csproj' }
           $violations = $files | Select-String -Pattern $patterns
           if ($violations) { $violations | ForEach-Object { Write-Error "$($_.Path):$($_.LineNumber): $($_.Line)" }; exit 1 }
