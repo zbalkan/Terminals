@@ -1241,13 +1241,6 @@
       <Link>wpcap.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Content Include="..\..\Resources\Database\Terminals.mdf">
-      <Link>Data\DB\Terminals.mdf</Link>
-    </Content>
-    <Content Include="..\..\Resources\Database\Terminals_log.ldf">
-      <Link>Data\DB\Terminals_log.ldf</Link>
-      <DependentUpon>Terminals.mdf</DependentUpon>
-    </Content>
     <Content Include="..\..\Resources\Images\Thumbs\certmgr.msc.jpg">
       <Link>Thumbs\certmgr.msc.jpg</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
