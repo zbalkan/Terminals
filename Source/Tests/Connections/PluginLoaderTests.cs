@@ -23,13 +23,14 @@ namespace Tests.Connections
                 new Tuple<string, string>("RDP", "Terminals.Plugins.Rdp")
             };
 
-        [ExpectedException(typeof(ApplicationException), NO_PLUGIN_ERRORMESSAGE)]
         [TestMethod]
         public void NoEnabledPlugins_Load_ThrowsApplicationException()
         {
             var disabledPlugins = this.CreateAllAvailablePlugins();
             var loader = CreateLoader(disabledPlugins);
-            loader.Load();
+            
+            Assert.ThrowsExactly<ApplicationException>(() => loader.Load(), NO_PLUGIN_ERRORMESSAGE);
+
         }
 
         [TestMethod]
