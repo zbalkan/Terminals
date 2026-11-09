@@ -38,6 +38,30 @@ namespace Tests.UserInterface
         }
 
         [TestMethod]
+        public void RefreshFromPreviouslyActiveConnection_DoesNotStartDiscovery()
+        {
+            var sut = new MenuVisitorSut();
+            var earlier = new RDPConnection();
+            var current = earlier;
+            sut.MockProvider.SetupGet(p => p.CurrentConnection).Returns(() => current);
+            var visitor = new RdpMenuVisitor(sut.MockProvider.Object);
+            visitor.Visit(sut.Toolbar);
+            new PrivateObject(visitor).Invoke("AddRefreshMenuItem", earlier);
+
+            var button = sut.Toolbar.Items[RdpMenuVisitor.TERMINAL_SERVER_MENU_BUTTON_NAME]
+                as ToolStripDropDownButton;
+            Assert.IsNotNull(button);
+            var refresh = button.DropDownItems[1] as ToolStripMenuItem;
+            Assert.IsNotNull(refresh);
+
+            current = new RDPConnection();
+            refresh.PerformClick();
+            Assert.IsNull(earlier.TerminalServerLoadTask,
+                "Stale refresh must not enumerate sessions on a previous connection.");
+            Assert.IsNull(current.TerminalServerLoadTask);
+        }
+
+        [TestMethod]
         public void Visit_RdpConnection_DoesNotQueryTerminalServices()
         {
             var sut = new MenuVisitorSut();

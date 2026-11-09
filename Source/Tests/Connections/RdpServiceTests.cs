@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Terminals.Connections;
@@ -18,6 +20,85 @@ namespace Tests.Connections
                 IsATerminalServer = true,
                 Sessions = new List<Session>()
             };
+        }
+
+        [TestMethod]
+        public void Connect_DoesNotCallTerminalServicesDiscoveryDirectly()
+        {
+            // This checks the actual compiled Connect() method without activating
+            // the RDP ActiveX control. Live WTS/audit behavior still requires
+            // an integration test with a Windows RDP server.
+            MethodInfo connect = typeof(RDPConnection).GetMethod("Connect");
+            Assert.IsNotNull(connect);
+            foreach (MethodBase invoked in GetDirectCalls(connect))
+            {
+                bool startsDiscovery = invoked.Name == "CheckForTerminalServer" ||
+                    invoked.Name == "LoadTerminalServerAsync" ||
+                    (invoked.DeclaringType == typeof(TerminalServer) && invoked.Name == "LoadServer");
+                Assert.IsFalse(startsDiscovery, "RDPConnection.Connect() initiates Terminal Services discovery: " + invoked);
+            }
+        }
+
+        private static IEnumerable<MethodBase> GetDirectCalls(MethodInfo method)
+        {
+            var opCodes = new Dictionary<ushort, OpCode>();
+            foreach (FieldInfo field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
+                if (field.FieldType == typeof(OpCode))
+                {
+                    var opcode = (OpCode)field.GetValue(null);
+                    opCodes[unchecked((ushort)opcode.Value)] = opcode;
+                }
+            }
+
+            byte[] il = method.GetMethodBody().GetILAsByteArray();
+            var called = new List<MethodBase>();
+            for (int position = 0; position < il.Length;)
+            {
+                ushort value = il[position++];
+                if (value == 0xFE)
+                    value = (ushort)(0xFE00 | il[position++]);
+                OpCode opcode = opCodes[value];
+                switch (opcode.OperandType)
+                {
+                    case OperandType.InlineNone:
+                        break;
+                    case OperandType.ShortInlineI:
+                    case OperandType.ShortInlineBrTarget:
+                    case OperandType.ShortInlineVar:
+                        position++;
+                        break;
+                    case OperandType.InlineVar:
+                        position += 2;
+                        break;
+                    case OperandType.InlineSwitch:
+                        int jumpCount = BitConverter.ToInt32(il, position);
+                        position += 4 + jumpCount * 4;
+                        break;
+                    case OperandType.InlineI8:
+                    case OperandType.InlineR:
+                        position += 8;
+                        break;
+                    case OperandType.InlineMethod:
+                        called.Add(method.Module.ResolveMethod(BitConverter.ToInt32(il, position)));
+                        position += 4;
+                        break;
+                    case OperandType.InlineI:
+                    case OperandType.InlineBrTarget:
+                    case OperandType.InlineField:
+                    case OperandType.InlineSig:
+                    case OperandType.InlineString:
+                    case OperandType.InlineTok:
+                    case OperandType.InlineType:
+                    case OperandType.ShortInlineR:
+                        position += 4;
+                        break;
+                    default:
+                        Assert.Fail("Unhandled IL operand type: " + opcode.OperandType);
+                        break;
+                }
+            }
+            return called;
         }
 
         [TestMethod]
