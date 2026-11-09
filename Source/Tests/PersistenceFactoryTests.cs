@@ -49,6 +49,7 @@ namespace Tests
         }
 
         [TestMethod]
+        [TestCategory("Database")]
         public void SqlPersistenceNoMasterPassword_Authenticate_CallsNoCallback()
         {
             this.SetupDatabasePersistence(this.TestContext.DeploymentDirectory);
@@ -57,6 +58,7 @@ namespace Tests
         }
 
         [TestMethod]
+        [TestCategory("Database")]
         public void SqlPersistenceMasterPassword_Authenticate_AsksForMasterPassword()
         {
             this.SetupDatabasePersistence(this.TestContext.DeploymentDirectory);
@@ -66,6 +68,7 @@ namespace Tests
         }
 
         [TestMethod]
+        [TestCategory("Database")]
         public void SqlPersistenceMasterPasswordWrongConnectionStringNoFallBack_Authenticate_Exits()
         {
             this.SetupDatabasePersistence(string.Empty);
@@ -75,6 +78,7 @@ namespace Tests
         }
 
         [TestMethod]
+        [TestCategory("Database")]
         public void SqlPersistenceMasterPasswordWrongConnectionStringFallBack_Authenticate_CreatesFilePersistence()
         {
             this.SetupDatabasePersistence(string.Empty);

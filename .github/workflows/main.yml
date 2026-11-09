@@ -14,8 +14,17 @@ env:
 
 jobs:
   build:
-    # because of legacy dotnet 4.8
-    runs-on: windows-2019
+    name: ${{ matrix.suite }} tests
+    # Separate the file/general test runner from SQL LocalDB setup and deployments.
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: file-and-general
+            filter: 'FullyQualifiedName!~Tests.SqlPersisted&TestCategory!=Database'
+          - suite: database
+            filter: 'FullyQualifiedName~Tests.SqlPersisted|TestCategory=Database'
 
     steps:
       - uses: actions/checkout@v3
@@ -25,21 +34,40 @@ jobs:
         uses: NuGet/setup-nuget@v1.1.1
       - name: Restore Packages
         run: nuget restore ${{ env.SLN_FILE_PATH }}
+      - name: Ensure .NET Framework 4.8.1 targeting assemblies
+        shell: pwsh
+        run: |
+          $destination = Join-Path ${env:ProgramFiles(x86)} 'Reference Assemblies/Microsoft/Framework/.NETFramework/v4.8.1'
+          if (-not (Test-Path (Join-Path $destination 'mscorlib.dll'))) {
+            $packageDir = Join-Path $env:RUNNER_TEMP 'net481-reference'
+            nuget install Microsoft.NETFramework.ReferenceAssemblies.net481 -Version 1.0.3 -Source https://api.nuget.org/v3/index.json -OutputDirectory $packageDir -ExcludeVersion -NonInteractive
+            if ($LASTEXITCODE -ne 0) { throw 'Failed to download .NET Framework 4.8.1 targeting assemblies' }
+            $source = Join-Path $packageDir 'Microsoft.NETFramework.ReferenceAssemblies.net481/build/.NETFramework/v4.8.1'
+            if (-not (Test-Path (Join-Path $source 'mscorlib.dll'))) { throw 'Missing 4.8.1 reference assemblies in package' }
+            New-Item -ItemType Directory -Path $destination -Force | Out-Null
+            Copy-Item (Join-Path $source '*') $destination -Recurse -Force
+          }
       - name: Build solution
         run: msbuild ${{ env.SLN_FILE_PATH }} -t:rebuild -property:Configuration=Release
       - name: Setup VSTest
         uses: darenm/Setup-VSTest@v1.2
-      - name: Install a SQL Server suite of tools
+      - name: Install SQL Server LocalDB (database suite only)
+        if: matrix.suite == 'database'
         uses: potatoqualitee/mssqlsuite@v1.7
         with:
           install: localdb
           show-log: true
-      - name: Test
-        run: vstest.console.exe /logger:"trx;LogFileName=test_results.trx" Source\Tests\bin\Release\Tests.dll
+      - name: Execute ${{ matrix.suite }} tests
+        shell: pwsh
+        env:
+          TEST_FILTER: ${{ matrix.filter }}
+        run: |
+          vstest.console.exe "Source\Tests\bin\Release\Tests.dll" "/TestCaseFilter:$env:TEST_FILTER" '/logger:trx;LogFileName=test_results.trx'
+          exit $LASTEXITCODE
       - name: Test Report
         uses: dorny/test-reporter@v1.6.0
-        if: success() || failure()    # run this step even if previous step failed
+        if: success() || failure()
         with:
-          name: MSTests
+          name: ${{ matrix.suite }} MSTests
           path: TestResults/test_results.trx
-          reporter: dotnet-trx 
+          reporter: dotnet-trx
