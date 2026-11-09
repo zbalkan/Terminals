@@ -14,8 +14,8 @@ env:
 
 jobs:
   build:
-    # because of legacy dotnet 4.8
-    runs-on: windows-2019
+    # Windows Server 2019 hosted runners were retired in June 2025.
+    runs-on: windows-2022
 
     steps:
       - uses: actions/checkout@v3
@@ -25,6 +25,18 @@ jobs:
         uses: NuGet/setup-nuget@v1.1.1
       - name: Restore Packages
         run: nuget restore ${{ env.SLN_FILE_PATH }}
+      - name: Provision .NET Framework 4.0 reference assemblies
+        shell: pwsh
+        run: |
+          $packageDir = Join-Path $env:RUNNER_TEMP 'net40-reference'
+          nuget install Microsoft.NETFramework.ReferenceAssemblies.net40 -Version 1.0.3 -Source https://api.nuget.org/v3/index.json -OutputDirectory $packageDir -ExcludeVersion -NonInteractive
+          if ($LASTEXITCODE -ne 0) { throw 'NuGet could not retrieve .NET Framework 4.0 reference assemblies' }
+          $source = Join-Path $packageDir 'Microsoft.NETFramework.ReferenceAssemblies.net40/build/.NETFramework/v4.0'
+          $destination = Join-Path ${env:ProgramFiles(x86)} 'Reference Assemblies/Microsoft/Framework/.NETFramework/v4.0'
+          if (-not (Test-Path (Join-Path $source 'mscorlib.dll'))) { throw 'Downloaded net40 reference assemblies are incomplete' }
+          New-Item -ItemType Directory -Path $destination -Force | Out-Null
+          Copy-Item -Path (Join-Path $source '*') -Destination $destination -Recurse -Force
+          if (-not (Test-Path (Join-Path $destination 'mscorlib.dll'))) { throw 'Failed to provision net40 reference assemblies' }
       - name: Build solution
         run: msbuild ${{ env.SLN_FILE_PATH }} -t:rebuild -property:Configuration=Release
       - name: Setup VSTest
