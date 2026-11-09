@@ -1,94 +1,99 @@
 using System;
-using FalafelSoftware.TransPort;
-using Terminals.Data;
+using System.Windows.Forms;
+using Terminals.Connections.RasNative;
 
 namespace Terminals.Connections
 {
     internal class RASConnection : Connection
     {
+        private bool wasConnected;
+        internal RasConnectionClient ras { get; private set; }
+
         public override bool Connected
         {
-            get { return ras.Connected; }
+            get { return ras != null && ras.Connected; }
         }
-
-        public Ras ras { get; set; }
 
         public override bool Connect()
         {
             try
             {
-                ras = new Ras();
-                RASProperties p = new RASProperties();
-                p.RASConnection = this;
-                p.Dock = System.Windows.Forms.DockStyle.Fill;
-                this.Dock = System.Windows.Forms.DockStyle.Fill;
-                Controls.Add(p);
-                p.BringToFront();
-                this.BringToFront();
-                p.Parent = this.Parent;
+                ras = new RasConnectionClient { EntryName = Favorite.ServerName };
+                var properties = new RASProperties { RASConnection = this, Dock = DockStyle.Fill };
+                Dock = DockStyle.Fill;
+                Controls.Add(properties);
+                properties.BringToFront();
+                BringToFront();
+                properties.Parent = Parent;
 
-                this.ras.SetModemSpeaker = false;
-                this.ras.SetSoftwareCompression = false;
-                this.ras.UsePrefixSuffix = false;
-                ras.HangUpOnDestroy = true;
-
-                ras.DialError += new DialErrorEventHandler(ras_DialError);
-                ras.DialStatus += new DialStatusEventHandler(ras_DialStatus);
-                ras.ConnectionChanged += new ConnectionChangedEventHandler(ras_ConnectionChanged);
-                ras.EntryName = Favorite.ServerName;
-
-                var security = this.ResolveFavoriteCredentials();
-                RasError error;
-                if (!string.IsNullOrEmpty(security.UserName) && !string.IsNullOrEmpty(security.Password))
+                var credentials = ResolveFavoriteCredentials();
+                uint error;
+                if (!string.IsNullOrEmpty(credentials.UserName) && !string.IsNullOrEmpty(credentials.Password))
                 {
-                    Log("Using Terminals Credentials, Dialing...");
-                    ras.UserName = security.UserName;
-                    ras.Password = security.Password;
-                    ras.Domain = security.Domain;
-                    error = ras.Dial();
+                    Log("Using Terminals credentials, dialing...");
+                    error = ras.Dial(credentials.UserName, credentials.Password, credentials.Domain);
                 }
                 else
                 {
-                    Log("Terminals has no credentials, Showing Dial Dialog...");
-                    error = ras.DialDialog();
+                    Log("Terminals has no credentials; showing Windows RAS dial dialog...");
+                    error = ras.DialDialog(FindForm() == null ? IntPtr.Zero : FindForm().Handle);
                 }
 
-                Log("Dial Result:" + error.ToString());
-                return (error == RasError.Success);
+                if (error != 0)
+                {
+                    LastError = "Windows RAS dial failed with error " + error;
+                    Log(LastError);
+                    ras.Dispose();
+                    ras = null;
+                    return false;
+                }
 
+                wasConnected = true;
+                Log("RAS connection established");
+                return true;
             }
-            catch(Exception exc)
+            catch (Exception exc)
             {
+                if (ras != null)
+                {
+                    ras.Dispose();
+                    ras = null;
+                }
+                LastError = exc.Message;
                 Logging.Fatal("Connecting to RAS", exc);
                 return false;
             }
         }
 
-        private void ras_DialStatus(object sender, DialStatusEventArgs e)
+        // Called by the existing RAS properties UI timer, on the WinForms thread.
+        internal void NotifyIfDisconnected()
         {
-            Log("Status:" + e.ConnectionState.ToString());
-        }
-
-        private void ras_DialError(object sender, DialErrorEventArgs e)
-        {
-            if(e.RasError != RasError.Success)
+            if (wasConnected && !Connected)
             {
-                Log("Error:" + e.RasError.ToString());
-                System.Windows.Forms.MessageBox.Show("Could not connect to the server. Reason:" + e.RasError.ToString());
+                wasConnected = false;
+                Log("RAS connection disconnected");
+                FireDisconnected();
             }
-        }
-
-        private void ras_ConnectionChanged(object sender, ConnectionChangedEventArgs e)
-        {
-            Log("Connected:" + e.Connected.ToString());
-
-            if (!e.Connected)
-                this.FireDisconnected();
         }
 
         public void Disconnect()
         {
-            Log("Hanging Up:" + ras.HangUp().ToString());
+            if (ras == null)
+                return;
+            Log("RAS hang-up result: " + ras.HangUp());
+            NotifyIfDisconnected();
+            ras.Dispose();
+            ras = null;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && ras != null)
+            {
+                ras.Dispose();
+                ras = null;
+            }
+            base.Dispose(disposing);
         }
     }
 }

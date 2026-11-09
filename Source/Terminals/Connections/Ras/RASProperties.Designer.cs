@@ -28,20 +28,11 @@ namespace Terminals.Connections
         /// the contents of this method with the code editor.
         /// </summary>
         private void InitializeComponent() {
-            this.ras1 = new FalafelSoftware.TransPort.Ras();
             this.lbDetails1 = new System.Windows.Forms.ListBox();
             this.LogListBox = new System.Windows.Forms.ListBox();
             this.splitter1 = new System.Windows.Forms.Splitter();
             this.SuspendLayout();
             // 
-            // ras1
-            // 
-            this.ras1.CallBackNumber = null;
-            this.ras1.Domain = null;
-            this.ras1.EntryName = null;
-            this.ras1.Password = null;
-            this.ras1.PhoneNumber = null;
-            this.ras1.UserName = null;
             // 
             // lbDetails1
             // 
@@ -83,7 +74,6 @@ namespace Terminals.Connections
 
         #endregion
 
-        private FalafelSoftware.TransPort.Ras ras1;
         private System.Windows.Forms.ListBox lbDetails1;
         private System.Windows.Forms.ListBox LogListBox;
         private System.Windows.Forms.Splitter splitter1;

@@ -59,12 +59,6 @@
       <Component Id="FluentValidationXml" Guid="42B671CD-1F35-441B-A23F-9CA352284FAA">
         <File Source="..\packages\FluentValidation.6.2.1.0\lib\Net45\FluentValidation.XML" KeyPath="yes" Checksum="yes"/>
       </Component>
-      <Component Id="TransPort2006" Guid="220FA6F3-1C60-4F32-9E82-31D635E8B551">
-        <File Source="..\..\Resources\Libraries\TransPort2006\TransPort2006.dll" KeyPath="yes" Checksum="yes"/>
-      </Component>
-      <Component Id="TransPort2006Design" Guid="299E6518-5760-4C45-8E88-34B2B8ADA50A">
-        <File Source="..\..\Resources\Libraries\TransPort2006\TransPort2006.Design.dll" KeyPath="yes" Checksum="yes"/>
-      </Component>
       <Component Id="Terminalslog4netConfig" Guid="EA925B16-4657-44BC-8ED8-895D2098CFA9">
         <File Source="..\Terminals\Terminals.log4net.config" KeyPath="yes"/>
       </Component>

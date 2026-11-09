@@ -30,7 +30,6 @@
         {
             this.RASGroupBox = new System.Windows.Forms.GroupBox();
             this.RASDetailsListBox = new System.Windows.Forms.ListBox();
-            this.ras1 = new FalafelSoftware.TransPort.Ras();
             this.RASGroupBox.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -53,14 +52,6 @@
             this.RASDetailsListBox.Size = new System.Drawing.Size(584, 346);
             this.RASDetailsListBox.TabIndex = 0;
             // 
-            // ras1
-            // 
-            this.ras1.CallBackNumber = null;
-            this.ras1.Domain = null;
-            this.ras1.EntryName = null;
-            this.ras1.Password = null;
-            this.ras1.PhoneNumber = null;
-            this.ras1.UserName = null;
             // 
             // RasControl
             // 
@@ -78,6 +69,5 @@
 
         private System.Windows.Forms.GroupBox RASGroupBox;
         private System.Windows.Forms.ListBox RASDetailsListBox;
-        private FalafelSoftware.TransPort.Ras ras1;
     }
 }
