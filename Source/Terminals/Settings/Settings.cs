@@ -318,8 +318,6 @@ namespace Terminals.Configuration
         {
             TerminalsConfigurationSection configSection = GetSection();
             configSection.EncryptedDefaultPassword = PasswordFunctions2.EncryptPassword(DefaultPassword, newKeyMaterial);
-            configSection.EncryptedAmazonAccessKey = PasswordFunctions2.EncryptPassword(AmazonAccessKey, newKeyMaterial);
-            configSection.EncryptedAmazonSecretKey = PasswordFunctions2.EncryptPassword(AmazonSecretKey, newKeyMaterial);
             configSection.EncryptedConnectionString = PasswordFunctions2.EncryptPassword(ConnectionString, newKeyMaterial);
             configSection.DatabaseMasterPasswordHash = PasswordFunctions2.EncryptPassword(DatabaseMasterPassword, newKeyMaterial);
         }
@@ -375,84 +373,6 @@ namespace Terminals.Configuration
         /// Set only initialized and authenticated instance before access to any data. 
         /// </summary>
         internal PersistenceSecurity PersistenceSecurity { get; set; }
-
-        internal bool UseAmazon
-        {
-            get
-            {
-                return GetSection().UseAmazon;
-            }
-
-            set
-            {
-                GetSection().UseAmazon = value;
-                SaveImmediatelyIfRequested();
-            }
-        }
-
-        internal string AmazonAccessKey
-        {
-            get
-            {
-                string encryptedAmazonAccessKey = GetSection().EncryptedAmazonAccessKey;
-                return PersistenceSecurity.DecryptPassword(encryptedAmazonAccessKey);
-            }
-
-            set
-            {
-                GetSection().EncryptedAmazonAccessKey = PersistenceSecurity.EncryptPassword(value);
-                SaveImmediatelyIfRequested();
-            }
-        }
-
-        internal string AmazonSecretKey
-        {
-            get
-            {
-                string encryptedAmazonSecretKey = GetSection().EncryptedAmazonSecretKey;
-                return PersistenceSecurity.DecryptPassword(encryptedAmazonSecretKey);
-            }
-
-            set
-            {
-                GetSection().EncryptedAmazonSecretKey = PersistenceSecurity.EncryptPassword(value);
-                SaveImmediatelyIfRequested();
-            }
-        }
-
-        internal string AmazonBucketName
-        {
-            get
-            {
-                return GetSection().AmazonBucketName;
-            }
-
-            set
-            {
-                GetSection().AmazonBucketName = value;
-                SaveImmediatelyIfRequested();
-            }
-        }
-
-        #endregion
-
-        #region Flickr tab settings
-
-        public string FlickrToken
-        {
-            get
-            {
-                return GetSection().FlickrToken;
-            }
-
-            set
-            {
-                GetSection().FlickrToken = value;
-                SaveImmediatelyIfRequested();
-            }
-        }
-
-        #endregion
 
         #region Proxy tab settings
 

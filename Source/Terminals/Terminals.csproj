@@ -105,17 +105,11 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AWSSDK, Version=1.3.10.0, Culture=neutral, PublicKeyToken=cd2d24cd2bace800, processorArchitecture=MSIL">
-      <HintPath>..\..\Resources\Libraries\AmazonS3\AWSSDK.dll</HintPath>
-    </Reference>
     <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\packages\EntityFramework.6.5.2\lib\net45\EntityFramework.dll</HintPath>
     </Reference>
     <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\packages\EntityFramework.6.5.2\lib\net45\EntityFramework.SqlServer.dll</HintPath>
-    </Reference>
-    <Reference Include="FlickrNet">
-      <HintPath>..\..\Resources\Libraries\Flicker\FlickrNet.dll</HintPath>
     </Reference>
     <Reference Include="FluentValidation, Version=11.0.0.0, Culture=neutral, PublicKeyToken=7de548da2fbae0f0, processorArchitecture=MSIL">
       <HintPath>..\packages\FluentValidation.11.12.0\lib\netstandard2.0\FluentValidation.dll</HintPath>
@@ -578,12 +572,6 @@
     <Compile Include="Integration\IIntegration.cs" />
     <Compile Include="Integration\Import\ImportRdpRegistry.cs" />
     <Compile Include="Integration\Integration.cs" />
-    <Compile Include="Forms\OptionPanels\AmazonOptionPanel.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="Forms\OptionPanels\AmazonOptionPanel.Designer.cs">
-      <DependentUpon>AmazonOptionPanel.cs</DependentUpon>
-    </Compile>
     <Compile Include="Forms\OptionPanels\CaptureOptionPanel.Designer.cs">
       <DependentUpon>CaptureOptionPanel.cs</DependentUpon>
     </Compile>
@@ -665,9 +653,6 @@
     </Compile>
     <Compile Include="Forms\OptionPanels\FavoritesOptionPanel.Designer.cs">
       <DependentUpon>FavoritesOptionPanel.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Forms\OptionPanels\FlickrOptionPanel.Designer.cs">
-      <DependentUpon>FlickrOptionPanel.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\OptionPanels\InterfaceOptionPanel.Designer.cs">
       <DependentUpon>InterfaceOptionPanel.cs</DependentUpon>
@@ -770,9 +755,6 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Forms\OptionPanels\FavoritesOptionPanel.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="Forms\OptionPanels\FlickrOptionPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Forms\OptionPanels\InterfaceOptionPanel.cs">
@@ -1083,9 +1065,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\UnhandledTerminationForm.resx">
       <DependentUpon>UnhandledTerminationForm.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Forms\OptionPanels\AmazonOptionPanel.resx">
-      <DependentUpon>AmazonOptionPanel.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Controls\FavoritesTreeView.resx">
       <DependentUpon>FavoritesTreeView.cs</DependentUpon>
@@ -1534,7 +1513,6 @@
       <DependentUpon>IntroForm.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="Resources\atoz.png" />
-    <None Include="Resources\amazon.jpg" />
     <None Include="Resources\Filtering.html" />
     <None Include="Resources\CompMgmt.png" />
     <None Include="Resources\computer_security.png" />
