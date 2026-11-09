@@ -14,7 +14,14 @@ namespace Terminals.Data.DB
     
     internal partial class DbFavorite
     {
+        public DbFavorite()
+        {
+            this.Groups = new HashSet<DbGroup>();
+        }
+    
+        public int Id { get; set; }
         public string Name { get; set; }
+        public string Protocol { get; set; }
         public int Port { get; set; }
         public string ServerName { get; set; }
         public bool NewWindow { get; set; }
