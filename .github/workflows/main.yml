@@ -3,8 +3,24 @@ name: CI
 on:
   push:
     branches: [ '**' ]
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.markdown'
+      - '**/*.mdown'
+      - '**/*.rst'
+      - 'Docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE/**'
   pull_request:
     branches: [ '*' ]
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.markdown'
+      - '**/*.mdown'
+      - '**/*.rst'
+      - 'Docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE/**'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
