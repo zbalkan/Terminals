@@ -5,9 +5,21 @@ Note: This feature is under active development and isn't present in any of publi
 Terminals supports two possibilities how to store user data. If you don't change any application options the data are saved into local xml based files (for more details see [Backup and restore settings files](Backup-and-restore-settings-files.md)). Because the  possibilities of sharing files are limited, we implemented the same functionality using SQL database. Currently **only Microsoft SQL server** is supported, tested on version 2008 Express.
 
 ## How to create database
-To create a terminals database use sql script stored under "Main\Resources\Database" or you can copy empty database stored also there. The database is used only as a simple store. Currently (version 3.0) it contains only a few tables, stored procedures and relations. There is no extra logic like triggers, indexes or in database stored CLR code etc.
+Create an empty SQL Server database using the version-controlled script `Resources/Database/Terminals_CreateDatabase_v3.0.sql`. Run it on the target SQL Server instance using a SQL administration tool (for example, `sqlcmd -S .\SQLEXPRESS -E -b -i Resources\Database\Terminals_CreateDatabase_v3.0.sql`). The script creates the `TERMINALS` database and its schema. There are **no prebuilt MDF/LDF files** in the project: SQL Server creates and manages those physical files. Existing installations must retain and back up their actual database files; removing sample binaries from source control does not migrate or delete deployed databases. The database is used only as a simple store. Currently (version 3.0) it contains only a few tables, stored procedures and relations. There is no extra logic like triggers, indexes or in database stored CLR code etc.
 Because the usage of data from performance point of view is not well known, there are no special indexes or other optimization. Any performance optimization proposals from database administrators are welcome.
 The empty database in this case doesn't mean empty database, it means database filled with required model structure (tables, relations and stored procedures), but without any value in all tables.
+
+The default SQL connection now targets `.\SQLEXPRESS`, database `TERMINALS`, using integrated security; it does not attach a database file. For remote SQL Server installations, configure the server and database in the connection string as usual.
+
+### Existing installations that used MDF auto-attachment
+
+This changes only the suggested **default** connection string. Existing saved connection strings are not automatically rewritten. An installation already configured to connect to a named SQL Server database can continue using that database without a schema migration.
+
+If an existing installation uses `AttachDbFilename=...` (and possibly `User Instance=...`), **do not replace the connection string blindly** or run the database-creation script against its existing data. First back up the database and verify where the MDF/LDF files are attached. If necessary, have a SQL Server administrator attach the existing database or restore its backup on a supported SQL Server instance. Then update Terminals to use that instance and database name, for example `Data Source=.\SQLEXPRESS;Initial Catalog=TERMINALS;Integrated Security=True`, and verify favorites, groups, credentials, and permissions before retiring the previous configuration.
+
+The SQL scripts shipped with this repository create a fresh database; they do **not** upgrade an existing one. This change does not introduce an automatic schema migration or convert an existing database to a newer version.
+
+The historical scripts in `Resources/Database/Migrations/1.0.0` are **SQL scripts, not EF6 Code First migrations**. They remain as source material; they are not automatically executed by the application or test runner. Do not assume they implement a supported database upgrade pipeline. A future migration system must support upgrades of existing databases, stored procedures, version tracking, and rollback/recovery.
 
 ## How to configure the connection
 To distribute the database connection in your environment, start Terminals on one of your machines, go to application options and under "**Data Store**" you will find relevant options. To successfully connect to the database, configure:
