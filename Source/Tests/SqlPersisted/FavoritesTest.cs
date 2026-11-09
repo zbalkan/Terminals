@@ -169,6 +169,8 @@ namespace Tests.SqlPersisted
             var loadedIcon = this.SecondaryFavorites.LoadFavoriteIcon(checkFavorite);
             Assert.IsNotNull(loadedIcon, "Icon didn't reach the database");
             ImageAssert.EqualsToExpectedIcon(this.TestContext.DeploymentDirectory, favoriteIcon);
+            // Verify the stored value round-trips through a second persistence instance.
+            ImageAssert.EqualsToExpectedIcon(this.TestContext.DeploymentDirectory, loadedIcon);
         }
 
         [DeploymentItem(IMAGE_FILE)]

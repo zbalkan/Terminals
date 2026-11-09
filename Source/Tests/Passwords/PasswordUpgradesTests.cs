@@ -1,6 +1,9 @@
 ﻿using System;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Linq;
+using System.Xml.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Terminals.Configuration;
 using Terminals.Data;
@@ -53,8 +56,34 @@ namespace Tests.Passwords
         [TestMethod]
         public void V2UpgradeNoMasterPasswordConfigTest()
         {
-            this.UpgradePasswordsTestInitialize(NOMASTER_CONFIG_FILE, NOMASTER_CREDENTIALS_FILE);
-            // simply nothing to upgrade, procedure shouldn't fail.
+            // Do not change the committed ciphertext. It is tied to its original DPAPI user.
+            string configFile;
+            string credentialsFile;
+            this.CopyNoMasterFixtures("OriginalNoMaster", out configFile, out credentialsFile);
+            AssertOriginalNoMasterCiphertextReadable(this.CreateFullTestFileName(configFile),
+                this.CreateFullTestFileName(credentialsFile));
+            this.UpgradePasswordsTestInitialize(configFile, credentialsFile, "OriginalNoMasterFavorites.xml");
+            this.AssertNoMasterUpgrade();
+        }
+
+        [DeploymentItem(TestDataFiles.TESTDATA_DIRECTORY + NOMASTER_CONFIG_FILE)]
+        [DeploymentItem(TestDataFiles.TESTDATA_DIRECTORY + NOMASTER_CREDENTIALS_FILE)]
+        [TestMethod]
+        public void V2UpgradeNoMasterPasswordCurrentUserTest()
+        {
+            // Exercise legacy-format migration on every test account without relying on
+            // the product's old encryption routine to manufacture its own test vectors.
+            string configFile;
+            string credentialsFile;
+            this.CopyNoMasterFixtures("CurrentUserNoMaster", out configFile, out credentialsFile);
+            WriteCurrentUserNoMasterCiphertext(this.CreateFullTestFileName(configFile),
+                this.CreateFullTestFileName(credentialsFile));
+            this.UpgradePasswordsTestInitialize(configFile, credentialsFile, "CurrentUserNoMasterFavorites.xml");
+            this.AssertNoMasterUpgrade();
+        }
+
+        private void AssertNoMasterUpgrade()
+        {
             IPersistence persistence = this.RunUpgrade();
             Assert.IsFalse(askedForPassword, "Config file shouldn't ask for password");
             bool masterStillValid = PasswordFunctions2.MasterPasswordIsValid(string.Empty, settings.MasterPasswordHash);
@@ -134,6 +163,90 @@ namespace Tests.Passwords
             settings.FileLocations.AssignCustomFileLocations(configFileName, favoritesFileName, credentialsFileName);
             // when running multiple tests, there is may be already old configuration
             settings.ForceReload();
+        }
+
+        private void CopyNoMasterFixtures(string prefix, out string configFile, out string credentialsFile)
+        {
+            configFile = prefix + "Terminals.config";
+            credentialsFile = prefix + "Credentials.xml";
+            File.Copy(this.CreateFullTestFileName(NOMASTER_CONFIG_FILE),
+                this.CreateFullTestFileName(configFile), true);
+            File.Copy(this.CreateFullTestFileName(NOMASTER_CREDENTIALS_FILE),
+                this.CreateFullTestFileName(credentialsFile), true);
+        }
+
+        private static void AssertOriginalNoMasterCiphertextReadable(string configFile, string credentialsFile)
+        {
+            XDocument configuration = XDocument.Load(configFile);
+            XDocument credentials = XDocument.Load(credentialsFile);
+            string favoriteCiphertext = configuration.Descendants("favorites").Descendants("add")
+                .Select(favorite => favorite.Attribute("encryptedPassword"))
+                .Where(password => password != null && !string.IsNullOrEmpty(password.Value))
+                .Select(password => password.Value).First();
+            string credentialCiphertext = credentials.Descendants("CredentialSet")
+                .Select(credential => credential.Element("Password"))
+                .Where(password => password != null && !string.IsNullOrEmpty(password.Value))
+                .Select(password => password.Value).First();
+
+            // DPAPI CurrentUser ciphertext can only be checked by the original Windows user.
+            // Inaccessible historical ciphertext is a fixture limitation, not an upgrade pass.
+            try
+            {
+                Assert.AreEqual(PasswordTests.USERPASSWORD, UnprotectLegacyFixture(favoriteCiphertext),
+                    "Committed legacy favorite ciphertext does not match the expected password.");
+                Assert.AreEqual(TEST_PASSWORD, UnprotectLegacyFixture(credentialCiphertext),
+                    "Committed legacy credential ciphertext does not match the expected password.");
+            }
+            catch (CryptographicException exception)
+            {
+                Assert.Inconclusive("Committed CurrentUser DPAPI fixture is inaccessible to this account: "
+                    + exception.Message);
+            }
+        }
+
+        private static string UnprotectLegacyFixture(string ciphertext)
+        {
+            byte[] protectedBytes = Convert.FromBase64String(ciphertext);
+            byte[] plaintext = ProtectedData.Unprotect(protectedBytes, new byte[0],
+                DataProtectionScope.CurrentUser);
+            return Encoding.UTF8.GetString(plaintext);
+        }
+
+        private static string ProtectLegacyFixture(string plaintext)
+        {
+            byte[] protectedBytes = ProtectedData.Protect(Encoding.UTF8.GetBytes(plaintext),
+                new byte[0], DataProtectionScope.CurrentUser);
+            return Convert.ToBase64String(protectedBytes);
+        }
+
+        private static void WriteCurrentUserNoMasterCiphertext(string configFile, string credentialsFile)
+        {
+            // The reference implementation is the framework DPAPI API, not PasswordFunctions.
+            string favoriteCiphertext = ProtectLegacyFixture(PasswordTests.USERPASSWORD);
+            string credentialCiphertext = ProtectLegacyFixture(TEST_PASSWORD);
+            Assert.AreEqual(PasswordTests.USERPASSWORD,
+                PasswordFunctions.DecryptPassword(favoriteCiphertext, string.Empty),
+                "The legacy decryption routine must accept a framework-produced DPAPI blob.");
+            Assert.AreEqual(TEST_PASSWORD,
+                PasswordFunctions.DecryptPassword(credentialCiphertext, string.Empty));
+
+            XDocument configuration = XDocument.Load(configFile);
+            foreach (XElement favorite in configuration.Descendants("favorites").Descendants("add"))
+            {
+                XAttribute password = favorite.Attribute("encryptedPassword");
+                if (password != null && !string.IsNullOrEmpty(password.Value))
+                    password.Value = favoriteCiphertext;
+            }
+            configuration.Save(configFile);
+
+            XDocument credentials = XDocument.Load(credentialsFile);
+            foreach (XElement credential in credentials.Descendants("CredentialSet"))
+            {
+                XElement password = credential.Element("Password");
+                if (password != null && !string.IsNullOrEmpty(password.Value))
+                    password.Value = credentialCiphertext;
+            }
+            credentials.Save(credentialsFile);
         }
 
         private string CreateFullTestFileName(string fileName)
