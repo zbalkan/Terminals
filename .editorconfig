@@ -1,8 +1,8 @@
-# NetBannerNG EditorConfig style and formatting rules.
+# EditorConfig style, formatting, naming, and analyzer rules.
 # Update these settings as project conventions evolve.
-# Reference: https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference
-[*.cs]
+# Reference: https://learn.microsoft.com/dotnet/fundamentals/code-analysis/configuration-options
 
+[*.cs]
 
 #Core editorconfig formatting - indentation
 
@@ -102,11 +102,7 @@ csharp_preferred_modifier_order = public,private,protected,internal,static,exter
 #Style - qualification options
 
 #prefer fields not to be prefaced with this. or Me. in Visual Basic
-dotnet_style_qualification_for_field = false:suggestion
-#prefer methods to be prefaced with this. in C# or Me. in Visual Basic
-dotnet_style_qualification_for_method = true:suggestion
 #prefer properties not to be prefaced with this. or Me. in Visual Basic
-dotnet_style_qualification_for_property = false:suggestion
 csharp_indent_labels = one_less_than_current
 csharp_using_directive_placement = outside_namespace:silent
 csharp_prefer_simple_using_statement = true:suggestion
@@ -119,20 +115,6 @@ csharp_style_inlined_variable_declaration = true:suggestion
 csharp_style_deconstructed_variable_declaration = true:suggestion
 csharp_style_prefer_range_operator = false:suggestion
 
-# CS8767: Nullability of reference types in type of parameter doesn't match implicitly implemented member (possibly because of nullability attributes).
-dotnet_diagnostic.CS8767.severity = silent
-
-# U2U1002: Method can be declared static
-dotnet_diagnostic.U2U1002.severity = silent
-
-# CA1822: Mark members as static
-dotnet_diagnostic.CA1822.severity = silent
-
-# CA2211: Non-constant fields should not be visible
-dotnet_diagnostic.CA2211.severity = silent
-
-# CA2208: Instantiate argument exceptions correctly
-dotnet_diagnostic.CA2208.severity = silent
 csharp_style_prefer_method_group_conversion = true:silent
 csharp_style_prefer_top_level_statements = true:silent
 csharp_style_prefer_primary_constructors = false:suggestion
@@ -143,6 +125,9 @@ csharp_space_around_binary_operators = before_and_after
 csharp_style_implicit_object_creation_when_type_is_apparent = false
 
 [*.{cs,vb}]
+# Default severity for analyzer diagnostics
+dotnet_analyzer_diagnostic.severity = warning
+
 dotnet_style_operator_placement_when_wrapping = beginning_of_line
 tab_width = 4
 indent_size = 4
@@ -151,7 +136,6 @@ dotnet_style_coalesce_expression = true:suggestion
 dotnet_style_null_propagation = true:suggestion
 dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
 dotnet_style_prefer_auto_properties = true:silent
-[*.{cs,vb}]
 #### Naming styles ####
 
 # Naming rules
@@ -194,10 +178,6 @@ dotnet_naming_style.pascal_case.required_suffix =
 dotnet_naming_style.pascal_case.word_separator = 
 dotnet_naming_style.pascal_case.capitalization = pascal_case
 
-dotnet_naming_style.pascal_case.required_prefix = 
-dotnet_naming_style.pascal_case.required_suffix = 
-dotnet_naming_style.pascal_case.word_separator = 
-dotnet_naming_style.pascal_case.capitalization = pascal_case
 dotnet_style_qualification_for_field = false:suggestion
 dotnet_style_qualification_for_property = false:suggestion
 dotnet_style_qualification_for_method = false:suggestion
