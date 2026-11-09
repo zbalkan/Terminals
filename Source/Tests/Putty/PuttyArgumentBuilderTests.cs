@@ -20,12 +20,11 @@ namespace Tests.Putty
             Assert.IsTrue(arguments.Contains(" -v "), "-v should be present.");
         }
 
-        [ExpectedException(typeof(ArgumentException), "The builder cant parse argument, if not supported options are provided.")]
         [TestMethod]
         public void InvalidProtocol_Build_Throws()
         {
             this.Protocol = "Unknown";
-            this.BuildArguments();
+            Assert.ThrowsExactly<ArgumentException>(() => this.BuildArguments());
         }
 
         protected string BuildArguments()
