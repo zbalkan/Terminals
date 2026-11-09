@@ -219,6 +219,7 @@
     <Compile Include="UserInterface\CredentialPanelTests.cs" />
     <Compile Include="UserInterface\CaptureManagerTests.cs" />
     <Compile Include="UserInterface\RdpMenuVisitorTests.cs" />
+    <Compile Include="Connections\RdpServiceTests.cs" />
     <Compile Include="UserInterface\ProtocolImageListBuilderTests.cs" />
     <Compile Include="UserInterface\FavoriteIconsTests.cs" />
     <Compile Include="UserInterface\ToolTipBuilderTests.cs" />

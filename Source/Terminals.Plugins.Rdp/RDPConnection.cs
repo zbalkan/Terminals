@@ -38,6 +38,16 @@ namespace Terminals.Connections
 
         public bool IsTerminalServer { get { return this.service.IsTerminalServer; } }
 
+        internal System.Threading.Tasks.Task<TerminalServer> LoadTerminalServerAsync(bool retry)
+        {
+            return this.service.LoadTerminalServerAsync(this.Favorite.ServerName, retry);
+        }
+
+        internal System.Threading.Tasks.Task<TerminalServer> TerminalServerLoadTask
+        {
+            get { return this.service.LoadTask; }
+        }
+
         public IConnectionSettings Settings { get; set; }
 
         public bool GrabInput { get; set; }
@@ -178,8 +188,6 @@ namespace Terminals.Connections
                 // if next line fails on Protected memory access exception,
                 // some string property is set to null, which leads to this exception
                 this.client.Connect();
-
-                this.service.CheckForTerminalServer(this.Favorite);
                 return true;
             }
             catch (Exception exc)
