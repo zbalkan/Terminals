@@ -1,6 +1,5 @@
 using System.Drawing;
 using System.IO;
-using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Tests.Helpers
@@ -24,22 +23,31 @@ namespace Tests.Helpers
         private static bool AreEqual(string deploymentDirectory, Image favoriteIcon)
         {
             string fullIconPath = Path.Combine(deploymentDirectory, IMAGE_FILE);
-            Image expectedImage = Image.FromFile(fullIconPath);
-            return AreEqual(expectedImage, favoriteIcon);
+            using (Image expectedImage = Image.FromFile(fullIconPath))
+                return AreEqual(expectedImage, favoriteIcon);
         }
 
         private static bool AreEqual(Image firstImage, Image secondImage)
         {
-            using (var ms = new MemoryStream())
+            if (firstImage == null || secondImage == null ||
+                firstImage.Width != secondImage.Width || firstImage.Height != secondImage.Height)
+                return false;
+
+            // PNG serialization is not a stable equality representation: even
+            // identical decoded pixels can produce different encoded byte streams.
+            using (var first = new Bitmap(firstImage))
+            using (var second = new Bitmap(secondImage))
             {
-                firstImage.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                byte[] firstBitmap = ms.ToArray();
-                ms.Position = 0;
+                for (int y = 0; y < first.Height; y++)
+                {
+                    for (int x = 0; x < first.Width; x++)
+                    {
+                        if (first.GetPixel(x, y).ToArgb() != second.GetPixel(x, y).ToArgb())
+                            return false;
+                    }
+                }
 
-                secondImage.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                byte[] secondBitmap = ms.ToArray();
-
-                return firstBitmap.SequenceEqual(secondBitmap);
+                return true;
             }
         }
     }

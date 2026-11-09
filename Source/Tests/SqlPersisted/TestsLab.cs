@@ -1,5 +1,5 @@
 ﻿using System;
-using System.IO;
+using System.Data.Entity.SqlServer;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Terminals.Configuration;
@@ -14,13 +14,11 @@ namespace Tests.SqlPersisted
     /// <summary>
     /// Shared configured store used by all SQL persistence tests
     /// </summary>
-    [DeploymentItem(DATABASE_LOG)]
-    [DeploymentItem(DATABASE_MDF)]
     public class TestsLab
     {
-        private const string DBF_FILE_NAME = "Terminals.mdf";
+        private const string CONNECTION_STRING = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TERMINALS;Integrated Security=True;";
 
-        private const string CONNECTION_STRING = @"Data Source=(localdb)\MSSQLLocalDB;AttachDbFilename={0}\Terminals.mdf;Integrated Security=True;";
+        private const string INVALID_CONNECTION_STRING = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=__TerminalsMissingTestDatabase__;Integrated Security=True;";
 
         protected const string FAVORITE_NAME = "test";
 
@@ -35,10 +33,6 @@ namespace Tests.SqlPersisted
         /// Gets second sample text value to be checked in tests when used as password, user name or another tested value
         /// </summary>
         protected const string VALIDATION_VALUE_B = "BBB";
-
-        internal const string DATABASE_LOG = @"..\Resources\Database\Terminals_log.LDF";
-
-        internal const string DATABASE_MDF = @"..\Resources\Database\Terminals.mdf";
 
         private readonly Settings settings = Settings.Instance;
         /// <summary>
@@ -82,9 +76,13 @@ namespace Tests.SqlPersisted
         /// </summary>
         protected void InitializeTestLab()
         {
-            this.RemoveDatabaseFileReadOnly();
             FilePersistedTestLab.SetDefaultFileLocations();
             this.SetDeploymentDirConnectionString();
+
+            // Make the EF6 SQL Server provider a concrete test-assembly dependency.
+            // MSTest must deploy this assembly even though EF normally loads it via config.
+            if (SqlProviderServices.Instance == null)
+                throw new InvalidOperationException("EF6 SQL Server provider was not initialized.");
 
             // first reset the database password, then continue with other initializations
             this.CheckDatabase = DatabaseConnections.CreateInstance();
@@ -118,19 +116,12 @@ namespace Tests.SqlPersisted
         {
             // Atleast to be able assign new connection string. Becasue of this we need application restart after persistence is changed.
             settings.PersistenceSecurity = new SqlPersistenceSecurity(); 
-            settings.ConnectionString = String.Format(CONNECTION_STRING, deploymentDir);
-        }
-
-        private void RemoveDatabaseFileReadOnly()
-        {
-            this.RemoveReadOnlyAttribute(DBF_FILE_NAME);
-            this.RemoveReadOnlyAttribute("Terminals_log.ldf");
-        }
-
-        private void RemoveReadOnlyAttribute(string fileName)
-        {
-            string databaseMdf = Path.Combine(this.TestContext.DeploymentDirectory, fileName);
-            File.SetAttributes(databaseMdf, FileAttributes.Normal);
+            string ciConnection = Environment.GetEnvironmentVariable("TERMINALS_TEST_SQL_CONNECTION_STRING");
+            // An empty directory is used by explicit failure/fallback tests.
+            // All other tests connect to the schema provisioned in LocalDB.
+            settings.ConnectionString = String.IsNullOrEmpty(deploymentDir)
+                ? INVALID_CONNECTION_STRING
+                : (String.IsNullOrEmpty(ciConnection) ? CONNECTION_STRING : ciConnection);
         }
 
         /// <summary>
@@ -141,7 +132,6 @@ namespace Tests.SqlPersisted
             const string DELETE_COMMAND = @"DELETE FROM ";
             // first clear dependences from both Favorites and groups table because of constraints
             System.Data.Entity.Database checkQueries = this.CheckDatabase.Database;
-            this.SetTrustWorthyOn(checkQueries);
 
             checkQueries.ExecuteSqlCommand(DELETE_COMMAND + "FavoritesInGroup");
             checkQueries.ExecuteSqlCommand(DELETE_COMMAND + "History");
@@ -154,16 +144,6 @@ namespace Tests.SqlPersisted
 
             checkQueries.ExecuteSqlCommand(DELETE_COMMAND + "CredentialBase");
             checkQueries.ExecuteSqlCommand(DELETE_COMMAND + "Credentials");
-        }
-
-        /// <summary>
-        /// Apply this command to be able run dotCover from test runner environment wiht host protection.
-        /// </summary>
-        private void SetTrustWorthyOn(System.Data.Entity.Database checkQueries)
-        {
-            string mdfFile = Path.Combine(this.TestContext.DeploymentDirectory, DBF_FILE_NAME);
-            string strustworthyCommand = string.Format(@"ALTER DATABASE ""{0}"" SET TRUSTWORTHY ON", mdfFile);
-            checkQueries.ExecuteSqlCommand(strustworthyCommand);
         }
 
         /// <summary>

@@ -17,7 +17,7 @@ namespace Terminals.Data.DB
         /// </summary>
         private const string METADATA = @"res://Terminals/Data.DB.SQLPersistence.csdl|res://Terminals/Data.DB.SQLPersistence.ssdl|res://Terminals/Data.DB.SQLPersistence.msl";
 
-        internal const string DEFAULT_CONNECTION_STRING = @"Data Source=.\SQLEXPRESS;AttachDbFilename=|DataDirectory|\Data\Terminals.mdf;Integrated Security=True;User Instance=False";
+        internal const string DEFAULT_CONNECTION_STRING = @"Data Source=.\SQLEXPRESS;Initial Catalog=TERMINALS;Integrated Security=True";
 
         internal static Database CreateInstance()
         {
