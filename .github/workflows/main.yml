@@ -37,6 +37,14 @@ jobs:
           New-Item -ItemType Directory -Path $destination -Force | Out-Null
           Copy-Item -Path (Join-Path $source '*') -Destination $destination -Recurse -Force
           if (-not (Test-Path (Join-Path $destination 'mscorlib.dll'))) { throw 'Failed to provision net40 reference assemblies' }
+      - name: Enforce EF6-only database API references
+        shell: pwsh
+        run: |
+          $patterns = 'System\.Data\.Objects', 'System\.Data\.EntityClient', 'EntityFramework\.5\.0\.0', 'EntityFramework, Version=4\.4\.0\.0'
+          $paths = @('Source/Terminals/Data/DB', 'Source/Terminals/Terminals.csproj', 'Source/Terminals/packages.config', 'Source/Terminals/app.config')
+          $files = Get-ChildItem $paths -File -Recurse | Where-Object { $_.Extension -in '.cs', '.tt', '.config', '.csproj' }
+          $violations = $files | Select-String -Pattern $patterns
+          if ($violations) { $violations | ForEach-Object { Write-Error "$($_.Path):$($_.LineNumber): $($_.Line)" }; exit 1 }
       - name: Build solution
         run: msbuild ${{ env.SLN_FILE_PATH }} -t:rebuild -property:Configuration=Release
       - name: Setup VSTest
