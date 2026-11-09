@@ -34,19 +34,14 @@ namespace Terminals.Forms
             treeNode2});
             System.Windows.Forms.TreeNode treeNode4 = new System.Windows.Forms.TreeNode("Master Password");
             System.Windows.Forms.TreeNode treeNode5 = new System.Windows.Forms.TreeNode("Default Password");
-            System.Windows.Forms.TreeNode treeNode6 = new System.Windows.Forms.TreeNode("Amazon");
             System.Windows.Forms.TreeNode treeNode7 = new System.Windows.Forms.TreeNode("Security", new System.Windows.Forms.TreeNode[] {
             treeNode4,
-            treeNode5,
-            treeNode6});
+            treeNode5});
             System.Windows.Forms.TreeNode treeNode8 = new System.Windows.Forms.TreeNode("Execute Before Connect");
             System.Windows.Forms.TreeNode treeNode9 = new System.Windows.Forms.TreeNode("Proxy");
             System.Windows.Forms.TreeNode treeNode10 = new System.Windows.Forms.TreeNode("Connections", new System.Windows.Forms.TreeNode[] {
             treeNode8,
             treeNode9});
-            System.Windows.Forms.TreeNode treeNode11 = new System.Windows.Forms.TreeNode("Flickr");
-            System.Windows.Forms.TreeNode treeNode12 = new System.Windows.Forms.TreeNode("Screen Capture", new System.Windows.Forms.TreeNode[] {
-            treeNode11});
             System.Windows.Forms.TreeNode treeNode13 = new System.Windows.Forms.TreeNode("Data store");
             System.Windows.Forms.TreeNode treeNode14 = new System.Windows.Forms.TreeNode("Plugins");
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(OptionDialog));
@@ -61,12 +56,10 @@ namespace Terminals.Forms
             this.tabPageFavorites = new System.Windows.Forms.TabPage();
             this.tabPageMasterPwd = new System.Windows.Forms.TabPage();
             this.tabPageDefaultPwd = new System.Windows.Forms.TabPage();
-            this.tabPageAmazon = new System.Windows.Forms.TabPage();
             this.tabPageConnections = new System.Windows.Forms.TabPage();
             this.tabPageBeforeConnect = new System.Windows.Forms.TabPage();
             this.tabPageProxy = new System.Windows.Forms.TabPage();
             this.tabPageScreenCapture = new System.Windows.Forms.TabPage();
-            this.tabPageFlickr = new System.Windows.Forms.TabPage();
             this.tabPagePersistence = new System.Windows.Forms.TabPage();
             this.tabPagePlugins = new System.Windows.Forms.TabPage();
             this.OptionTitelLabel = new System.Windows.Forms.Label();
@@ -75,12 +68,10 @@ namespace Terminals.Forms
             this.panelFavorites = new Terminals.Forms.FavoritesOptionPanel();
             this.panelMasterPassword = new Terminals.Forms.MasterPasswordOptionPanel();
             this.panelDefaultPassword = new Terminals.Forms.DefaultPasswordOptionPanel();
-            this.panelAmazon = new Terminals.Forms.AmazonOptionPanel();
             this.panelConnections = new Terminals.Forms.ConnectionsOptionPanel();
             this.panelExecuteBeforeConnect = new Terminals.Forms.ConnectCommandOptionPanel();
             this.panelProxy = new Terminals.Forms.ProxyOptionPanel();
             this.panelScreenCapture = new Terminals.Forms.CaptureOptionPanel();
-            this.panelFlickr = new Terminals.Forms.FlickrOptionPanel();
             this.panelPersistence = new Terminals.Forms.PersistenceOptionPanel();
             this.panelPlugins = new Terminals.Forms.OptionPanels.PluginsOptionPanel();
             this.tabCtrlOptionPanels.SuspendLayout();
@@ -89,12 +80,10 @@ namespace Terminals.Forms
             this.tabPageFavorites.SuspendLayout();
             this.tabPageMasterPwd.SuspendLayout();
             this.tabPageDefaultPwd.SuspendLayout();
-            this.tabPageAmazon.SuspendLayout();
             this.tabPageConnections.SuspendLayout();
             this.tabPageBeforeConnect.SuspendLayout();
             this.tabPageProxy.SuspendLayout();
             this.tabPageScreenCapture.SuspendLayout();
-            this.tabPageFlickr.SuspendLayout();
             this.tabPagePersistence.SuspendLayout();
             this.tabPagePlugins.SuspendLayout();
             this.SuspendLayout();
@@ -167,9 +156,6 @@ namespace Terminals.Forms
             treeNode5.Name = "Default Password";
             treeNode5.Tag = "DefaultPassword";
             treeNode5.Text = "Default Password";
-            treeNode6.Name = "Amazon";
-            treeNode6.Tag = "Amazon";
-            treeNode6.Text = "Amazon";
             treeNode7.Name = "Master Password";
             treeNode7.Tag = "MasterPassword";
             treeNode7.Text = "Security";
@@ -182,12 +168,6 @@ namespace Terminals.Forms
             treeNode10.Name = "Connections";
             treeNode10.Tag = "Connections";
             treeNode10.Text = "Connections";
-            treeNode11.Name = "Flickr";
-            treeNode11.Tag = "Flickr";
-            treeNode11.Text = "Flickr";
-            treeNode12.Name = "Screen Capture";
-            treeNode12.Tag = "ScreenCapture";
-            treeNode12.Text = "Screen Capture";
             treeNode13.Name = "Data store";
             treeNode13.Tag = "Persistence";
             treeNode13.Text = "Data store";
@@ -199,7 +179,6 @@ namespace Terminals.Forms
             treeNode3,
             treeNode7,
             treeNode10,
-            treeNode12,
             treeNode13,
             treeNode14});
             this.OptionsTreeView.ShowLines = false;
@@ -218,12 +197,10 @@ namespace Terminals.Forms
             this.tabCtrlOptionPanels.Controls.Add(this.tabPageFavorites);
             this.tabCtrlOptionPanels.Controls.Add(this.tabPageMasterPwd);
             this.tabCtrlOptionPanels.Controls.Add(this.tabPageDefaultPwd);
-            this.tabCtrlOptionPanels.Controls.Add(this.tabPageAmazon);
             this.tabCtrlOptionPanels.Controls.Add(this.tabPageConnections);
             this.tabCtrlOptionPanels.Controls.Add(this.tabPageBeforeConnect);
             this.tabCtrlOptionPanels.Controls.Add(this.tabPageProxy);
             this.tabCtrlOptionPanels.Controls.Add(this.tabPageScreenCapture);
-            this.tabCtrlOptionPanels.Controls.Add(this.tabPageFlickr);
             this.tabCtrlOptionPanels.Controls.Add(this.tabPagePersistence);
             this.tabCtrlOptionPanels.Controls.Add(this.tabPagePlugins);
             this.tabCtrlOptionPanels.ItemSize = new System.Drawing.Size(20, 20);
@@ -292,17 +269,6 @@ namespace Terminals.Forms
             this.tabPageDefaultPwd.Text = "Default Pwd";
             this.tabPageDefaultPwd.UseVisualStyleBackColor = true;
             // 
-            // tabPageAmazon
-            // 
-            this.tabPageAmazon.AutoScroll = true;
-            this.tabPageAmazon.Controls.Add(this.panelAmazon);
-            this.tabPageAmazon.Location = new System.Drawing.Point(4, 4);
-            this.tabPageAmazon.Name = "tabPageAmazon";
-            this.tabPageAmazon.Size = new System.Drawing.Size(582, 357);
-            this.tabPageAmazon.TabIndex = 5;
-            this.tabPageAmazon.Text = "Amazon";
-            this.tabPageAmazon.UseVisualStyleBackColor = true;
-            // 
             // tabPageConnections
             // 
             this.tabPageConnections.AutoScroll = true;
@@ -346,17 +312,6 @@ namespace Terminals.Forms
             this.tabPageScreenCapture.TabIndex = 8;
             this.tabPageScreenCapture.Text = "Capture";
             this.tabPageScreenCapture.UseVisualStyleBackColor = true;
-            // 
-            // tabPageFlickr
-            // 
-            this.tabPageFlickr.AutoScroll = true;
-            this.tabPageFlickr.Controls.Add(this.panelFlickr);
-            this.tabPageFlickr.Location = new System.Drawing.Point(4, 4);
-            this.tabPageFlickr.Name = "tabPageFlickr";
-            this.tabPageFlickr.Size = new System.Drawing.Size(582, 357);
-            this.tabPageFlickr.TabIndex = 9;
-            this.tabPageFlickr.Text = "Flickr";
-            this.tabPageFlickr.UseVisualStyleBackColor = true;
             // 
             // tabPagePersistence
             // 
@@ -428,13 +383,6 @@ namespace Terminals.Forms
             this.panelDefaultPassword.Size = new System.Drawing.Size(513, 325);
             this.panelDefaultPassword.TabIndex = 0;
             // 
-            // panelAmazon
-            // 
-            this.panelAmazon.Location = new System.Drawing.Point(4, 26);
-            this.panelAmazon.Name = "panelAmazon";
-            this.panelAmazon.Size = new System.Drawing.Size(513, 328);
-            this.panelAmazon.TabIndex = 0;
-            // 
             // panelConnections
             // 
             this.panelConnections.Location = new System.Drawing.Point(4, 22);
@@ -462,13 +410,6 @@ namespace Terminals.Forms
             this.panelScreenCapture.Name = "panelScreenCapture";
             this.panelScreenCapture.Size = new System.Drawing.Size(513, 330);
             this.panelScreenCapture.TabIndex = 0;
-            // 
-            // panelFlickr
-            // 
-            this.panelFlickr.Location = new System.Drawing.Point(5, 27);
-            this.panelFlickr.Name = "panelFlickr";
-            this.panelFlickr.Size = new System.Drawing.Size(514, 328);
-            this.panelFlickr.TabIndex = 0;
             // 
             // panelPersistence
             // 
@@ -513,12 +454,10 @@ namespace Terminals.Forms
             this.tabPageFavorites.ResumeLayout(false);
             this.tabPageMasterPwd.ResumeLayout(false);
             this.tabPageDefaultPwd.ResumeLayout(false);
-            this.tabPageAmazon.ResumeLayout(false);
             this.tabPageConnections.ResumeLayout(false);
             this.tabPageBeforeConnect.ResumeLayout(false);
             this.tabPageProxy.ResumeLayout(false);
             this.tabPageScreenCapture.ResumeLayout(false);
-            this.tabPageFlickr.ResumeLayout(false);
             this.tabPagePersistence.ResumeLayout(false);
             this.tabPagePlugins.ResumeLayout(false);
             this.ResumeLayout(false);
@@ -538,24 +477,20 @@ namespace Terminals.Forms
         private System.Windows.Forms.TabPage tabPageFavorites;
         private System.Windows.Forms.TabPage tabPageMasterPwd;
         private System.Windows.Forms.TabPage tabPageDefaultPwd;
-        private System.Windows.Forms.TabPage tabPageAmazon;
         private System.Windows.Forms.TabPage tabPageConnections;
         private System.Windows.Forms.TabPage tabPageBeforeConnect;
         private System.Windows.Forms.TabPage tabPageProxy;
         private System.Windows.Forms.TabPage tabPageScreenCapture;
-        private System.Windows.Forms.TabPage tabPageFlickr;
         private System.Windows.Forms.Label OptionTitelLabel;
         private StartShutdownOptionPanel panelStartupShutdown;
         private InterfaceOptionPanel panelInterface;
         private FavoritesOptionPanel panelFavorites;
         private MasterPasswordOptionPanel panelMasterPassword;
         private DefaultPasswordOptionPanel panelDefaultPassword;
-        private AmazonOptionPanel panelAmazon;
         private ConnectionsOptionPanel panelConnections;
         private ConnectCommandOptionPanel panelExecuteBeforeConnect;
         private ProxyOptionPanel panelProxy;
         private CaptureOptionPanel panelScreenCapture;
-        private FlickrOptionPanel panelFlickr;
         private System.Windows.Forms.TabPage tabPagePersistence;
         private PersistenceOptionPanel panelPersistence;
         private System.Windows.Forms.TabPage tabPagePlugins;

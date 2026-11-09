@@ -185,7 +185,6 @@ namespace Terminals.CaptureManager
             this.copyImagePathToClipboardToolStripMenuItem});
             this.thumbsContextMenu.Name = "thumbsContextMenu";
             this.thumbsContextMenu.Size = new System.Drawing.Size(233, 70);
-            this.thumbsContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.thumbsContextMenu_Opening);
             // 
             // deleteToolStripMenuItem
             // 

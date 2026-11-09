@@ -14,7 +14,6 @@ namespace Terminals.CaptureManager
     {
         public const string ControlName = "layout1";
         private TreeNode root = new TreeNode("Capture Root Folder");
-        private ToolStripMenuItem flickrMenuItem;
 
         public CaptureManagerLayout()
         {
@@ -23,55 +22,8 @@ namespace Terminals.CaptureManager
         
         private void CaptureManagerLayout_Load(object sender, EventArgs e)
         {
-            this.flickrMenuItem = new ToolStripMenuItem("Post selected images to Flickr");
-            this.flickrMenuItem.Click += new EventHandler(this.flickrMenuItem_Click);
             this.LoadRoot();
             this.viewComboBox.SelectedIndex = 0;
-        }
-
-        private void SendToFlickr(object state)
-        {
-            try
-            {
-                List<ListViewItem> items = (List<ListViewItem>)state;
-                if (items != null && items.Count > 0)
-                {
-                    foreach (ListViewItem lvi in items)
-                    {
-                        Capture cap = (lvi.Tag as Capture);
-                        cap.PostToFlickr();
-                    }
-                }
-
-                System.Windows.Forms.MessageBox.Show("All images have been uploaded to Flickr.");
-            }
-            catch (Exception ex)
-            {
-                Logging.Info("There was an error uploading your screen shots to Flickr.", ex);
-                MessageBox.Show("There was an error uploading your screen shots to Flickr:\r\n" + ex.Message);
-            }
-        }
-
-        public void flickrMenuItem_Click(object sender, EventArgs e)
-        {
-            List<ListViewItem> items = new List<ListViewItem>();
-            foreach (ListViewItem item in this.listViewFiles.SelectedItems)
-            {
-                items.Add(item);
-            }
-
-            if (items.Count > 0)
-            {
-                if (MessageBox.Show("Are you sure you want to post " + items.Count + " images to your Flickr account?", "Confirmation Required", MessageBoxButtons.OKCancel) == DialogResult.OK)
-                {
-                    MessageBox.Show("All items have been queued for upload to Flickr.  Once the upload has been completed you will be notified.");
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(this.SendToFlickr), items);
-                }
-            }
-            else
-            {
-                MessageBox.Show("You must first select a screen capture to upload.");
-            }
         }
 
         public void RefreshView()
@@ -416,14 +368,6 @@ namespace Terminals.CaptureManager
             this.imageList1.ImageSize = new Size(this.trackBarZoom.Value, this.trackBarZoom.Value);
             this.listViewFiles.View = View.LargeIcon;
             this.RefreshView();
-        }
-
-        private void thumbsContextMenu_Opening(object sender, CancelEventArgs e)
-        {
-            if (Settings.Instance.FlickrToken != string.Empty && (this.listViewFiles.SelectedItems != null && this.listViewFiles.SelectedItems.Count > 0))
-            {
-                this.thumbsContextMenu.Items.Add(this.flickrMenuItem);
-            }
         }
     }
 }

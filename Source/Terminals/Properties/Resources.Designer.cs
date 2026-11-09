@@ -73,16 +73,6 @@ namespace Terminals.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap amazon {
-            get {
-                object obj = ResourceManager.GetObject("amazon", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
         internal static System.Drawing.Bitmap amber {
             get {
                 object obj = ResourceManager.GetObject("amber", resourceCulture);

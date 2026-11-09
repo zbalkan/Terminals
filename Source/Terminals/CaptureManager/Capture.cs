@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using FlickrNet;
 using Terminals.Configuration;
 using Terminals.Services;
 
@@ -8,8 +7,6 @@ namespace Terminals.CaptureManager
 {
     internal class Capture
     {
-        internal static string FlickrAPIKey = "9362619635c6f6c20e7c14fe4b67c2a0";
-        internal static string FlickrSharedSecretKey = "ac8f3c60be0812b6";
         private System.Drawing.Image image;
         private string comments;
         private string filepath;
@@ -28,32 +25,6 @@ namespace Terminals.CaptureManager
             catch (Exception ec)
             {
                 Logging.Error("Error trying to Delete", ec);
-            }
-        }
-
-        internal static Flickr CreateFlickerInstance()
-        {
-            return new Flickr(FlickrAPIKey, FlickrSharedSecretKey);
-        }
-
-        public void PostToFlickr()
-        {
-            var settings = Settings.Instance;
-            if (settings.FlickrToken != string.Empty)
-            {
-                Flickr flckr = CreateFlickerInstance();
-                flckr.AuthToken = settings.FlickrToken;
-                string c = this.Comments;
-                if (c == null) c = string.Empty;
-                using (FileStream fs = new FileStream(this.FilePath, FileMode.Open))
-                {
-                    flckr.UploadPicture(fs, Path.GetFileName(this.FilePath), c, "screenshot Terminals", 1, 1, 1,
-                        ContentType.Screenshot, SafetyLevel.Safe, HiddenFromSearch.Visible);
-                }
-            } 
-            else
-            {
-                throw new Exception("You must authorize with Flickr prior to posting.  In Terminals, go to Tools, Options and then select the Flickr tab.");
             }
         }
 

@@ -373,6 +373,7 @@ namespace Terminals.Configuration
         /// Set only initialized and authenticated instance before access to any data. 
         /// </summary>
         internal PersistenceSecurity PersistenceSecurity { get; set; }
+        #endregion Security tab settings
 
         #region Proxy tab settings
 
