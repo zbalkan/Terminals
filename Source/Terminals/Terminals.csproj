@@ -687,6 +687,8 @@
       <DependentUpon>PacketCapture.cs</DependentUpon>
     </Compile>
     <Compile Include="Network\Tools\Ping\PingReplyData.cs" />
+    <Compile Include="Network\Tools\TcpConnectScanner.cs" />
+    <Compile Include="Network\Tools\NetworkInterfaceInventory.cs" />
     <Compile Include="Network\Tools\PortScanner.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -1528,10 +1530,6 @@
     <ProjectReference Include="..\HexEditor\HexEditor.csproj">
       <Project>{405E4F74-CE98-4BDC-8B78-F3293F4F7BBF}</Project>
       <Name>HexEditor</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Metro\Metro.csproj">
-      <Project>{4F3A4024-5A19-4F08-823A-B75D6AFE5CD8}</Project>
-      <Name>Metro</Name>
     </ProjectReference>
     <ProjectReference Include="..\TabControl\TabControl.csproj">
       <Project>{3D54DB4B-DC8A-44AA-8EE0-4EDF58CE1331}</Project>

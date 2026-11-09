@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Net;
 using System.Windows.Forms;
-using Metro;
-using Metro.Scanning;
+using Terminals.Network;
 using Terminals.Connections;
 using Terminals.Data;
 using Terminals.Integration.Import;
@@ -13,13 +13,9 @@ namespace Terminals.Wizard
 {
     internal partial class AddExistingRDPConnections : UserControl
     {
-        private MethodInvoker _miv;
-        private NetworkInterfaceList _nil;
-        private IPAddress _endPointAddress;
-        private List<TcpSynScanner> _scannerList = new List<TcpSynScanner>(1275);
-        private int _scannerCount = 0;
-        private int _pendingRequests = 0;
-        private object _uiElementsLock = new object();
+        private CancellationTokenSource discoveryCancellation;
+        private int pendingRequests;
+        private bool discoveryFinished;
 
         private ConnectionManager connectionManager;
 
@@ -35,15 +31,6 @@ namespace Terminals.Wizard
             InitializeComponent();
 
             this.dataGridView1.Visible = false;
-            _miv = new MethodInvoker(this.UpdateConnections);
-            try
-            {
-                _nil = new NetworkInterfaceList();
-            }
-            catch (Exception exc)
-            {
-                Logging.Error("Could not new up Metro.NetworkInterfaceList in AddExistingRDPConnections", exc);
-            }
         }
 
         public void StartImport(ConnectionManager connectionManager)
@@ -63,135 +50,114 @@ namespace Terminals.Wizard
         }
 
         /// <summary>
-        /// then kick up the port scan for the entire subnet
+        /// Discover services on the local IPv4 /24 using bounded TCP connect probes.
+        /// Unlike the legacy SYN scanner, this does not require raw packet privileges.
         /// </summary>
-        private void ScanInterfaceList()
+        private async void ScanInterfaceList()
         {
-            if (this._nil != null)
+            discoveryCancellation = new CancellationTokenSource();
+            discoveryFinished = false;
+            CancellationToken token = discoveryCancellation.Token;
+            try
             {
-                try
+                IPAddress local = NetworkInterfaceInventory.GetFirstActiveIPv4();
+                if (local == null)
+                    return;
+
+                ushort[] ports = connectionManager.SupportedPorts();
+                if (ports == null || ports.Length == 0)
+                    return;
+
+                byte[] bytes = local.GetAddressBytes();
+                pendingRequests = 254 * ports.Length;
+                UpdateConnections();
+
+                var tasks = new List<Task<IPEndPoint>>();
+                using (var throttle = new SemaphoreSlim(32))
                 {
-                    foreach (NetworkInterface face in this._nil.Interfaces)
+                    try
                     {
-                        if (face.IsEnabled && !face.isLoopback)
+                        for (int host = 1; host <= 254; host++)
                         {
-                            this._endPointAddress = face.Address;
-                            break;
+                            var address = new IPAddress(new[] { bytes[0], bytes[1], bytes[2], (byte)host });
+                            foreach (ushort port in ports)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                await throttle.WaitAsync(token);
+                                tasks.Add(ProbeAsync(address, port, throttle, token));
+                            }
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                    }
 
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(this.ScanSubnet), null);
+                    foreach (Task<IPEndPoint> task in tasks)
+                    {
+                        try
+                        {
+                            IPEndPoint endpoint = await task;
+                            if (endpoint != null && !token.IsCancellationRequested)
+                                AddFavorite(endpoint);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                        }
+                        UpdateConnections();
+                    }
                 }
-                catch (Exception e)
+            }
+            catch (Exception exception)
+            {
+                Logging.Error("RDP network discovery failed.", exception);
+            }
+            finally
+            {
+                pendingRequests = 0;
+                if (!IsDisposed)
                 {
-                    Logging.Error("Port Scan error", e);
+                    UpdateConnections();
+                    if (!discoveryFinished)
+                    {
+                        discoveryFinished = true;
+                        if (OnDiscoveryCompleted != null)
+                            OnDiscoveryCompleted();
+                    }
                 }
+                discoveryCancellation.Dispose();
+                discoveryCancellation = null;
+            }
+        }
+
+        private async Task<IPEndPoint> ProbeAsync(IPAddress address, int port,
+            SemaphoreSlim throttle, CancellationToken token)
+        {
+            try
+            {
+                bool open = await TcpConnectScanner.IsOpenAsync(
+                    address, port, TimeSpan.FromMilliseconds(1000), token).ConfigureAwait(false);
+                return open ? new IPEndPoint(address, port) : null;
+            }
+            catch (OperationCanceledException)
+            {
+                return null;
+            }
+            catch (Exception exception)
+            {
+                Logging.Info("Discovery TCP probe failed.", exception);
+                return null;
+            }
+            finally
+            {
+                Interlocked.Decrement(ref pendingRequests);
+                throttle.Release();
             }
         }
 
         internal void CancelDiscovery()
         {
-            try
-            {
-                if (_scannerCount > 0)
-                {
-                    foreach (TcpSynScanner scanner in _scannerList)
-                    {
-                        if (scanner.Running)
-                            scanner.CancelScan();
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Logging.Info("Cancel Discovery", e);
-            }
-        }
-
-        private void Scanner_ScanComplete()
-        {
-            try
-            {
-                lock (_uiElementsLock)
-                {
-                    _scannerCount--;
-                }
-
-                this.Invoke(_miv);
-            }
-            catch (Exception e)
-            {
-                Logging.Error("Scanner Complete Error", e);
-            }
-        }
-
-        private void ScanSubnet(object nullstate)
-        {
-            try
-            {
-                _pendingRequests = 254 * 5;
-                string ipAddress = _endPointAddress.ToString();
-                string start = ipAddress.Substring(0, ipAddress.LastIndexOf('.')) + ".";
-                for (int x = 1; x < 255; x++)
-                {
-                    IPAddress address = IPAddress.Parse(start + x.ToString());
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(ScanMachine), address);
-                }
-            }
-            catch (Exception e)
-            {
-                Logging.Error("Scan Subnet Error", e);
-            }
-
-            this.Invoke(_miv);
-        }
-
-        private void ScanMachine(object machine)
-        {
-            try
-            {
-                TcpSynScanner scanner;
-                scanner = new TcpSynScanner(new IPEndPoint(_endPointAddress, 0));
-                scanner.PortReply += new TcpPortReplyHandler(Scanner_PortReply);
-                scanner.ScanComplete += new TcpPortScanComplete(Scanner_ScanComplete);
-
-                IPAddress address = (IPAddress)machine;
-                _scannerList.Add(scanner);
-                scanner.StartScan(address, this.connectionManager.SupportedPorts(), 1000, 100, true);
-                _scannerCount++;
-            }
-            catch (Exception)
-            {
-                //its safe to ignore exceptions here as well  
-                //Terminals.Logging.Log.Info("", e); 
-                lock (_uiElementsLock)
-                {
-                    _pendingRequests = _pendingRequests - 5;
-                }
-            }
-
-            if (!this.IsDisposed)
-                this.Invoke(_miv);
-
-            Application.DoEvents();
-        }
-
-        private void Scanner_PortReply(IPEndPoint remoteEndPoint, TcpPortState state)
-        {
-            try
-            {
-                lock (_uiElementsLock) _pendingRequests--;
-                if (state == TcpPortState.Opened)
-                {
-                    AddFavorite(remoteEndPoint);
-                }
-
-                this.Invoke(_miv);
-            }
-            catch (Exception e)
-            {
-                Logging.Error("Scanner Port Reply", e);
-            }
+            if (discoveryCancellation != null)
+                discoveryCancellation.Cancel();
         }
 
         private void AddFavorite(IPEndPoint endPoint)
@@ -222,20 +188,10 @@ namespace Terminals.Wizard
 
         private void UpdateConnections()
         {
-            try
-            {
-                ConnectionsCountLabel.Text = this.DiscoveredConnections.Count.ToString();
-                PendingRequestsLabel.Text = _pendingRequests.ToString();
-
-                if (_pendingRequests <= 0 && OnDiscoveryCompleted != null)
-                    OnDiscoveryCompleted();
-
-                Application.DoEvents();
-            }
-            catch (Exception e)
-            {
-                Logging.Error("Update Connections", e);
-            }
+            if (IsDisposed)
+                return;
+            ConnectionsCountLabel.Text = DiscoveredConnections.Count.ToString();
+            PendingRequestsLabel.Text = Math.Max(0, pendingRequests).ToString();
         }
 
         /// <summary>

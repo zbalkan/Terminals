@@ -14,9 +14,6 @@
       <Component Id="HexEditorDll" Guid="A280B61A-9FA2-469C-9DC0-1D356FA35603">
         <File Source="$(var.HexEditor.TargetPath)" KeyPath="yes" Checksum="yes"/>
       </Component>
-      <Component Id="MetroDll" Guid="8737AA17-03D4-4E4E-81F9-734029698ECF">
-        <File Source="$(var.Metro.TargetPath)" KeyPath="yes" Checksum="yes"/>
-      </Component>
       <Component Id="SharpPcapDll" Guid="29188BD1-307E-4CD0-9750-BF294FD0E902">
         <File Source="$(var.Terminals.TargetDir)SharpPcap.dll" KeyPath="yes" Checksum="yes"/>
       </Component>

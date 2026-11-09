@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Forms;
+using System.Net.NetworkInformation;
 
 namespace Terminals.Network
 {
@@ -12,7 +13,7 @@ namespace Terminals.Network
         }
         private void timer1_Tick(object sender, EventArgs e)
         {
-            Metro.TransportLayer.Tcp.TcpConnection[] connections = Metro.TransportLayer.Tcp.TcpConnectionManager.GetCurrentTcpConnections();
+            TcpConnectionInformation[] connections = IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpConnections();
             //this.dataGridView1.DataSource = null;
             this.dataGridView1.DataSource = connections;
         }
