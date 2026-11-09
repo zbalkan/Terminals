@@ -11,8 +11,8 @@
       <Component Id="TerminalsCommon" Guid="E00CC8C9-011E-4627-9ECC-4A842F2511DC">
         <File Source="$(var.Terminals.Common.TargetPath)" KeyPath="yes" Checksum="yes"/>
       </Component>
-      <Component Id="HexEditorDll" Guid="A280B61A-9FA2-469C-9DC0-1D356FA35603">
-        <File Source="$(var.HexEditor.TargetPath)" KeyPath="yes" Checksum="yes"/>
+      <Component Id="HexBoxDll" Guid="A280B61A-9FA2-469C-9DC0-1D356FA35603">
+        <File Source="$(var.Terminals.TargetDir)Be.Windows.Forms.HexBox.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
       <Component Id="SharpPcapDll" Guid="29188BD1-307E-4CD0-9750-BF294FD0E902">
         <File Source="$(var.Terminals.TargetDir)SharpPcap.dll" KeyPath="yes" Checksum="yes"/>

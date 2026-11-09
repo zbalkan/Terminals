@@ -93,7 +93,6 @@
             this.hexBox1.BytesPerLine = 8;
             this.hexBox1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.hexBox1.Font = new System.Drawing.Font("Courier New", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.hexBox1.LineInfoForeColor = System.Drawing.Color.Empty;
             this.hexBox1.LineInfoVisible = true;
             this.hexBox1.Location = new System.Drawing.Point(3, 3);
             this.hexBox1.Name = "hexBox1";

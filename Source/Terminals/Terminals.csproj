@@ -112,6 +112,7 @@
     <PackageReference Include="DnsClient" Version="1.8.0" />
     <PackageReference Include="SharpPcap" Version="6.3.1" />
     <PackageReference Include="PacketDotNet" Version="1.4.8" />
+    <PackageReference Include="Be.Windows.Forms.HexBox.Net8" Version="2.1.0" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="MSTSCLib">
@@ -1527,10 +1528,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\HexEditor\HexEditor.csproj">
-      <Project>{405E4F74-CE98-4BDC-8B78-F3293F4F7BBF}</Project>
-      <Name>HexEditor</Name>
-    </ProjectReference>
     <ProjectReference Include="..\TabControl\TabControl.csproj">
       <Project>{3D54DB4B-DC8A-44AA-8EE0-4EDF58CE1331}</Project>
       <Name>TabControl</Name>

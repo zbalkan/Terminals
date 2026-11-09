@@ -39,14 +39,6 @@
       <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
       <RefTargetDir>INSTALLFOLDER</RefTargetDir>
     </ProjectReference>
-    <ProjectReference Include="..\HexEditor\HexEditor.csproj">
-      <Name>HexEditor</Name>
-      <Project>{405e4f74-ce98-4bdc-8b78-f3293f4f7bbf}</Project>
-      <Private>True</Private>
-      <DoNotHarvest>True</DoNotHarvest>
-      <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
-      <RefTargetDir>INSTALLFOLDER</RefTargetDir>
-    </ProjectReference>
     <ProjectReference Include="..\TabControl\TabControl.csproj">
       <Name>TabControl</Name>
       <Project>{3d54db4b-dc8a-44aa-8ee0-4edf58ce1331}</Project>
