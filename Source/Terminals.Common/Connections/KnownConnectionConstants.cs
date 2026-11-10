@@ -4,6 +4,7 @@ namespace Terminals.Common.Connections
     {
         public const int RDPPort = 3389;
 
+        // Retained for legacy favorites; no HTTP connection target is registered.
         public const int HTTPPort = 80;
 
         public const string HTTP = "HTTP";

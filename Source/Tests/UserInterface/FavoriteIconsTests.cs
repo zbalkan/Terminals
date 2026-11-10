@@ -37,7 +37,6 @@ namespace Tests.UserInterface
                 new Tuple<string, string>(VncConnectionPlugin.VNC, "treeIcon_VNC"),
                 new Tuple<string, string>(SshConnectionPlugin.SSH, "treeIcon_SSH"),
                 new Tuple<string, string>(TelnetConnectionPlugin.TELNET, "treeIcon_Telnet"),
-                new Tuple<string, string>(KnownConnectionConstants.HTTP, "treeIcon_HTTP"),
                 new Tuple<string, string>(KnownConnectionConstants.HTTPS, "treeIcon_HTTPS"),
 
                 // undefined icons use default icon
@@ -54,6 +53,9 @@ namespace Tests.UserInterface
             var testCase = new Tuple<string, string>(UNKNOWNPROTOCOL, UNKNOWN_ICON_KEY);
             bool keyEquals = this.AssertGetTreeviewImageListKey(testCase);
             Assert.IsTrue(keyEquals, UNKNOWN_PROTOCOL_DEFUULT_ICON_MESSAGE);
+            Assert.IsTrue(this.AssertGetTreeviewImageListKey(
+                new Tuple<string, string>(KnownConnectionConstants.HTTP, UNKNOWN_ICON_KEY)),
+                "Retired HTTP must not have a registered protocol icon.");
         }
 
         private bool AssertGetTreeviewImageListKey(Tuple<string, string> testCase)
@@ -73,8 +75,7 @@ namespace Tests.UserInterface
                 new Tuple<string, Image>(VncConnectionPlugin.VNC, VncConnectionPlugin.TreeIconVnc),
                 new Tuple<string, Image>(SshConnectionPlugin.SSH, SshConnectionPlugin.TreeIconSsh),
                 new Tuple<string, Image>(TelnetConnectionPlugin.TELNET, TelnetConnectionPlugin.TreeIconTelnet),
-                new Tuple<string, Image>(KnownConnectionConstants.HTTP, HttpConnectionPlugin.TreeIconHttp),
-                new Tuple<string, Image>(KnownConnectionConstants.HTTPS, HttpConnectionPlugin.TreeIconHttp),
+                new Tuple<string, Image>(KnownConnectionConstants.HTTPS, HttpsConnectionPlugin.TreeIconHttps),
 
                 // undefined icons use default icon
                 new Tuple<string, Image>(ICAConnectionPlugin.ICA_CITRIX, Connection.Terminalsicon),
@@ -90,6 +91,9 @@ namespace Tests.UserInterface
             var testCase = new Tuple<string, Image>(UNKNOWNPROTOCOL, Connection.Terminalsicon);
             bool keyEquals = this.AssertGetFavoriteIcon(testCase);
             Assert.IsTrue(keyEquals, UNKNOWN_PROTOCOL_DEFUULT_ICON_MESSAGE);
+            Assert.IsTrue(this.AssertGetFavoriteIcon(
+                new Tuple<string, Image>(KnownConnectionConstants.HTTP, Connection.Terminalsicon)),
+                "Retired HTTP favorites must use the default icon.");
         }
 
         private bool AssertGetFavoriteIcon(Tuple<string, Image> testCase)

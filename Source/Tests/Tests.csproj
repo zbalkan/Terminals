@@ -108,6 +108,7 @@
     <Compile Include="Connections\ConnectionManagerTests.cs" />
     <Compile Include="Connections\ConnectionManagerOtionsTests.cs" />
     <Compile Include="Connections\FavoriteSerializerTests.cs" />
+    <Compile Include="Connections\LegacyHttpFavoritesMigrationTests.cs" />
     <Compile Include="Connections\PluginBasedTests.cs" />
     <Compile Include="Connections\PluginLoaderTests.cs" />
     <Compile Include="Connections\TestConnectionManager.cs" />
@@ -148,6 +149,7 @@
     <Compile Include="SqlPersisted\ConnectionsHistoryTest.cs" />
     <Compile Include="SqlPersisted\GroupsTest.cs" />
     <Compile Include="SqlPersisted\FavoritesTest.cs" />
+    <Compile Include="SqlPersisted\LegacyHttpMigrationSqlTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SqlPersisted\ImportsTest.cs" />
     <Compile Include="SqlPersisted\SecurityTests.cs" />

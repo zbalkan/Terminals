@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using Terminals.CaptureManager;
+using Terminals.Common.Connections;
 using Terminals.Configuration;
 using Terminals.Connections;
 using Terminals.Data;
@@ -126,6 +127,13 @@ namespace Terminals.Forms
         private void Connect(IFavorite favorite, ConnectionDefinition definition)
         {
             IFavorite configured = GetFavoriteUpdatedCopy(favorite, definition);
+            if (configured.Protocol == KnownConnectionConstants.HTTP)
+            {
+                MessageBox.Show(this.mainForm,
+                    "HTTP connection targets are retired. Verify that the server supports HTTPS and create a new HTTPS favorite. The original favorite has not been changed.",
+                    "HTTP connection unavailable", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             this.persistence.ConnectionHistory.RecordHistoryItem(favorite);
             this.mainForm.SendNativeMessageToFocus();
             this.CreateTerminalTab(favorite, configured);

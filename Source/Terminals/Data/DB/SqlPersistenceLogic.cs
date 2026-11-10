@@ -107,6 +107,12 @@ namespace Terminals.Data.DB
             return true;
         }
 
+        internal void ReloadAfterLegacyHttpMigration()
+        {
+            this.groups.RefreshCache();
+            this.favorites.RefreshCache();
+        }
+
         private bool TryInitializeDatabase()
         {
             if (DatabaseConnections.TestConnection())

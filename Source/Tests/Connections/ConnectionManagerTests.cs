@@ -39,7 +39,7 @@ namespace Tests.Connections
         public void GetAvailableProtocols_ReturnsAll()
         {
             int knownProtocols = GetUniqueProtocols().Count();
-            Assert.AreEqual(7, knownProtocols, "All other test in this SUT operate on wrong data.");
+            Assert.AreEqual(6, knownProtocols, "All other test in this SUT operate on wrong data.");
         }
 
         [TestMethod]
@@ -51,7 +51,6 @@ namespace Tests.Connections
                 new Tuple<string, Type>(VncConnectionPlugin.VNC, typeof(VNCConnection)),
                 new Tuple<string, Type>(TelnetConnectionPlugin.TELNET, typeof(PuttyConnection)),
                 new Tuple<string, Type>(SshConnectionPlugin.SSH, typeof(PuttyConnection)),
-                new Tuple<string, Type>(KnownConnectionConstants.HTTP, typeof(HTTPConnection)),
                 new Tuple<string, Type>(KnownConnectionConstants.HTTPS, typeof(HTTPConnection)),
                 new Tuple<string, Type>(ICAConnectionPlugin.ICA_CITRIX, typeof(ICAConnection))
             };
@@ -113,7 +112,6 @@ namespace Tests.Connections
                 new Tuple<string, int>(VncConnectionPlugin.VNC, VncConnectionPlugin.VncPort),
                 new Tuple<string, int>(TelnetConnectionPlugin.TELNET, TelnetConnectionPlugin.TelnetPort),
                 new Tuple<string, int>(SshConnectionPlugin.SSH, SshConnectionPlugin.SSHPort),
-                new Tuple<string, int>(KnownConnectionConstants.HTTP, KnownConnectionConstants.HTTPPort),
                 new Tuple<string, int>(KnownConnectionConstants.HTTPS, HttpsConnectionPlugin.HTTPSPort),
                 new Tuple<string, int>(ICAConnectionPlugin.ICA_CITRIX, ICAConnectionPlugin.ICAPort)
             };
@@ -148,7 +146,6 @@ namespace Tests.Connections
                 new Tuple<int, string>(VncConnectionPlugin.VncPort, VncConnectionPlugin.VNC),
                 new Tuple<int, string>(TelnetConnectionPlugin.TelnetPort, TelnetConnectionPlugin.TELNET),
                 new Tuple<int, string>(SshConnectionPlugin.SSHPort, SshConnectionPlugin.SSH),
-                new Tuple<int, string>(KnownConnectionConstants.HTTPPort, KnownConnectionConstants.HTTP),
                 new Tuple<int, string>(HttpsConnectionPlugin.HTTPSPort, KnownConnectionConstants.HTTPS),
                 new Tuple<int, string>(ICAConnectionPlugin.ICAPort, ICAConnectionPlugin.ICA_CITRIX)
             };
@@ -189,9 +186,8 @@ namespace Tests.Connections
         [TestMethod]
         public void HttpBasedProtocols_IsPortWebbased_ReturnTrue()
         {
-            var nonHttpPorts = new[] { KnownConnectionConstants.HTTP, KnownConnectionConstants.HTTPS };
-            bool nonHttp = nonHttpPorts.All(connectionManager.IsProtocolWebBased);
-            Assert.IsTrue(nonHttp, "Only Http based protocols are known web based.");
+            Assert.IsFalse(connectionManager.IsProtocolWebBased(KnownConnectionConstants.HTTP));
+            Assert.IsTrue(connectionManager.IsProtocolWebBased(KnownConnectionConstants.HTTPS));
         }
         
         [TestMethod]
@@ -227,11 +223,8 @@ namespace Tests.Connections
         [TestMethod]
         public void WebProtocols_CreateControls_ReturnsEmpty()
         {
-            int httpControls = connectionManager.CreateControls(KnownConnectionConstants.HTTP).Length;
             int httpsControls = connectionManager.CreateControls(KnownConnectionConstants.HTTPS).Length;
-            const string MESSAGE = "Web based protocols have no configuration.";
-            bool bothEmpty = httpControls == 0 && httpsControls == 0;
-            Assert.IsTrue(bothEmpty, MESSAGE);
+            Assert.AreEqual(0, httpsControls, "HTTPS has no protocol-specific controls.");
         }
 
         [TestMethod]
@@ -341,8 +334,6 @@ namespace Tests.Connections
                     new List<string>() { "Terminals.Plugins.Putty.TelnetConnectionPlugin"}),
                 new Tuple<int, IEnumerable<string>>(SshConnectionPlugin.SSHPort, 
                     new List<string>() { "Terminals.Plugins.Putty.SshConnectionPlugin"}),
-                new Tuple<int, IEnumerable<string>>(KnownConnectionConstants.HTTPPort, 
-                    new List<string>() { "Terminals.Connections.Web.HttpConnectionPlugin"}),
                 new Tuple<int, IEnumerable<string>>(HttpsConnectionPlugin.HTTPSPort, 
                     new List<string>() { "Terminals.Connections.Web.HttpsConnectionPlugin"}),
             };

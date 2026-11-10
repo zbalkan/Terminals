@@ -50,7 +50,6 @@
     <Compile Include="HTTPConnection.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="HttpConnectionPlugin.cs" />
     <Compile Include="HttpsConnectionPlugin.cs" />
     <Compile Include="MiniBrowser.cs">
       <SubType>UserControl</SubType>

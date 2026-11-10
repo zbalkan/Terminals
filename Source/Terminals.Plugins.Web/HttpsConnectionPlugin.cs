@@ -4,12 +4,14 @@ using System.Windows.Forms;
 using Terminals.Common.Connections;
 using Terminals.Data;
 using Terminals.Plugins.Web;
+using Terminals.Plugins.Web.Properties;
 
 namespace Terminals.Connections.Web
 {
     internal class HttpsConnectionPlugin: IConnectionPlugin, IOptionsConverterFactory
     {
         internal const int HTTPSPort = 443;
+        internal static readonly Image TreeIconHttps = Resources.treeIcon_http;
 
         public int Port { get { return HTTPSPort; } }
 
@@ -37,7 +39,7 @@ namespace Terminals.Connections.Web
 
         public Image GetIcon()
         {
-            return HttpConnectionPlugin.TreeIconHttp;
+            return TreeIconHttps;
         }
 
         public IOptionsConverter CreatOptionsConverter()

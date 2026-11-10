@@ -15,7 +15,6 @@ namespace Tests.Connections
         private static readonly List<IConnectionPlugin> connectionPlugins = new List<IConnectionPlugin>()
         {
             new RdpConnectionPlugin(),
-            new HttpConnectionPlugin(),
             new HttpsConnectionPlugin(),
             new VncConnectionPlugin(),
             new TelnetConnectionPlugin(),

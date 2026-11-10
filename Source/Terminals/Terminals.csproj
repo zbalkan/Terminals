@@ -141,6 +141,8 @@
   <ItemGroup>
     <Compile Include="Configuration\FavoriteConfigurationSecurity.cs" />
     <Compile Include="Configuration\FileChangedEventArgs.cs" />
+    <Compile Include="Data\LegacyHttpFavoritesMigration.cs" />
+    <Compile Include="Forms\LegacyHttpFavoritesDialog.cs" />
     <Compile Include="Connections\EmptyOptionsConverter.cs" />
     <Compile Include="Connections\PluginsLoader.cs" />
     <Compile Include="Converters\TagsConverter.cs" />

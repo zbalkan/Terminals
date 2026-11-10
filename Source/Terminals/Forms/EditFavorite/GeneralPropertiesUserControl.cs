@@ -249,13 +249,14 @@ namespace Terminals.Forms.EditFavorite
 
         internal Uri GetFullUrlFromHttpTextBox()
         {
-            string newUrlText = this.httpUrlTextBox.Text.ToLower();
-            string protocolPrefix = this.ProtocolComboBox.Text.ToLower();
+            string newUrlText = this.httpUrlTextBox.Text.Trim();
+            if (string.IsNullOrEmpty(newUrlText))
+                return null;
 
-            if (!newUrlText.StartsWith(KnownConnectionConstants.HTTP.ToLower()) &&
-                !newUrlText.StartsWith(KnownConnectionConstants.HTTPS.ToLower()))
-                newUrlText = String.Format("{0}://{1}", protocolPrefix, newUrlText);
-            return UrlConverter.TryParseUrl(newUrlText);
+            // Preserve path and query case. Explicit http:// URLs must not be upgraded silently.
+            if (!newUrlText.Contains("://"))
+                newUrlText = "https://" + newUrlText;
+            return UrlConverter.TryParseHttpsUrl(newUrlText);
         }
 
         public void SaveTo(IFavorite favorite)

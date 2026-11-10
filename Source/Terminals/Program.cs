@@ -67,11 +67,37 @@ namespace Terminals
             var startupUi = new StartupUi();
             persistence = persistenceFactory.AuthenticateByMasterPassword(persistence, startupUi);
             PersistenceErrorForm.RegisterDataEventHandler(persistence.Dispatcher);
+            OfferLegacyHttpMigration(persistence);
 
             RunMainForm(persistence, connectionManager, favoriteIcons, commandLine);
 
             Logging.Info(String.Format("-------------------------------{0} Stopped-------------------------------",
                 Info.TitleVersion));
+        }
+
+        private static void OfferLegacyHttpMigration(IPersistence persistence)
+        {
+            try
+            {
+                var migration = new LegacyHttpFavoritesMigration(persistence);
+                int count = migration.Count();
+                if (count == 0)
+                    return;
+
+                using (var dialog = new LegacyHttpFavoritesDialog(count))
+                {
+                    if (dialog.ShowDialog() != DialogResult.OK)
+                        return;
+                    migration.Apply(dialog.SelectedChoice, count);
+                }
+            }
+            catch (Exception exception)
+            {
+                Logging.Error("Legacy HTTP favorites migration failed", exception);
+                MessageBox.Show("HTTP favorites were not fully migrated. Review the error log and verify " +
+                    "a backup before retrying. " + exception.Message,
+                    "HTTP favorites migration failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private static void TryUpdateConfig(Settings settings, IPersistence persistence, ConnectionManager connectionManager)

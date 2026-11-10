@@ -5,6 +5,7 @@ using System.Linq;
 using System.Xml.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Terminals.Common.Connections;
+using Terminals.Common.Converters;
 using Terminals.Connections.ICA;
 using Terminals.Connections.VNC;
 using Terminals.Data;
@@ -69,11 +70,79 @@ namespace Tests.Connections
             new Tuple<string, Type>(VncConnectionPlugin.VNC, typeof(VncOptions)),
             new Tuple<string, Type>(TelnetConnectionPlugin.TELNET, typeof(TelnetOptions)),
             new Tuple<string, Type>(SshConnectionPlugin.SSH, typeof(SshOptions)),
-            new Tuple<string, Type>(KnownConnectionConstants.HTTP, typeof(WebOptions)),
             new Tuple<string, Type>(KnownConnectionConstants.HTTPS, typeof(WebOptions)),
             new Tuple<string, Type>(ICAConnectionPlugin.ICA_CITRIX, typeof(ICAOptions))
         };
 
+
+        [TestMethod]
+        public void HttpTarget_IsUnavailableButHttpsRemainsAvailable()
+        {
+            var manager = TestConnectionManager.Instance;
+            Assert.IsFalse(manager.GetAvailableProtocols().Contains(KnownConnectionConstants.HTTP));
+            Assert.IsFalse(manager.IsKnownProtocol(KnownConnectionConstants.HTTP));
+            Assert.IsTrue(manager.GetAvailableProtocols().Contains(KnownConnectionConstants.HTTPS));
+            Assert.ThrowsExactly<NotSupportedException>(() =>
+                manager.CreateConnection(new Favorite { Protocol = KnownConnectionConstants.HTTP }));
+        }
+
+        [TestMethod]
+        public void HttpsOnlyUrlValidation_PreservesCaseAndRejectsInsecureSchemes()
+        {
+            Assert.IsNull(UrlConverter.TryParseHttpsUrl("http://example.invalid"));
+            Assert.IsNull(UrlConverter.TryParseHttpsUrl("ftp://example.invalid"));
+            Assert.IsNull(UrlConverter.TryParseHttpsUrl("https://user:pass@example.invalid"));
+            var uri = UrlConverter.TryParseHttpsUrl("https://example.invalid:8443/CaseSensitive?Token=AbC");
+            Assert.IsNotNull(uri);
+            Assert.AreEqual(8443, uri.Port);
+            Assert.AreEqual("/CaseSensitive?Token=AbC", uri.PathAndQuery);
+
+            var favorite = ToFavorite(KnownConnectionConstants.HTTPS);
+            favorite.ServerName = "original.invalid";
+            Assert.ThrowsExactly<ArgumentException>(() =>
+                UrlConverter.UpdateFavoriteUrl(favorite, "http://other.invalid"));
+            Assert.AreEqual("original.invalid", favorite.ServerName);
+            UrlConverter.UpdateFavoriteUrl(favorite, "https://secure.invalid:9443/Path?Token=AaB");
+            Assert.AreEqual("secure.invalid", favorite.ServerName);
+            Assert.AreEqual(9443, favorite.Port);
+            Assert.AreEqual("/Path?Token=AaB", ((WebOptions)favorite.ProtocolProperties).RelativeUrl);
+        }
+
+        [TestMethod]
+        public void RetiredHttpFavorite_FileRoundTrip_PreservesOriginalXmlAndGroup()
+        {
+            var serializer = new FavoritesFileSerializer(TestConnectionManager.Instance);
+            serializer.Serialize(new SerializationContext(CreateTestFile(RDP_FAVORITE),
+                new UnknonwPluginElements()), FILE_NAME);
+            XNamespace ns = FavoritesFile.SERIALIZATION_DEFAULT_NAMESPACE;
+            var doc = XDocument.Load(FILE_NAME);
+            var retiredId = new Guid("a76634b6-ffb2-4814-a24b-c5d14ebae028");
+            var retired = new XElement(doc.Descendants(ns + "Favorite").Single());
+            retired.SetAttributeValue("id", retiredId.ToString());
+            retired.SetElementValue(ns + "Protocol", KnownConnectionConstants.HTTP);
+            retired.SetElementValue(ns + "Port", "80");
+            retired.SetElementValue(ns + "ServerName", "legacy.invalid");
+            foreach (var option in retired.Elements()
+                .Where(e => e.Name.LocalName.EndsWith("Options")).ToList())
+                option.Remove();
+            retired.Add(new XElement(ns + "WebOptions",
+                new XElement(ns + "RelativeUrl", "/OriginalCase?Token=AbC")));
+            doc.Descendants(ns + "Favorites").First().Add(retired);
+            doc.Descendants(ns + "FavoritesInGroup").Single()
+                .Element(ns + "Favorites").Add(new XElement(ns + "guid", retiredId.ToString()));
+            doc.Save(FILE_NAME);
+
+            var restored = serializer.Deserialize(FILE_NAME);
+            Assert.AreEqual(1, restored.File.Favorites.Length);
+            Assert.AreEqual(1, restored.Unknown.Favorites.Count);
+            Assert.IsTrue(XNode.DeepEquals(retired, restored.Unknown.Favorites.Single()));
+            serializer.Serialize(restored, FILE_NAME);
+            var saved = XDocument.Load(FILE_NAME);
+            Assert.IsTrue(XNode.DeepEquals(retired, saved.Descendants(ns + "Favorite")
+                .Single(e => (string)e.Element(ns + "Protocol") == KnownConnectionConstants.HTTP)));
+            Assert.IsTrue(saved.Descendants(ns + "FavoritesInGroup")
+                .Descendants(ns + "guid").Any(e => (string)e == retiredId.ToString()));
+        }
 
         [TestMethod]
         public void RetiredVmrc_SaveReload_PreservesOriginalXmlAndTwoGroupMemberships()

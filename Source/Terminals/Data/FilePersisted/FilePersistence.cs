@@ -159,6 +159,11 @@ namespace Terminals.Data
             return true;
         }
 
+        internal void ReloadAfterLegacyHttpMigration()
+        {
+            FavoritesFileChanged(this, EventArgs.Empty);
+        }
+
         internal void UpdatePasswordsByNewMasterPassword(string newMasterKey)
         {
             this.storedCredentials.UpdatePasswordsByNewKeyMaterial(newMasterKey);

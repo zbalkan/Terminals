@@ -1,4 +1,5 @@
 ﻿using System;
+using Terminals.Common.Connections;
 using Terminals.Data;
 
 namespace Terminals.Common.Converters
@@ -21,6 +22,15 @@ namespace Terminals.Common.Converters
             }
         }
 
+        public static Uri TryParseHttpsUrl(string url)
+        {
+            Uri result;
+            return Uri.TryCreate(url, UriKind.Absolute, out result) &&
+                   result.Scheme == Uri.UriSchemeHttps &&
+                   !string.IsNullOrEmpty(result.Host) &&
+                   string.IsNullOrEmpty(result.UserInfo) ? result : null;
+        }
+
         public static void UpdateFavoriteUrl(IFavorite destination, string newAbsoluteUrl)
         {
             var webOptions = destination.ProtocolProperties as IRelativeUrlProvider;
@@ -32,9 +42,14 @@ namespace Terminals.Common.Converters
 
         private static void UpdateMyFavoriteUrl(IFavorite destination, IRelativeUrlProvider relativeUrl, string newAbsoluteUrl)
         {
-            Uri url = UrlConverter.TryParseUrl(newAbsoluteUrl);
+            bool httpsOnly = destination.Protocol == KnownConnectionConstants.HTTPS;
+            Uri url = httpsOnly ? TryParseHttpsUrl(newAbsoluteUrl) : TryParseUrl(newAbsoluteUrl);
             if (url == null)
+            {
+                if (httpsOnly)
+                    throw new ArgumentException("An absolute HTTPS URL is required.", "newAbsoluteUrl");
                 return;
+            }
 
             destination.ServerName = url.Host;
             destination.Port = url.Port; // would also manage default port for us

@@ -88,6 +88,8 @@ namespace Terminals.Connections
         {
             if (string.Equals(favorite.Protocol, "VMRC", StringComparison.OrdinalIgnoreCase))
                 throw new NotSupportedException("Microsoft Virtual Server VMRC is no longer supported.");
+            if (favorite.Protocol == KnownConnectionConstants.HTTP)
+                throw new NotSupportedException("HTTP connection targets are retired. Verify the HTTPS endpoint and create a new favorite.");
             IConnectionPlugin plugin = FindPlugin(favorite.Protocol);
             return plugin.CreateConnection();
         }
@@ -138,7 +140,7 @@ namespace Terminals.Connections
         /// <param name="protocol">One of connection short cuts.</param>
         internal bool IsProtocolWebBased(string protocol)
         {
-            return protocol == KnownConnectionConstants.HTTP || protocol == KnownConnectionConstants.HTTPS;
+            return protocol == KnownConnectionConstants.HTTPS;
         }
 
         internal bool IsKnownProtocol(string protocol)

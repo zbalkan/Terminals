@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using System.Windows.Forms;
+using Terminals.Common.Connections;
 using Terminals.Common.Converters;
 using Terminals.Data;
 
@@ -33,7 +34,12 @@ namespace Terminals.Connections
             try
             {
                 this.Dock = DockStyle.Fill;
-                string url = UrlConverter.ExtractAbsoluteUrl(this.Favorite);
+                if (Favorite.Protocol != KnownConnectionConstants.HTTPS)
+                    throw new InvalidOperationException("HTTP connection targets are retired.");
+                Uri target = UrlConverter.TryParseHttpsUrl(UrlConverter.ExtractAbsoluteUrl(Favorite));
+                if (target == null)
+                    throw new InvalidOperationException("Only HTTPS web targets are supported.");
+                string url = target.AbsoluteUri;
                 IGuardedSecurity security = this.ResolveFavoriteCredentials();
 
                 if (!String.IsNullOrEmpty(security.UserName) && !String.IsNullOrEmpty(security.Password))
@@ -53,7 +59,8 @@ namespace Terminals.Connections
             }
             catch (Exception exc)
             {
-                Logging.Fatal("Connecting to HTTP", exc);
+                Logging.Error("Connecting to HTTPS", exc);
+                LastError = exc.Message;
                 return false;
             }
             return true;
