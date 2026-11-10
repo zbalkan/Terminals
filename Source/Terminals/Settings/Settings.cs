@@ -1038,6 +1038,26 @@ namespace Terminals.Configuration
             }
         }
 
+        public string CitrixSelfServiceExecutablePath
+        {
+            get { return GetSection().CitrixSelfServiceExecutablePath; }
+            set
+            {
+                GetSection().CitrixSelfServiceExecutablePath = value ?? string.Empty;
+                SaveImmediatelyIfRequested();
+            }
+        }
+
+        public string CitrixStorebrowseExecutablePath
+        {
+            get { return GetSection().CitrixStorebrowseExecutablePath; }
+            set
+            {
+                GetSection().CitrixStorebrowseExecutablePath = value ?? string.Empty;
+                SaveImmediatelyIfRequested();
+            }
+        }
+
         public string[] DisabledPlugins
         {
             get

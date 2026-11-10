@@ -9,6 +9,7 @@ namespace Terminals.Forms.EditFavorite
         public CitrixControl()
         {
             InitializeComponent();
+            Enabled = false; // Preserve legacy favorite values for inspection, not launching.
         }
 
         private void ICAEnableEncryptionCheckbox_CheckedChanged(object sender, EventArgs e)

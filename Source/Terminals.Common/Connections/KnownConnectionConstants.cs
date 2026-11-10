@@ -9,6 +9,11 @@ namespace Terminals.Common.Connections
 
         public const string HTTP = "HTTP";
 
+        // SQL insert/update procedures accept only nvarchar(5), even when
+        // the table itself allows longer values.
+        public const string CITRIX_WORKSPACE = "CTXWS";
+        public const string LEGACY_ICA_SQL = "ICA C";
+
         public const string HTTPS = "HTTPS";
 
         public const string RAS = "RAS";

@@ -8,3 +8,5 @@ These features are "big rocks" and they explain long period between some previou
 * Database optimizations - Database was implemented with low performance and to allow larger environments we will need to enhance its implementation.
 
 * External credentials providers integrations - Keepass and Windows credentials store are logical extension of credentials providers.
+
+* Citrix Workspace modernization (CITRIX-01–07): **implemented on the feature branch; manual compatibility acceptance pending**. Replace legacy embedded ICA ActiveX with a launch-only Citrix Workspace protocol, preserve historical ICA favorites for inspection, and remove bundled Receiver and COM dependencies. See [Citrix Workspace integration](Citrix-Workspace.md). Validation gates: Windows CI (file and SQL), Workspace current/LTSR Cloud SSO and StoreFront, UI behavior, and MSI upgrade checks.

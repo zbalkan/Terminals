@@ -903,6 +903,20 @@ namespace Terminals
             set { this["pageantExecutablePath"] = value; }
         }
 
+        [ConfigurationProperty("citrixSelfServiceExecutablePath", DefaultValue = "")]
+        public string CitrixSelfServiceExecutablePath
+        {
+            get { return (string)this["citrixSelfServiceExecutablePath"]; }
+            set { this["citrixSelfServiceExecutablePath"] = value; }
+        }
+
+        [ConfigurationProperty("citrixStorebrowseExecutablePath", DefaultValue = "")]
+        public string CitrixStorebrowseExecutablePath
+        {
+            get { return (string)this["citrixStorebrowseExecutablePath"]; }
+            set { this["citrixStorebrowseExecutablePath"] = value; }
+        }
+
         [ConfigurationProperty("preferredSshClient", DefaultValue = "PuTTY")]
         public string PreferredSshClient
         {

@@ -76,17 +76,20 @@ jobs:
           }
           if (Test-Path 'Resources/Libraries/mstsc/MSTSCLib.dll') { throw 'Vendored MSTSC wrapper still present' }
           if (Test-Path 'Resources/Libraries/mstsc/AxInterop.MSTSCLib.dll') { throw 'Vendored ActiveX wrapper still present' }
-      - name: Locate VSTest in Visual Studio
+      # MSTest.TestAdapter 4.5.2 depends on TestPlatform.ObjectModel 18.10.1.
+      # The Visual Studio 2022 image includes the older VSTest 17.14, which
+      # causes deployment-time CodePages assembly identity conflicts.
+      - name: Install matching VSTest platform
         shell: pwsh
         run: |
-          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
-          if (-not (Test-Path -LiteralPath $vswhere)) { throw 'vswhere.exe is unavailable' }
-          $installationPath = & $vswhere -latest -products '*' -property installationPath
-          if (-not $installationPath) { throw 'Visual Studio installation was not found' }
-          $vstest = Join-Path $installationPath 'Common7/IDE/Extensions/TestPlatform/vstest.console.exe'
-          if (-not (Test-Path -LiteralPath $vstest)) { throw "Missing VSTest executable at $vstest" }
+          $packageDir = Join-Path $env:RUNNER_TEMP 'vstest-platform'
+          nuget install Microsoft.TestPlatform -Version 18.10.1 -Source https://api.nuget.org/v3/index.json -OutputDirectory $packageDir -ExcludeVersion -NonInteractive
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to install Microsoft.TestPlatform 18.10.1' }
+          $vstest = Join-Path $packageDir 'Microsoft.TestPlatform/tools/net462/Common7/IDE/Extensions/TestPlatform/vstest.console.exe'
+          if (-not (Test-Path -LiteralPath $vstest)) { throw "Missing .NET Framework VSTest: $vstest" }
           (Split-Path -Path $vstest -Parent) | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          Write-Host "Using VSTest from: $vstest"
+          Write-Host "Using pinned VSTest from: $vstest"
+          # The pinned executable prints its version when tests run. /version is not supported.
       - name: Install SQL Server LocalDB (database suite only)
         if: matrix.suite == 'database'
         uses: potatoqualitee/mssqlsuite@v1.7

@@ -37,9 +37,6 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AxWFICALib">
-      <HintPath>..\..\Resources\Libraries\Citrix\AxWFICALib.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -56,11 +53,13 @@
     <Compile Include="CitrixControl.Designer.cs">
       <DependentUpon>CitrixControl.cs</DependentUpon>
     </Compile>
-    <Compile Include="ICAConnection.cs">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Include="ICAConnectionPlugin.cs" />
     <Compile Include="ICAOptions.cs" />
+    <Compile Include="CitrixWorkspaceOptions.cs" />
+    <Compile Include="CitrixWorkspaceControl.cs" />
+    <Compile Include="CitrixWorkspaceConnection.cs" />
+    <Compile Include="CitrixWorkspaceConnectionPlugin.cs" />
+    <Compile Include="CitrixWorkspaceOptionsConverter.cs" />
     <Compile Include="IcaOptionsConverter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TerminalsIcaExport.cs" />

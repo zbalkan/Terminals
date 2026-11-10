@@ -46,6 +46,18 @@ namespace Terminals.Forms.EditFavorite
         public GeneralPropertiesUserControl()
         {
             InitializeComponent();
+            ProtocolComboBox.DrawMode = DrawMode.OwnerDrawFixed;
+            ProtocolComboBox.DrawItem += (sender, e) =>
+            {
+                if (e.Index < 0) return;
+                e.DrawBackground();
+                string id = ProtocolComboBox.Items[e.Index].ToString();
+                string name = id == KnownConnectionConstants.CITRIX_WORKSPACE
+                    ? "Citrix Workspace" : id;
+                using (var brush = new SolidBrush(e.ForeColor))
+                    e.Graphics.DrawString(name, e.Font, brush, e.Bounds);
+                e.DrawFocusRectangle();
+            };
 
             this.securityPanel1.PasswordChanged += TxtPassword_TextChanged;
             this.securityPanel1.SelectedCredentailChanged += this.SecurityPanel1_SelectedCredentailChanged;
@@ -193,9 +205,20 @@ namespace Terminals.Forms.EditFavorite
             if(validator != null && this.canValidate)// designer support
                  this.validator.OnServerNameValidating(this.cmbServers, new CancelEventArgs());
 
+            bool isCitrix = this.ProtocolText == KnownConnectionConstants.CITRIX_WORKSPACE;
             if (this.connectionManager.IsProtocolWebBased(this.ProtocolText))
                 this.SetControlsForWeb();
-
+            if (isCitrix)
+            {
+                this.lblServerName.Text = "Store URL:";
+                // Do not use the designer's placeholder HTTPS URL as a Citrix store.
+                if (!string.Equals(this.httpUrlTextBox.Text, string.Empty, StringComparison.Ordinal) &&
+                    this.httpUrlTextBox.Text.Contains("github.com/Terminals-Origin"))
+                    this.httpUrlTextBox.Clear();
+            }
+            this.securityPanel1.Enabled = !isCitrix;
+            this.chkSavePassword.Enabled = !isCitrix;
+            this.NewWindowCheckbox.Enabled = !isCitrix;
             this.FireProtocolChanged();
             int defaultPort = this.connectionManager.GetPort(this.ProtocolText);
             this.txtPort.Text = defaultPort.ToString(CultureInfo.InvariantCulture);
@@ -262,13 +285,14 @@ namespace Terminals.Forms.EditFavorite
         public void SaveTo(IFavorite favorite)
         {
             this.FillGeneralProrperties(favorite);
-            this.securityPanel1.SaveTo(favorite.Security, this.chkSavePassword.Checked);
+            if (this.ProtocolText != KnownConnectionConstants.CITRIX_WORKSPACE)
+                this.securityPanel1.SaveTo(favorite.Security, this.chkSavePassword.Checked);
             this.FillDescriptionProperties(favorite);
         }
 
         private void FillDescriptionProperties(IFavorite favorite)
         {
-            favorite.NewWindow = this.NewWindowCheckbox.Checked;
+            favorite.NewWindow = this.ProtocolText == KnownConnectionConstants.CITRIX_WORKSPACE ? false : this.NewWindowCheckbox.Checked;
             this.favorites.UpdateFavoriteIcon(favorite, this.currentToolBarFileName);
         }
 
@@ -302,6 +326,14 @@ namespace Terminals.Forms.EditFavorite
         {
             this.txtName.Text = favorite.Name;
             this.cmbServers.Text = favorite.ServerName;
+            // Only expose retired ICA when editing an existing favorite.
+            if ((favorite.Protocol == "ICA Citrix" || favorite.Protocol == KnownConnectionConstants.LEGACY_ICA_SQL) &&
+                !this.ProtocolComboBox.Items.Contains(favorite.Protocol))
+            {
+                string[] protocols = this.ProtocolComboBox.Items.Cast<string>()
+                    .Concat(new[] { favorite.Protocol }).ToArray();
+                this.ProtocolComboBox.DataSource = protocols;
+            }
             this.ProtocolComboBox.SelectedItem = favorite.Protocol;
             this.txtPort.Text = favorite.Port.ToString(CultureInfo.InvariantCulture);
             this.httpUrlTextBox.Text = UrlConverter.ExtractAbsoluteUrl(favorite);

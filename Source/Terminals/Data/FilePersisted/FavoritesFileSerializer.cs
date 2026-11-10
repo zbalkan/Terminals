@@ -45,7 +45,7 @@ namespace Terminals.Data.FilePersisted
 
         private SerializationContext TryDeserialize(string fileLocation)
         {
-            var availableProtocols = this.connectinManager.GetAvailableProtocols();
+            var availableProtocols = this.connectinManager.GetReadableProtocols();
             FavoritesXmlFile document = FavoritesXmlFile.LoadXmlDocument(fileLocation);
             UnknonwPluginElements unknown = document.RemoveUnknownFavorites(availableProtocols);
             XmlSerializer serializer = this.CreateSerializer();

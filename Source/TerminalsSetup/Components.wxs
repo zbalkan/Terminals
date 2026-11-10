@@ -77,12 +77,6 @@
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="IcaComponents" Directory="ICAFOLDER">
-      <Component Id="AxWFICALibDll" Guid="E3A4BF7F-538C-40F3-A5D0-736E2478E9AE">
-        <File Source="..\..\Resources\Libraries\Citrix\AxWFICALib.dll" KeyPath="yes" Checksum="yes"/>
-      </Component>
-      <Component Id="WFICALibDll" Guid="3329874C-3276-4FCF-953D-67FB490F0BAF">
-        <File Source="..\..\Resources\Libraries\Citrix\WFICALib.dll" KeyPath="yes" Checksum="yes"/>
-      </Component>
       <Component Id="PluginIca" Guid="04AEC5C0-91DB-4FF4-9FBB-215ADE7AAFC6">
         <File Source="$(var.Terminals.Plugins.Ica.TargetPath)" KeyPath="yes" Checksum="yes"/>
       </Component>

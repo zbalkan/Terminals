@@ -71,7 +71,8 @@ namespace Tests.Connections
             new Tuple<string, Type>(TelnetConnectionPlugin.TELNET, typeof(TelnetOptions)),
             new Tuple<string, Type>(SshConnectionPlugin.SSH, typeof(SshOptions)),
             new Tuple<string, Type>(KnownConnectionConstants.HTTPS, typeof(WebOptions)),
-            new Tuple<string, Type>(ICAConnectionPlugin.ICA_CITRIX, typeof(ICAOptions))
+            new Tuple<string, Type>(ICAConnectionPlugin.ICA_CITRIX, typeof(ICAOptions)),
+            new Tuple<string, Type>(KnownConnectionConstants.CITRIX_WORKSPACE, typeof(CitrixWorkspaceOptions))
         };
 
 

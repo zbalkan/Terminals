@@ -38,7 +38,8 @@ namespace Tests.Connections
                 new Tuple<string, ProtocolOptions>(TelnetConnectionPlugin.TELNET, new TelnetOptions()),
                 new Tuple<string, ProtocolOptions>(SshConnectionPlugin.SSH, new SshOptions()),
                 new Tuple<string, ProtocolOptions>(KnownConnectionConstants.HTTPS, new WebOptions()),
-                new Tuple<string, ProtocolOptions>(ICAConnectionPlugin.ICA_CITRIX, new ICAOptions())
+                new Tuple<string, ProtocolOptions>(ICAConnectionPlugin.ICA_CITRIX, new ICAOptions()),
+                new Tuple<string, ProtocolOptions>(KnownConnectionConstants.CITRIX_WORKSPACE, new CitrixWorkspaceOptions())
             };
 
             var allValid = testData.All(this.AssertTheSameInstance);
@@ -64,7 +65,8 @@ namespace Tests.Connections
                 new Tuple<string, Type>(TelnetConnectionPlugin.TELNET, typeof(TelnetOptions)),
                 new Tuple<string, Type>(SshConnectionPlugin.SSH, typeof(SshOptions)),
                 new Tuple<string, Type>(KnownConnectionConstants.HTTPS, typeof(WebOptions)),
-                new Tuple<string, Type>(ICAConnectionPlugin.ICA_CITRIX, typeof(ICAOptions))
+                new Tuple<string, Type>(ICAConnectionPlugin.ICA_CITRIX, typeof(ICAOptions)),
+                new Tuple<string, Type>(KnownConnectionConstants.CITRIX_WORKSPACE, typeof(CitrixWorkspaceOptions))
             };
 
             var allValid = testData.All(this.AssertOptions);

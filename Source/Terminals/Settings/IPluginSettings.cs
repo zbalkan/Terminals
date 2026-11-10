@@ -6,5 +6,7 @@ namespace Terminals.Configuration
         string PreferredSshClient { get; set; }
         string PuttyExecutablePath { get; set; }
         string PageantExecutablePath { get; set; }
+        string CitrixSelfServiceExecutablePath { get; set; }
+        string CitrixStorebrowseExecutablePath { get; set; }
     }
 }

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Windows.Forms;
 using Terminals.CommandLine;
 using Terminals.Configuration;
+using Terminals.Common.Configuration;
 using Terminals.Connections;
 using Terminals.Data;
 using Terminals.Forms;
@@ -40,6 +41,8 @@ namespace Terminals
             Logging.Info("Start state 3 Complete: Set application properties");
 
             var settings = Settings.Instance;
+            ExternalExecutablePaths.CitrixSelfService = settings.CitrixSelfServiceExecutablePath;
+            ExternalExecutablePaths.CitrixStorebrowse = settings.CitrixStorebrowseExecutablePath;
             CommandLineArgs commandLine = ParseCommandline(settings);
             Logging.Info("Start state 4 Complete: Parse command line");
 

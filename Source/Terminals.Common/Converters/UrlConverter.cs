@@ -42,7 +42,8 @@ namespace Terminals.Common.Converters
 
         private static void UpdateMyFavoriteUrl(IFavorite destination, IRelativeUrlProvider relativeUrl, string newAbsoluteUrl)
         {
-            bool httpsOnly = destination.Protocol == KnownConnectionConstants.HTTPS;
+            bool httpsOnly = destination.Protocol == KnownConnectionConstants.HTTPS ||
+                destination.Protocol == KnownConnectionConstants.CITRIX_WORKSPACE;
             Uri url = httpsOnly ? TryParseHttpsUrl(newAbsoluteUrl) : TryParseUrl(newAbsoluteUrl);
             if (url == null)
             {
@@ -76,8 +77,15 @@ namespace Terminals.Common.Converters
             if (webOptions != null)
                 relativeUrl = webOptions.RelativeUrl;
 
-            string protocol = source.Protocol.ToLower();
+            string protocol = source.Protocol == KnownConnectionConstants.CITRIX_WORKSPACE
+                ? Uri.UriSchemeHttps : source.Protocol.ToLowerInvariant();
             var uriBuilder = new UriBuilder(protocol, source.ServerName, source.Port);
+            // Citrix store URLs are HTTPS; avoid an extra slash between the host
+            // and the stored path, while preserving case and query arguments.
+            if (source.Protocol == KnownConnectionConstants.CITRIX_WORKSPACE)
+                return uriBuilder.ToString().TrimEnd('/') +
+                    (string.IsNullOrEmpty(relativeUrl) ? "/" :
+                        (relativeUrl.StartsWith("/") ? relativeUrl : "/" + relativeUrl));
             // using relative url in uriBuilder constructor encodes ? character. So we have to make an workaround
             return uriBuilder + relativeUrl;
         }

@@ -134,7 +134,15 @@ namespace Terminals.Forms
                     "HTTP connection unavailable", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            this.persistence.ConnectionHistory.RecordHistoryItem(favorite);
+            if (configured.Protocol == "ICA Citrix" || configured.Protocol == KnownConnectionConstants.LEGACY_ICA_SQL)
+            {
+                MessageBox.Show(this.mainForm,
+                    "Legacy ICA Citrix connections cannot be launched. Create a new Citrix Workspace favorite.",
+                    "Legacy ICA unavailable", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (configured.Protocol != KnownConnectionConstants.CITRIX_WORKSPACE)
+                this.persistence.ConnectionHistory.RecordHistoryItem(favorite);
             this.mainForm.SendNativeMessageToFocus();
             this.CreateTerminalTab(favorite, configured);
         }
@@ -147,8 +155,13 @@ namespace Terminals.Forms
             if (definition.ForceNewWindow.HasValue)
                 favoriteCopy.NewWindow = definition.ForceNewWindow.Value;
 
-            var guarded = this.guardedCredentialFactory.CreateSecurityOptoins(favoriteCopy.Security);
-            guarded.UpdateFromCredential(definition.Credentials);
+            // Workspace brokers authentication; never resolve or copy credentials
+            // for an external Citrix launch, even when a caller supplies overrides.
+            if (favoriteCopy.Protocol != KnownConnectionConstants.CITRIX_WORKSPACE)
+            {
+                var guarded = this.guardedCredentialFactory.CreateSecurityOptoins(favoriteCopy.Security);
+                guarded.UpdateFromCredential(definition.Credentials);
+            }
             return favoriteCopy;
         }
 
@@ -171,6 +184,11 @@ namespace Terminals.Forms
                 await ExternalLinks.CallExecuteBeforeConnectedAsync(configured.ExecuteBeforeConnect);
                 if (this.mainForm.IsDisposed || this.mainForm.Disposing)
                     return;
+                if (configured.Protocol == KnownConnectionConstants.CITRIX_WORKSPACE)
+                {
+                    await LaunchExternalConnectionAsync(origin, configured);
+                    return;
+                }
                 TerminalTabControlItem tab = CreateTerminalTabPageByFavoriteName(configured);
                 this.TryConnectTabPage(origin, configured, tab);
             }
@@ -180,6 +198,31 @@ namespace Terminals.Forms
                 if (!this.mainForm.IsDisposed)
                     MessageBox.Show("A pre-connection command failed: " + ex.Message,
                         "Terminals", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private async System.Threading.Tasks.Task LaunchExternalConnectionAsync(IFavorite origin, IFavorite configured)
+        {
+            using (Connection connection = this.connectionManager.CreateConnection(configured))
+            {
+                connection.Favorite = configured;
+                connection.OriginFavorite = origin;
+                if (!connection.LaunchOnly)
+                    throw new InvalidOperationException("The selected protocol is not launch-only.");
+
+                try
+                {
+                    await connection.LaunchAsync();
+                    if (!this.mainForm.IsDisposed && !this.mainForm.Disposing)
+                        this.persistence.ConnectionHistory.RecordHistoryItem(origin);
+                }
+                catch (Exception ex)
+                {
+                    Logging.Error("Unable to launch Citrix Workspace", ex);
+                    if (!this.mainForm.IsDisposed && !this.mainForm.Disposing)
+                        MessageBox.Show(this.mainForm, ex.Message, "Citrix Workspace launch failed",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 

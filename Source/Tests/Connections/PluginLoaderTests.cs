@@ -17,7 +17,7 @@ namespace Tests.Connections
         private static readonly Tuple<string, string>[] expectedPlugins = new Tuple<string, string>[]
             {
                 new Tuple<string, string>("VNC", "Terminals.Plugins.Vnc"),
-                new Tuple<string, string>("ICA", "Terminals.Plugins.Ica"),
+                new Tuple<string, string>("Citrix Workspace launcher and legacy ICA compatibility", "Terminals.Plugins.Ica"),
                 new Tuple<string, string>("Putty", "Terminals.Plugins.Putty"),
                 new Tuple<string, string>("HTTP and HTTPS", "Terminals.Plugins.Web"),
                 new Tuple<string, string>("RDP", "Terminals.Plugins.Rdp")

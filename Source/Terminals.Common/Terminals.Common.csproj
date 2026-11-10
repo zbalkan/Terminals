@@ -100,6 +100,7 @@
     <Compile Include="Connections\IConnectionExtra.cs" />
     <Compile Include="Converters\ColorParser.cs" />
     <Compile Include="Configuration\Colors.cs" />
+    <Compile Include="Connections\IRetiredConnectionPlugin.cs" />
     <Compile Include="Connections\Connection.cs">
       <SubType>Component</SubType>
     </Compile>

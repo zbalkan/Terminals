@@ -19,7 +19,9 @@ namespace Tests.Connections
             new VncConnectionPlugin(),
             new TelnetConnectionPlugin(),
             new SshConnectionPlugin(),
-            new ICAConnectionPlugin()
+            new ICAConnectionPlugin(),
+            new LegacyIcaDbAliasPlugin(),
+            new CitrixWorkspaceConnectionPlugin()
         };
 
         private static readonly ConnectionManager instance = CreateConnectionManager(connectionPlugins);

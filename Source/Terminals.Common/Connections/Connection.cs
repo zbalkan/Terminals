@@ -1,4 +1,6 @@
+using System;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Terminals.Common.Properties;
 using Terminals.Data;
@@ -25,6 +27,17 @@ namespace Terminals.Connections
         /// it can report Connected. Used to preserve new-window behavior.
         /// </summary>
         public virtual bool ConnectionPending { get { return false; } }
+
+        /// <summary>
+        /// External launch-only connections do not own a terminal tab or the child session.
+        /// A successful launch task only indicates process creation, not remote authentication.
+        /// </summary>
+        public virtual bool LaunchOnly { get { return false; } }
+
+        public virtual Task LaunchAsync()
+        {
+            throw new NotSupportedException("This connection does not support external launching.");
+        }
 
         public virtual bool Connected 
         {

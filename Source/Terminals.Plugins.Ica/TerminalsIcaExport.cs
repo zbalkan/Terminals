@@ -1,4 +1,5 @@
 ﻿using Terminals.Connections.ICA;
+using Terminals.Common.Connections;
 
 namespace Terminals.Integration.Export
 {
@@ -6,7 +7,8 @@ namespace Terminals.Integration.Export
     {
         public void ExportOptions(IExportOptionsContext context)
         {
-            if (context.Favorite.Protocol == ICAConnectionPlugin.ICA_CITRIX)
+            if (context.Favorite.Protocol == ICAConnectionPlugin.ICA_CITRIX ||
+                context.Favorite.Protocol == KnownConnectionConstants.LEGACY_ICA_SQL)
             {
                 context.WriteElementString("iCAApplicationName", context.Favorite.ICAApplicationName);
                 context.WriteElementString("iCAApplicationPath", context.Favorite.ICAApplicationPath);

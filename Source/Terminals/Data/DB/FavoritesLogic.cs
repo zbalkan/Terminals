@@ -398,7 +398,8 @@ namespace Terminals.Data.DB
 
         private List<DbFavorite> TryLoadFromDatabase()
         {
-            string[] knownProtocols = this.connectionManager.GetAvailableProtocols();
+            // Retired ICA favorites are readable/editable but cannot be launched.
+            string[] knownProtocols = this.connectionManager.GetReadableProtocols();
             using (Database database = DatabaseConnections.CreateInstance())
             {
                 // to list because Linq to entities allows only cast to primitive types.

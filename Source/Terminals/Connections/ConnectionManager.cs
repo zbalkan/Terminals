@@ -78,7 +78,7 @@ namespace Terminals.Connections
 
         internal ushort[] SupportedPorts()
         {
-            return this.plugins.Values.Where(p => !this.IsProtocolWebBased(p.PortName))
+            return this.plugins.Values.Where(p => p.Port > 0 && !(p is IRetiredConnectionPlugin) && !this.IsProtocolWebBased(p.PortName))
                 .Select(p => Convert.ToUInt16(p.Port))
                 .Distinct()
                 .ToArray();
@@ -91,6 +91,8 @@ namespace Terminals.Connections
             if (favorite.Protocol == KnownConnectionConstants.HTTP)
                 throw new NotSupportedException("HTTP connection targets are retired. Verify the HTTPS endpoint and create a new favorite.");
             IConnectionPlugin plugin = FindPlugin(favorite.Protocol);
+            if (plugin is IRetiredConnectionPlugin)
+                throw new NotSupportedException("Legacy ICA Citrix connections are retired. Create a Citrix Workspace favorite.");
             return plugin.CreateConnection();
         }
 
@@ -105,7 +107,7 @@ namespace Terminals.Connections
         /// </summary>
         public IEnumerable<IConnectionPlugin> GetPluginsByPort(int port)
         {
-            var resolvedPlugins = this.plugins.Values.Where(p => PluginIsOnPort(port, p))
+            var resolvedPlugins = this.plugins.Values.Where(p => !(p is IRetiredConnectionPlugin) && PluginIsOnPort(port, p))
                 .ToList();
 
             if (resolvedPlugins.Count > 0)
@@ -120,7 +122,7 @@ namespace Terminals.Connections
         /// </summary>
         internal string GetPortName(int port)
         {
-            var plugin = this.plugins.Values.OrderBy(p => p.PortName.Length)
+            var plugin = this.plugins.Values.Where(p => !(p is IRetiredConnectionPlugin)).OrderBy(p => p.PortName.Length)
                 .FirstOrDefault(p => PluginIsOnPort(port, p));
 
             if (plugin != null)
@@ -131,7 +133,7 @@ namespace Terminals.Connections
 
         private static bool PluginIsOnPort(int port, IConnectionPlugin plugin)
         {
-            return plugin.Port == port;
+            return port > 0 && plugin.Port == port;
         }
 
         /// <summary>
@@ -140,7 +142,8 @@ namespace Terminals.Connections
         /// <param name="protocol">One of connection short cuts.</param>
         internal bool IsProtocolWebBased(string protocol)
         {
-            return protocol == KnownConnectionConstants.HTTPS;
+            return protocol == KnownConnectionConstants.HTTPS ||
+                protocol == KnownConnectionConstants.CITRIX_WORKSPACE;
         }
 
         internal bool IsKnownProtocol(string protocol)
@@ -165,8 +168,14 @@ namespace Terminals.Connections
 
         public string[] GetAvailableProtocols()
         {
-            return this.plugins.Values.Select(p => p.PortName)
-                .ToArray();
+            return this.plugins.Values.Where(p => !(p is IRetiredConnectionPlugin))
+                .Select(p => p.PortName).ToArray();
+        }
+
+        /// <summary>Includes legacy identifiers for favorite deserialization.</summary>
+        internal string[] GetReadableProtocols()
+        {
+            return this.plugins.Keys.ToArray();
         }
 
         internal ITerminalsOptionsExport[] GetTerminalsOptionsExporters()

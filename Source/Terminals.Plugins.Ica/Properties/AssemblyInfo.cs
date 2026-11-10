@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Terminals.Plugins.Ica")]
-[assembly: AssemblyDescription("ICA")]
+[assembly: AssemblyDescription("Citrix Workspace launcher and legacy ICA compatibility")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCulture("")]
 

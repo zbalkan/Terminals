@@ -52,7 +52,7 @@ namespace Tests.Connections
                 new Tuple<string, Type>(TelnetConnectionPlugin.TELNET, typeof(PuttyConnection)),
                 new Tuple<string, Type>(SshConnectionPlugin.SSH, typeof(PuttyConnection)),
                 new Tuple<string, Type>(KnownConnectionConstants.HTTPS, typeof(HTTPConnection)),
-                new Tuple<string, Type>(ICAConnectionPlugin.ICA_CITRIX, typeof(ICAConnection))
+                new Tuple<string, Type>(KnownConnectionConstants.CITRIX_WORKSPACE, typeof(CitrixWorkspaceConnection))
             };
 
             var allValid = testData.All(this.AssertCreatedConnection);
@@ -86,6 +86,20 @@ namespace Tests.Connections
 
 
         [TestMethod]
+        public void LegacyIca_IsReadableButNotSelectableOrLaunchable()
+        {
+            Assert.IsTrue(connectionManager.IsKnownProtocol(ICAConnectionPlugin.ICA_CITRIX));
+            Assert.IsFalse(connectionManager.GetAvailableProtocols().Contains(ICAConnectionPlugin.ICA_CITRIX));
+            Assert.IsTrue(connectionManager.GetReadableProtocols().Contains(ICAConnectionPlugin.ICA_CITRIX));
+            Assert.IsTrue(connectionManager.IsKnownProtocol(KnownConnectionConstants.LEGACY_ICA_SQL));
+            Assert.IsFalse(connectionManager.GetAvailableProtocols().Contains(KnownConnectionConstants.LEGACY_ICA_SQL));
+            var f = new Mock<IFavorite>();
+            f.SetupGet(x => x.Protocol).Returns(ICAConnectionPlugin.ICA_CITRIX);
+            Assert.ThrowsExactly<NotSupportedException>(() => connectionManager.CreateConnection(f.Object));
+            Assert.IsFalse(connectionManager.SupportedPorts().Contains((ushort)1494));
+        }
+
+        [TestMethod]
         public void RetiredVmrc_CreateConnection_ThrowsUnsupportedInsteadOfCreatingDummyConnection()
         {
             var mockFavorite = new Mock<IFavorite>();
@@ -113,7 +127,7 @@ namespace Tests.Connections
                 new Tuple<string, int>(TelnetConnectionPlugin.TELNET, TelnetConnectionPlugin.TelnetPort),
                 new Tuple<string, int>(SshConnectionPlugin.SSH, SshConnectionPlugin.SSHPort),
                 new Tuple<string, int>(KnownConnectionConstants.HTTPS, HttpsConnectionPlugin.HTTPSPort),
-                new Tuple<string, int>(ICAConnectionPlugin.ICA_CITRIX, ICAConnectionPlugin.ICAPort)
+                new Tuple<string, int>(KnownConnectionConstants.CITRIX_WORKSPACE, 0)
             };
 
             var allValid = testData.All(this.AssertResolvedPort);
@@ -146,8 +160,7 @@ namespace Tests.Connections
                 new Tuple<int, string>(VncConnectionPlugin.VncPort, VncConnectionPlugin.VNC),
                 new Tuple<int, string>(TelnetConnectionPlugin.TelnetPort, TelnetConnectionPlugin.TELNET),
                 new Tuple<int, string>(SshConnectionPlugin.SSHPort, SshConnectionPlugin.SSH),
-                new Tuple<int, string>(HttpsConnectionPlugin.HTTPSPort, KnownConnectionConstants.HTTPS),
-                new Tuple<int, string>(ICAConnectionPlugin.ICAPort, ICAConnectionPlugin.ICA_CITRIX)
+                new Tuple<int, string>(HttpsConnectionPlugin.HTTPSPort, KnownConnectionConstants.HTTPS)
             };
 
             var allValid = testData.All(this.AssertPortName);
@@ -243,7 +256,8 @@ namespace Tests.Connections
                 new Tuple<string, int, string>(VncConnectionPlugin.VNC, 1, "Terminals.Forms.EditFavorite.VncControl"),
                 new Tuple<string, int, string>(TelnetConnectionPlugin.TELNET, 1, "Terminals.Plugins.Putty.PuttyOptionsControl"),
                 new Tuple<string, int, string>(SshConnectionPlugin.SSH, 1, "Terminals.Plugins.Putty.SshOptionsControl"),
-                new Tuple<string, int, string>(ICAConnectionPlugin.ICA_CITRIX, 1, "Terminals.Forms.EditFavorite.CitrixControl")
+                new Tuple<string, int, string>(ICAConnectionPlugin.ICA_CITRIX, 1, "Terminals.Forms.EditFavorite.CitrixControl"),
+                new Tuple<string, int, string>(KnownConnectionConstants.CITRIX_WORKSPACE, 1, "Terminals.Forms.EditFavorite.CitrixWorkspaceControl")
             };
         }
 
@@ -282,7 +296,7 @@ namespace Tests.Connections
         public void GetSupportedPorts_ReturnsAllNonWeb()
         {
             var resolved = connectionManager.SupportedPorts();
-            var expected = new ushort[] { 22, 23, 1494, 3389, 5900 };
+            var expected = new ushort[] { 22, 23, 3389, 5900 };
             Assert.AreEqual(expected.Length, resolved.Length, "We want to scan each unique port only once ignoring default web ports.");
             bool allResolved = resolved.All(port => expected.Contains(port));
             Assert.IsTrue(allResolved, "Port numbers have to obtained from plugins.");
@@ -310,7 +324,7 @@ namespace Tests.Connections
         {
             IEnumerable<Type> optionTypes = this.connectionManager.GetAllKnownProtocolOptionTypes()
                 .Distinct();
-            Assert.AreEqual(7, optionTypes.Count(), "To be able serialize all known protocols we have to list all.");
+            Assert.AreEqual(8, optionTypes.Count(), "To be able serialize all known protocols we have to list all.");
         }
         
         [TestMethod]

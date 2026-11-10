@@ -106,6 +106,9 @@ namespace Terminals
                                                        ExecuteBeforeConnectWaitForExit = this.ExecuteBeforeConnectWaitForExit,
                                                        GrabFocusOnConnect = this.GrabFocusOnConnect,
                                                        ICAApplicationName = this.ICAApplicationName,
+                                                       CitrixWorkspaceMode = this.CitrixWorkspaceMode,
+                                                       CitrixWorkspaceResource = this.CitrixWorkspaceResource,
+                                                       CitrixWorkspaceRelativeUrl = this.CitrixWorkspaceRelativeUrl,
                                                        ICAApplicationWorkingFolder = this.ICAApplicationWorkingFolder,
                                                        ICAApplicationPath = this.ICAApplicationPath,
                                                        IcaClientINI = this.IcaClientINI,
@@ -552,6 +555,27 @@ namespace Terminals
             {
                 this["allowBackgroundInput"] = value;
             }
+        }
+
+        [ConfigurationProperty("citrixWorkspaceMode", DefaultValue = "Cloud")]
+        public string CitrixWorkspaceMode
+        {
+            get { return (string)this["citrixWorkspaceMode"]; }
+            set { this["citrixWorkspaceMode"] = value; }
+        }
+
+        [ConfigurationProperty("citrixWorkspaceResource", DefaultValue = "")]
+        public string CitrixWorkspaceResource
+        {
+            get { return (string)this["citrixWorkspaceResource"]; }
+            set { this["citrixWorkspaceResource"] = value; }
+        }
+
+        [ConfigurationProperty("citrixWorkspaceRelativeUrl", DefaultValue = "")]
+        public string CitrixWorkspaceRelativeUrl
+        {
+            get { return (string)this["citrixWorkspaceRelativeUrl"]; }
+            set { this["citrixWorkspaceRelativeUrl"] = value; }
         }
 
         [ConfigurationProperty("ICAApplicationName", IsRequired = false, DefaultValue = "")]

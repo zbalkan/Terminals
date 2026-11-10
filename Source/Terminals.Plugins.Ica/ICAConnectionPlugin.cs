@@ -9,7 +9,24 @@ using Terminals.Plugins.Ica;
 
 namespace Terminals.Connections.ICA
 {
-    internal class ICAConnectionPlugin :IConnectionPlugin, IOptionsExporterFactory, IOptionsConverterFactory
+    internal sealed class LegacyIcaDbAliasPlugin : IConnectionPlugin, IOptionsConverterFactory, IRetiredConnectionPlugin
+    {
+        // Historical SQL stored procedures truncate "ICA Citrix" to five characters.
+        private readonly ICAConnectionPlugin legacy = new ICAConnectionPlugin();
+        public int Port { get { return 0; } }
+        public string PortName { get { return KnownConnectionConstants.LEGACY_ICA_SQL; } }
+        public Connection CreateConnection()
+        {
+            throw new NotSupportedException("Legacy ICA favorites cannot be connected.");
+        }
+        public Control[] CreateOptionsControls() { return legacy.CreateOptionsControls(); }
+        public Type GetOptionsType() { return typeof(ICAOptions); }
+        public ProtocolOptions CreateOptions() { return new ICAOptions(); }
+        public Image GetIcon() { return Connection.Terminalsicon; }
+        public IOptionsConverter CreatOptionsConverter() { return new IcaOptionsConverter(); }
+    }
+
+    internal class ICAConnectionPlugin : IConnectionPlugin, IOptionsExporterFactory, IOptionsConverterFactory, IRetiredConnectionPlugin
     {
         internal const int ICAPort = 1494;
 
@@ -21,12 +38,12 @@ namespace Terminals.Connections.ICA
 
         public Connection CreateConnection()
         {
-            return new ICAConnection();
+            throw new NotSupportedException("Legacy ICA Citrix favorites cannot be connected. Create a Citrix Workspace favorite.");
         }
 
         public Control[] CreateOptionsControls()
         {
-            return new Control[] { new CitrixControl() { Name = "ICA Citrix" } };
+            return new Control[] { new CitrixControl() { Name = "Legacy ICA (read-only)", Enabled = false } };
         }
 
         public Type GetOptionsType()

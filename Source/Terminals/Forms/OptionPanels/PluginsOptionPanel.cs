@@ -24,6 +24,11 @@ namespace Terminals.Forms.OptionPanels
         private readonly TextBox pageantPath;
         private readonly Panel puttyControls;
         private SelectedPlugin puttyPlugin;
+        private SelectedPlugin citrixPlugin;
+        private readonly CheckBox enableCitrix;
+        private readonly Panel citrixControls;
+        private readonly TextBox selfServicePath;
+        private readonly TextBox storebrowsePath;
         private bool loading;
 
         public PluginsOptionPanel()
@@ -71,6 +76,16 @@ namespace Terminals.Forms.OptionPanels
             puttyGroup.Controls.Add(puttyControls);
             pluginGroups.Controls.Add(puttyGroup);
 
+            var citrixGroup = new GroupBox { Text = "Citrix Workspace", Height = 113, Margin = new Padding(3, 3, 3, 10) };
+            enableCitrix = new CheckBox { Text = "Enable Citrix Workspace", AutoSize = true, Location = new Point(12, 21) };
+            citrixControls = new Panel { Location = new Point(12, 45), Height = 60 };
+            selfServicePath = AddExecutableRow(citrixControls, "SelfSvc", "SelfService.exe", 0);
+            storebrowsePath = AddExecutableRow(citrixControls, "Store", "storebrowse.exe", 30);
+            enableCitrix.CheckedChanged += (sender, args) => citrixControls.Enabled = enableCitrix.Checked;
+            citrixGroup.Controls.Add(enableCitrix);
+            citrixGroup.Controls.Add(citrixControls);
+            pluginGroups.Controls.Add(citrixGroup);
+
             var otherGroup = new GroupBox { Text = "Other protocol plugins", Height = 164, Margin = new Padding(3) };
             otherPlugins = new CheckedListBox
             {
@@ -99,6 +114,14 @@ namespace Terminals.Forms.OptionPanels
                     control.Width = Math.Max(80, puttyControls.Width - 165);
                 else if (control is Button)
                     control.Left = puttyControls.Width - 76;
+            }
+            citrixControls.Width = width - 24;
+            foreach (Control control in citrixControls.Controls)
+            {
+                if (control is TextBox)
+                    control.Width = Math.Max(80, citrixControls.Width - 165);
+                else if (control is Button)
+                    control.Left = citrixControls.Width - 76;
             }
             otherPlugins.Width = width - 24;
             preferredSshClient.Width = Math.Max(150, width - 124);
@@ -135,12 +158,16 @@ namespace Terminals.Forms.OptionPanels
             try
             {
                 puttyPlugin = null;
+                citrixPlugin = null;
                 otherPlugins.Items.Clear();
                 foreach (SelectedPlugin plugin in pluginsSelection.LoadPlugins())
                 {
                     if (Path.GetFileName(plugin.FullPath).Equals("Terminals.Plugins.Putty.dll",
                         StringComparison.OrdinalIgnoreCase))
                         puttyPlugin = plugin;
+                    else if (Path.GetFileName(plugin.FullPath).Equals("Terminals.Plugins.Ica.dll",
+                        StringComparison.OrdinalIgnoreCase))
+                        citrixPlugin = plugin;
                     else
                         otherPlugins.Items.Add(plugin, plugin.Enabled);
                 }
@@ -164,6 +191,11 @@ namespace Terminals.Forms.OptionPanels
                 puttyPath.Text = DisplayPath("putty.exe", Settings.Instance.PuttyExecutablePath);
                 pageantPath.Text = DisplayPath("pageant.exe", Settings.Instance.PageantExecutablePath);
                 puttyControls.Enabled = enablePutty.Checked;
+                enableCitrix.Enabled = citrixPlugin != null;
+                enableCitrix.Checked = citrixPlugin != null && citrixPlugin.Enabled;
+                selfServicePath.Text = DisplayPath("SelfService.exe", Settings.Instance.CitrixSelfServiceExecutablePath);
+                storebrowsePath.Text = DisplayPath("storebrowse.exe", Settings.Instance.CitrixStorebrowseExecutablePath);
+                citrixControls.Enabled = enableCitrix.Checked;
             }
             finally { loading = false; }
         }
@@ -191,6 +223,10 @@ namespace Terminals.Forms.OptionPanels
             SaveExecutablePath(pageantPath, "pageant.exe", value => Settings.Instance.PageantExecutablePath = value);
             ExternalExecutablePaths.Putty = Settings.Instance.PuttyExecutablePath;
             ExternalExecutablePaths.Pageant = Settings.Instance.PageantExecutablePath;
+            SaveExecutablePath(selfServicePath, "SelfService.exe", value => Settings.Instance.CitrixSelfServiceExecutablePath = value);
+            SaveExecutablePath(storebrowsePath, "storebrowse.exe", value => Settings.Instance.CitrixStorebrowseExecutablePath = value);
+            ExternalExecutablePaths.CitrixSelfService = Settings.Instance.CitrixSelfServiceExecutablePath;
+            ExternalExecutablePaths.CitrixStorebrowse = Settings.Instance.CitrixStorebrowseExecutablePath;
         }
 
         private static void SaveExecutablePath(TextBox textbox, string executable, Action<string> save)
@@ -215,11 +251,15 @@ namespace Terminals.Forms.OptionPanels
 
             foreach (var row in new[] {
                 new { Name = "putty.exe", Field = puttyPath },
-                new { Name = "pageant.exe", Field = pageantPath }
+                new { Name = "pageant.exe", Field = pageantPath },
+                new { Name = "SelfService.exe", Field = selfServicePath },
+                new { Name = "storebrowse.exe", Field = storebrowsePath }
             })
             {
                 errorProvider.SetError(row.Field, string.Empty);
-                if (!enablePutty.Checked || string.IsNullOrWhiteSpace(row.Field.Text))
+                bool isCitrixRow = row.Name == "SelfService.exe" || row.Name == "storebrowse.exe";
+                if (!(isCitrixRow ? enableCitrix.Checked : enablePutty.Checked) ||
+                    string.IsNullOrWhiteSpace(row.Field.Text))
                     continue;
                 try { ExternalExecutablePaths.Find(row.Name, row.Field.Text); }
                 catch (Exception ex) when (ex is FileNotFoundException || ex is ArgumentException ||
@@ -239,6 +279,11 @@ namespace Terminals.Forms.OptionPanels
             {
                 puttyPlugin.Enabled = enablePutty.Checked;
                 selected.Add(puttyPlugin);
+            }
+            if (citrixPlugin != null)
+            {
+                citrixPlugin.Enabled = enableCitrix.Checked;
+                selected.Add(citrixPlugin);
             }
             for (int i = 0; i < otherPlugins.Items.Count; i++)
             {

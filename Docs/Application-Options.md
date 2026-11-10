@@ -48,3 +48,5 @@ See also: ([How to use screen capture](Capture-connection-screen.md))
 NOTE: **Requires application restart**.
 * Files in local profile (Default): All application and configuration files are stored in your user profile or application directory in case of portable version. Read more about files configuration and usage in  [Backup and restore settings files](Backup-and-restore-settings-files.md). Read more about portable version in  [Upgrade to version 3.0](Upgrade-to-version-3.0.md).
 * [Microsoft SQL database server](Store-data-in-SQL-database.md)
+## Citrix Workspace
+* [Citrix Workspace launcher and legacy ICA favorites](Citrix-Workspace.md): configure SelfService and Storebrowse executable paths, published resources, and the HTTPS store URL. Sessions open in Citrix Workspace rather than Terminals tabs. Legacy ICA Citrix favorites remain readable but are non-launchable.
