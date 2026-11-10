@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Terminals.Common.Configuration;
 using Terminals.Data;
 using Terminals.Properties;
 using SysConfig = System.Configuration;
@@ -110,6 +111,9 @@ namespace Terminals.Configuration
         internal void ForceReload()
         {
             _config = GetConfiguration();
+            TerminalsConfigurationSection section = GetSection();
+            ExternalExecutablePaths.Putty = section.PuttyExecutablePath;
+            ExternalExecutablePaths.Pageant = section.PageantExecutablePath;
         }
 
         /// <summary>

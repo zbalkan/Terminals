@@ -147,6 +147,18 @@ namespace Tests
         }
 
         [TestMethod]
+        public void ExternalExecutablePaths_SaveAndReload()
+        {
+            settings.PuttyExecutablePath = @"C:\Tools\PuTTY\putty.exe";
+            settings.PageantExecutablePath = @"C:\Tools\PuTTY\pageant.exe";
+            settings.ForceReload();
+            Assert.AreEqual(@"C:\Tools\PuTTY\putty.exe", settings.PuttyExecutablePath);
+            Assert.AreEqual(@"C:\Tools\PuTTY\pageant.exe", settings.PageantExecutablePath);
+            settings.PuttyExecutablePath = string.Empty;
+            settings.PageantExecutablePath = string.Empty;
+        }
+
+        [TestMethod]
         public void SavedValue_ForceReload_IsLoaded()
         {
             this.AssertAskToReconnectReloaded(false, "Direct assignment of property saves the property to file");

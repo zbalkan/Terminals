@@ -58,6 +58,7 @@
       <Link>Properties\Common.AssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Configuration\AuthMethod.cs" />
+    <Compile Include="Configuration\ExternalExecutablePaths.cs" />
     <Compile Include="Configuration\KeysSection.cs" />
     <Compile Include="Connections\IFocusable.cs" />
     <Compile Include="Connections\IHandleKeyboardInput.cs" />

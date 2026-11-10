@@ -48,7 +48,6 @@
             <Directory Id="ICAFOLDER" Name="Ica" />
             <Directory Id="RDPFOLDER" Name="Rdp" />
             <Directory Id="PUTTYFOLDER" Name="Putty" >
-              <Directory Id="PUTTYRESOURCESFOLDER" Name="Resources" />
             </Directory>    
             <Directory Id="VMRCFOLDER" Name="Vmrc" />
             <Directory Id="VNCFOLDER" Name="Vnc" />

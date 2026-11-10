@@ -889,6 +889,20 @@ namespace Terminals
             }
         }
 
+        [ConfigurationProperty("puttyExecutablePath", DefaultValue = "")]
+        public string PuttyExecutablePath
+        {
+            get { return (string)this["puttyExecutablePath"]; }
+            set { this["puttyExecutablePath"] = value; }
+        }
+
+        [ConfigurationProperty("pageantExecutablePath", DefaultValue = "")]
+        public string PageantExecutablePath
+        {
+            get { return (string)this["pageantExecutablePath"]; }
+            set { this["pageantExecutablePath"] = value; }
+        }
+
         private const string DISABLED_PLUGINS_NAME = "disabledPlugins";
 
         [ConfigurationProperty(DISABLED_PLUGINS_NAME)]

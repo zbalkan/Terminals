@@ -1008,6 +1008,26 @@ namespace Terminals.Configuration
             }
         }
 
+        public string PuttyExecutablePath
+        {
+            get { return GetSection().PuttyExecutablePath; }
+            set
+            {
+                GetSection().PuttyExecutablePath = value ?? string.Empty;
+                SaveImmediatelyIfRequested();
+            }
+        }
+
+        public string PageantExecutablePath
+        {
+            get { return GetSection().PageantExecutablePath; }
+            set
+            {
+                GetSection().PageantExecutablePath = value ?? string.Empty;
+                SaveImmediatelyIfRequested();
+            }
+        }
+
         public string[] DisabledPlugins
         {
             get

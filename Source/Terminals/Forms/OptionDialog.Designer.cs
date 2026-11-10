@@ -422,7 +422,7 @@ namespace Terminals.Forms
             // 
             this.panelPlugins.Location = new System.Drawing.Point(8, 27);
             this.panelPlugins.Name = "panelPlugins";
-            this.panelPlugins.Size = new System.Drawing.Size(509, 300);
+            this.panelPlugins.Size = new System.Drawing.Size(509, 332);
             this.panelPlugins.TabIndex = 0;
             // 
             // OptionDialog

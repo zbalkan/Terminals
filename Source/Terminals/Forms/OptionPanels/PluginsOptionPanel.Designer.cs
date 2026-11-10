@@ -29,31 +29,9 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            this.descriptionLabel = new System.Windows.Forms.Label();
-            this.pluginsListbox = new System.Windows.Forms.CheckedListBox();
             this.errorProvider = new System.Windows.Forms.ErrorProvider(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.errorProvider)).BeginInit();
             this.SuspendLayout();
-            // 
-            // descriptionLabel
-            // 
-            this.descriptionLabel.AutoSize = true;
-            this.descriptionLabel.Location = new System.Drawing.Point(15, 14);
-            this.descriptionLabel.Name = "descriptionLabel";
-            this.descriptionLabel.Size = new System.Drawing.Size(291, 52);
-            this.descriptionLabel.TabIndex = 1;
-            this.descriptionLabel.Text = "Select plugins you want to use.\r\nYou need to select atleast one of them.\r\nTo appl" +
-    "y you need restart the application.\r\nAfter disable and enable some plugin some d" +
-    "ata may be lost.";
-            // 
-            // pluginsListbox
-            // 
-            this.pluginsListbox.FormattingEnabled = true;
-            this.errorProvider.SetIconAlignment(this.pluginsListbox, System.Windows.Forms.ErrorIconAlignment.TopRight);
-            this.pluginsListbox.Location = new System.Drawing.Point(18, 76);
-            this.pluginsListbox.Name = "pluginsListbox";
-            this.pluginsListbox.Size = new System.Drawing.Size(332, 124);
-            this.pluginsListbox.TabIndex = 2;
             // 
             // errorProvider
             // 
@@ -63,8 +41,6 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.pluginsListbox);
-            this.Controls.Add(this.descriptionLabel);
             this.Name = "PluginsOptionPanel";
             this.Size = new System.Drawing.Size(402, 300);
             ((System.ComponentModel.ISupportInitialize)(this.errorProvider)).EndInit();
@@ -74,8 +50,6 @@
         }
 
         #endregion
-        private System.Windows.Forms.Label descriptionLabel;
-        private System.Windows.Forms.CheckedListBox pluginsListbox;
         private System.Windows.Forms.ErrorProvider errorProvider;
     }
 }

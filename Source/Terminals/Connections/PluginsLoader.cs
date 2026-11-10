@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Terminals.Configuration;
+using Terminals.Common.Configuration;
 
 namespace Terminals.Connections
 {
@@ -14,6 +15,8 @@ namespace Terminals.Connections
         public PluginsLoader(IPluginSettings settings)
         {
             this.enabledPlugins = settings.DisabledPlugins;
+            ExternalExecutablePaths.Putty = settings.PuttyExecutablePath;
+            ExternalExecutablePaths.Pageant = settings.PageantExecutablePath;
         }
 
         public IEnumerable<IConnectionPlugin> Load()

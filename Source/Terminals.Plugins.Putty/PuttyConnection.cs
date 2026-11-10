@@ -88,9 +88,17 @@ namespace Terminals.Plugins.Putty
         public override bool Connect()
         {
             this.Dock = DockStyle.Fill;
-            this.LaunchPuttyProcess();
-
-            return true; // Not connected putty fires later proces exited.
+            try
+            {
+                this.LaunchPuttyProcess();
+                return true; // PuTTY reports connection state asynchronously.
+            }
+            catch (System.IO.FileNotFoundException ex)
+            {
+                Logging.Error("PuTTY executable is unavailable.", ex);
+                MessageBox.Show(ex.Message, "PuTTY", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
         }
 
         private void LaunchPuttyProcess()
