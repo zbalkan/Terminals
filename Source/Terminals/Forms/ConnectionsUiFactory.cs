@@ -154,12 +154,25 @@ namespace Terminals.Forms
                 rdpOptions.ConnectToConsole = definition.ForceConsole.Value;
         }
 
-        private void CreateTerminalTab(IFavorite origin, IFavorite configured)
+        private async void CreateTerminalTab(IFavorite origin, IFavorite configured)
         {
-            ExternalLinks.CallExecuteBeforeConnected(this.settings);
-            ExternalLinks.CallExecuteBeforeConnected(configured.ExecuteBeforeConnect);
-            TerminalTabControlItem terminalTabPage = CreateTerminalTabPageByFavoriteName(configured);
-            this.TryConnectTabPage(origin, configured, terminalTabPage);
+            try
+            {
+                // Preserve configured process ordering without blocking the UI.
+                await ExternalLinks.CallExecuteBeforeConnectedAsync(this.settings);
+                await ExternalLinks.CallExecuteBeforeConnectedAsync(configured.ExecuteBeforeConnect);
+                if (this.mainForm.IsDisposed || this.mainForm.Disposing)
+                    return;
+                TerminalTabControlItem tab = CreateTerminalTabPageByFavoriteName(configured);
+                this.TryConnectTabPage(origin, configured, tab);
+            }
+            catch (Exception ex)
+            {
+                Logging.Error("Unable to execute pre-connection command.", ex);
+                if (!this.mainForm.IsDisposed)
+                    MessageBox.Show("A pre-connection command failed: " + ex.Message,
+                        "Terminals", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         private TerminalTabControlItem CreateTerminalTabPageByFavoriteName(IFavorite favorite)
@@ -187,7 +200,7 @@ namespace Terminals.Forms
                 Connection conn = CreateConnection(origin, configured, terminalTabPage);
                 this.UpdateConnectionTabPageByConnectionState(configured, terminalTabPage, conn);
 
-                if (conn.Connected && configured.NewWindow)
+                if ((conn.Connected || conn.ConnectionPending) && configured.NewWindow)
                 {
                     this.terminalsControler.DetachTabToNewWindow(terminalTabPage);
                 }

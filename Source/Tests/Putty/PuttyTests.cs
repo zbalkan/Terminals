@@ -2,6 +2,9 @@ using System;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Terminals.Common.Configuration;
+using Terminals.Common.Forms;
+using System.Threading;
+using System.Threading.Tasks;
 using Terminals.Plugins.Putty;
 
 namespace Tests.Putty
@@ -140,6 +143,38 @@ namespace Tests.Putty
                 WindowsOpenSshConnection.BuildArguments("-invalid\n", 22, "alice"));
             Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 WindowsOpenSshConnection.BuildArguments("server.example.com", 0, "alice"));
+        }
+
+        [TestMethod]
+        public void ExternalProcessLauncher_DoesNotBlockCaller()
+        {
+            using (var gate = new ManualResetEventSlim(false))
+            {
+                var task = ExternalProcessLauncher.RunAsync(() =>
+                {
+                    gate.Wait(TimeSpan.FromSeconds(10));
+                });
+                try
+                {
+                    Assert.IsFalse(task.IsCompleted, "Background operation should not block the caller.");
+                }
+                finally
+                {
+                    gate.Set();
+                }
+                Assert.IsTrue(task.Wait(TimeSpan.FromSeconds(10)));
+            }
+        }
+
+        [TestMethod]
+        public void ExternalProcessLauncher_PropagatesErrorsToAwaitingCaller()
+        {
+            var task = ExternalProcessLauncher.RunAsync(() =>
+            {
+                throw new InvalidOperationException("test process failure");
+            });
+            Assert.ThrowsExactly<InvalidOperationException>(() =>
+                task.GetAwaiter().GetResult());
         }
 
         private string CreateExecutable(string folder, string fileName)

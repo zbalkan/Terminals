@@ -2,6 +2,9 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
+using System.Threading;
+using System.Threading.Tasks;
+using Terminals.Common.Forms;
 using Terminals.Configuration;
 using Terminals.Connections;
 using Terminals.Data;
@@ -53,18 +56,14 @@ namespace Terminals.Services
             OpenPath(FileLocations.LogDirectory);
         }
 
-        internal static void CallExecuteBeforeConnected(IBeforeConnectExecuteOptions executeOptions)
+        internal static Task CallExecuteBeforeConnectedAsync(IBeforeConnectExecuteOptions executeOptions)
         {
-            if (executeOptions.Execute && !string.IsNullOrEmpty(executeOptions.Command))
-            {
-                var processStartInfo = new ProcessStartInfo(executeOptions.Command, executeOptions.CommandArguments);
-                processStartInfo.WorkingDirectory = executeOptions.InitialDirectory;
-                Process process = Process.Start(processStartInfo);
-                if (executeOptions.WaitForExit)
-                {
-                    process.WaitForExit();
-                }
-            }
+            if (!executeOptions.Execute || string.IsNullOrEmpty(executeOptions.Command))
+                return Task.FromResult(0);
+
+            var start = new ProcessStartInfo(executeOptions.Command, executeOptions.CommandArguments);
+            start.WorkingDirectory = executeOptions.InitialDirectory;
+            return ExternalProcessLauncher.ExecuteAsync(start, executeOptions.WaitForExit);
         }
 
         internal static void Launch(SpecialCommandConfigurationElement command)
@@ -89,18 +88,22 @@ namespace Terminals.Services
 
             var startInfo = new ProcessStartInfo(exe, command.Arguments);
             startInfo.WorkingDirectory = command.WorkingFolder;
-            Process.Start(startInfo);
+            ExternalProcessLauncher.StartDetached(startInfo,
+                ex => Logging.Error("Unable to launch shortcut application.", ex),
+                SynchronizationContext.Current);
         }
 
         internal static void StartMsManagementConsole(IFavorite favorite)
         {
             if (favorite != null)
-                Process.Start("mmc.exe", "compmgmt.msc /a /computer=" + favorite.ServerName);
+                ExternalProcessLauncher.StartDetached(new ProcessStartInfo("mmc.exe", "compmgmt.msc /a /computer=" + favorite.ServerName),
+                    ex => Logging.Error("Unable to launch computer management.", ex), SynchronizationContext.Current);
         }
 
         internal static void OpenLocalComputerManagement()
         {
-            Process.Start("mmc.exe", "compmgmt.msc /a /computer=.");
+            ExternalProcessLauncher.StartDetached(new ProcessStartInfo("mmc.exe", "compmgmt.msc /a /computer=."),
+                ex => Logging.Error("Unable to launch local computer management.", ex), SynchronizationContext.Current);
         }
 
         internal static void StartMsInfo32(IFavorite favorite)
@@ -112,7 +115,8 @@ namespace Terminals.Services
                 String path = String.Format(@"{0}\common files\Microsoft Shared\MSInfo\msinfo32.exe", programFiles);
                 if (File.Exists(path))
                 {
-                    Process.Start(String.Format("\"{0}\"", path), String.Format("/computer {0}", favorite.ServerName));
+                    ExternalProcessLauncher.StartDetached(new ProcessStartInfo(path, String.Format("/computer {0}", favorite.ServerName)),
+                        ex => Logging.Error("Unable to launch MSInfo32.", ex), SynchronizationContext.Current);
                 }
             }
         }
@@ -121,28 +125,45 @@ namespace Terminals.Services
         {
             if (MessageBox.Show("Open dump file in notepad?") == DialogResult.OK)
             {
-                Process.Start("notepad.exe", file);
+                ExternalProcessLauncher.StartDetached(new ProcessStartInfo("notepad.exe", "\"" + file + "\""),
+                    ex => Logging.Error("Unable to launch Notepad.", ex), SynchronizationContext.Current);
             }
         }
 
         internal static void OpenTerminalServiceCommandPrompt(IConnectionExtra terminal, string psexecLocation)
         {
-            String sessionId = String.Empty;
-            if (!terminal.ConnectToConsole)
+            // Reading the remote session through TSManager can require a network
+            // roundtrip. Perform discovery and process creation on the same worker.
+            var context = SynchronizationContext.Current;
+            ExternalProcessLauncher.RunAsync(() =>
             {
-                sessionId = TSManager.GetCurrentSession(terminal.Server,
-                    terminal.UserName,
-                    terminal.Domain,
-                    Environment.MachineName).Id.ToString();
-            }
+                try
+                {
+                    string sessionId = String.Empty;
+                    if (!terminal.ConnectToConsole)
+                    {
+                        sessionId = TSManager.GetCurrentSession(terminal.Server,
+                            terminal.UserName, terminal.Domain, Environment.MachineName).Id.ToString();
+                    }
 
-            var process = new Process();
-            String args = String.Format(" \\\\{0} -i {1} -d cmd", terminal.Server, sessionId);
-            var startInfo = new ProcessStartInfo(psexecLocation, args);
-            startInfo.UseShellExecute = false;
-            startInfo.CreateNoWindow = true;
-            process.StartInfo = startInfo;
-            process.Start();
+                    string args = String.Format(" \\\\{0} -i {1} -d cmd", terminal.Server, sessionId);
+                    using (var process = new Process())
+                    {
+                        process.StartInfo = new ProcessStartInfo(psexecLocation, args)
+                        {
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        };
+                        if (!process.Start())
+                            throw new InvalidOperationException("PsExec did not start.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ExternalProcessLauncher.Post(context,
+                        () => Logging.Error("Unable to launch terminal service command prompt.", ex));
+                }
+            });
         }
     }
 }

@@ -84,6 +84,7 @@
     </Compile>
     <Compile Include="Forms\EditFavorite\ISupportsSecurityControl.cs" />
     <Compile Include="Forms\ExternalLinks.cs" />
+    <Compile Include="Forms\ExternalProcessLauncher.cs" />
     <Compile Include="Forms\InputBox.cs">
       <SubType>Form</SubType>
     </Compile>

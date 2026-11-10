@@ -13,8 +13,6 @@ namespace Terminals
     /// </summary>
     internal class TabControlRemover
     {
-        private delegate void InvokeCloseTabPage(TabControlItem tabPage);
-
         private readonly Settings settings;
 
         private readonly MainForm mainForm;
@@ -66,27 +64,38 @@ namespace Terminals
 
         internal void OnDisconnected(Connection connection)
         {
-            // unregister not the method here, but the registered method
-            connection.OnDisconnected -= this.mainForm.OnDisconnected;
-            TerminalTabControlItem tabPage = new TabControlFilter(this.tcTerminals).FindTabToClose(connection);
-            this.InvokeCloseTab(tabPage);
-        }
+            // Process.Exited is called from a worker thread. Marshall the
+            // entire tab lookup and removal onto the WinForms UI thread.
+            // BeginInvoke never blocks a process-exit callback behind a dialog,
+            // disposal or another UI operation.
+            if (this.mainForm.IsDisposed || !this.mainForm.IsHandleCreated)
+                return;
 
-        /// <summary>
-        /// Because tabControl is cast internaly to TabControlItem, all connections should send their tab,
-        /// which we already have in the connection.
-        /// </summary>
-        private void InvokeCloseTab(TerminalTabControlItem tabPage)
-        {
             if (this.mainForm.InvokeRequired)
             {
-                var d = new InvokeCloseTabPage(this.CloseTabPage);
-                this.mainForm.Invoke(d, new object[] { tabPage });
+                try
+                {
+                    this.mainForm.BeginInvoke(new Action<Connection>(this.RemoveDisconnectedTab),
+                        connection);
+                }
+                catch (InvalidOperationException) { } // Main form is closing
+
             }
             else
-            {
+                this.RemoveDisconnectedTab(connection);
+        }
+
+        private void RemoveDisconnectedTab(Connection connection)
+        {
+            if (this.mainForm.IsDisposed || connection == null)
+                return;
+
+            connection.OnDisconnected -= this.mainForm.OnDisconnected;
+            // The user may have closed the tab before the queued callback ran.
+            TerminalTabControlItem tabPage = new TabControlFilter(this.tcTerminals)
+                .FindTabToClose(connection);
+            if (tabPage != null)
                 this.CloseTabPage(tabPage);
-            }
         }
 
         private void CloseTabPage(object tabObject)

@@ -20,6 +20,12 @@ namespace Terminals.Connections
 
         public string LastError { get; protected set; }
 
+        /// <summary>
+        /// True while an external connection is starting asynchronously, before
+        /// it can report Connected. Used to preserve new-window behavior.
+        /// </summary>
+        public virtual bool ConnectionPending { get { return false; } }
+
         public virtual bool Connected 
         {
             get; private set;

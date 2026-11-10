@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Threading;
+using Terminals.Common.Forms;
 using System.Windows.Forms;
 using Terminals.Connections;
 using Terminals.Data;
@@ -12,8 +13,15 @@ namespace Terminals.Plugins.Putty
     internal class PuttyConnection : Connection, IFocusable
     {
         private bool windowCaptured;
+        private int closing;
+        private int starting;
         
         private Process puttyProcess;
+
+        public override bool ConnectionPending
+        {
+            get { return Volatile.Read(ref starting) != 0; }
+        }
 
         public override bool Connected
         {
@@ -44,7 +52,8 @@ namespace Terminals.Plugins.Putty
 
         private void PuttyConnection_Resize(object sender, EventArgs e)
         {
-            this.Invoke(new ThreadStart(this.ClipPutty));
+            if (this.windowCaptured && !this.IsDisposed)
+                this.ClipPutty();
         }
 
         private void ClipPutty()
@@ -90,68 +99,121 @@ namespace Terminals.Plugins.Putty
             this.Dock = DockStyle.Fill;
             try
             {
-                this.LaunchPuttyProcess();
-                return true; // PuTTY reports connection state asynchronously.
+                // Read favorites and credentials while still on the UI thread.
+                // Process creation and WaitForInputIdle must never block it.
+                string executable = Executables.GetPuttyBinaryPath();
+                IGuardedSecurity credentials = this.ResolveFavoriteCredentials();
+                string arguments = new ArgumentsBuilder(credentials, this.Favorite).Build();
+                var launched = new Process();
+                launched.StartInfo.FileName = executable;
+                launched.StartInfo.Arguments = arguments;
+                launched.StartInfo.WindowStyle = ProcessWindowStyle.Minimized;
+                launched.EnableRaisingEvents = true;
+                launched.Exited += this.PuttyProcessOnExited;
+                this.puttyProcess = launched;
+                Volatile.Write(ref starting, 1);
+                ExternalProcessLauncher.RunAsync(() => this.LaunchPuttyProcess(launched));
+                return true; // UI remains responsive during process startup.
             }
             catch (System.IO.FileNotFoundException ex)
             {
                 Logging.Error("PuTTY executable is unavailable.", ex);
-                MessageBox.Show(ex.Message, "PuTTY", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                LastError = ex.Message;
                 return false;
             }
         }
 
-        private void LaunchPuttyProcess()
+        private void LaunchPuttyProcess(Process launched)
         {
-            this.puttyProcess = new Process();
-            this.puttyProcess.StartInfo.FileName = Executables.GetPuttyBinaryPath();
-            
-            IGuardedSecurity credentials = this.ResolveFavoriteCredentials();
-            string arguments = new ArgumentsBuilder(credentials, this.Favorite).Build();
+            try
+            {
+                if (Volatile.Read(ref closing) != 0)
+                    return;
+                if (!launched.Start())
+                    throw new InvalidOperationException("PuTTY did not start.");
 
-            // security issue: password visible in taskbar
-            this.puttyProcess.StartInfo.Arguments = arguments;
-            this.puttyProcess.StartInfo.WindowStyle = ProcessWindowStyle.Minimized;
-            this.puttyProcess.EnableRaisingEvents = true;
-            this.puttyProcess.Exited += this.PuttyProcessOnExited;
-            this.puttyProcess.Start();
-            this.puttyProcess.WaitForInputIdle();
+                // Bound the wait and keep it on the worker. A slow or broken PuTTY
+                // cannot freeze the WinForms message loop.
+                launched.WaitForInputIdle(5000);
+                if (Volatile.Read(ref closing) != 0)
+                    return;
 
-            IntPtr puttyWindow = this.puttyProcess.MainWindowHandle;
-            this.AdjustWindowStyle(puttyWindow);
-            Methods.SetParent(puttyWindow, this.Handle);
-            this.windowCaptured = true;
+                var form = ParentForm as Control;
+                if (form != null && form.IsHandleCreated && !form.IsDisposed)
+                    form.BeginInvoke(new MethodInvoker(() => CapturePuttyWindow(launched)));
+            }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception ||
+                                       ex is InvalidOperationException || ex is System.IO.IOException ||
+                                       ex is ObjectDisposedException)
+            {
+                Logging.Error("Unable to start or embed PuTTY.", ex);
+                var form = ParentForm as Control;
+                if (form != null && form.IsHandleCreated && !form.IsDisposed)
+                {
+                    try
+                    {
+                        form.BeginInvoke(new MethodInvoker(() =>
+                        {
+                            if (Volatile.Read(ref closing) != 0) return;
+                            LastError = "Unable to start PuTTY: " + ex.Message;
+                            MessageBox.Show(LastError, "PuTTY", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            FireDisconnected();
+                        }));
+                    }
+                    catch (InvalidOperationException) { }
+                }
+            }
+        }
 
-            this.ClipPutty();
+        private void CapturePuttyWindow(Process launched)
+        {
+            if (Volatile.Read(ref closing) != 0 || this.IsDisposed) return;
+            try
+            {
+                if (launched.HasExited)
+                {
+                    FireDisconnected();
+                    return;
+                }
+
+                IntPtr handle = launched.MainWindowHandle;
+                if (handle == IntPtr.Zero)
+                    throw new InvalidOperationException("PuTTY did not create a terminal window.");
+
+                AdjustWindowStyle(handle);
+                Methods.SetParent(handle, this.Handle);
+                this.windowCaptured = true;
+                Volatile.Write(ref starting, 0);
+                ClipPutty();
+            }
+            catch (Exception ex) when (ex is InvalidOperationException ||
+                                       ex is System.ComponentModel.Win32Exception)
+            {
+                Logging.Error("Unable to embed PuTTY window.", ex);
+                FireDisconnected();
+            }
         }
 
         private void PuttyProcessOnExited(object sender, EventArgs eventArgs)
         {
-            this.FireDisconnected();
+            Volatile.Write(ref starting, 0);
+            if (Volatile.Read(ref closing) == 0)
+                FireDisconnected(); // TabControlRemover marshals to WinForms.
         }
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing && this.ProcessRunning)
-                this.ClosePutty();
-
+            if (disposing && Interlocked.Exchange(ref closing, 1) == 0)
+            {
+                Volatile.Write(ref starting, 0);
+                var launched = Interlocked.Exchange(ref puttyProcess, null);
+                if (launched != null)
+                {
+                    launched.Exited -= this.PuttyProcessOnExited;
+                    ExternalProcessLauncher.StopDetached(launched);
+                }
+            }
             base.Dispose(disposing);
-        }
-
-        private void ClosePutty()
-        {
-            try
-            {
-                this.puttyProcess.Kill();
-            }
-            catch
-            {
-                Logging.Warn("Unable to close putty process.");
-            }
-            finally
-            {
-                this.puttyProcess.Dispose();
-            }
         }
 
         void IFocusable.Focus()
@@ -164,7 +226,8 @@ namespace Terminals.Plugins.Putty
             if (!this.Connected)
                 return;
 
-            this.Invoke(new ThreadStart(() =>
+            if (this.IsDisposed) return;
+            this.BeginInvoke(new MethodInvoker(() =>
             {
                 IntPtr puttyWindow = this.puttyProcess.MainWindowHandle;
                 Methods.SetForegroundWindow(puttyWindow);
