@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Windows.Forms;
 using Terminals.Common.Connections;
+using Terminals.Common.Configuration;
 using Terminals.Connections;
 using Terminals.Data;
 using Terminals.Integration.Export;
@@ -23,7 +24,8 @@ namespace Terminals.Plugins.Putty
 
         public Connection CreateConnection()
         {
-            return new PuttyConnection();
+            return SshClientPreference.Selected == SshClientKind.WindowsOpenSSH
+                ? (Connection)new WindowsOpenSshConnection() : new PuttyConnection();
         }
 
         public ProtocolOptions CreateOptions()

@@ -1008,6 +1008,16 @@ namespace Terminals.Configuration
             }
         }
 
+        public string PreferredSshClient
+        {
+            get { return GetSection().PreferredSshClient; }
+            set
+            {
+                GetSection().PreferredSshClient = value ?? "PuTTY";
+                SaveImmediatelyIfRequested();
+            }
+        }
+
         public string PuttyExecutablePath
         {
             get { return GetSection().PuttyExecutablePath; }

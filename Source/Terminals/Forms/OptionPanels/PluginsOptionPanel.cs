@@ -19,6 +19,7 @@ namespace Terminals.Forms.OptionPanels
         private readonly FlowLayoutPanel pluginGroups;
         private readonly CheckedListBox otherPlugins;
         private readonly CheckBox enablePutty;
+        private readonly ComboBox preferredSshClient;
         private readonly TextBox puttyPath;
         private readonly TextBox pageantPath;
         private readonly Panel puttyControls;
@@ -41,6 +42,20 @@ namespace Terminals.Forms.OptionPanels
             };
             Controls.Clear();
             Controls.Add(pluginGroups);
+
+            var sshGroup = new GroupBox { Text = "SSH", Height = 78, Margin = new Padding(3, 3, 3, 10) };
+            sshGroup.Controls.Add(new Label { Text = "SSH client", Location = new Point(12, 29), Width = 82 });
+            preferredSshClient = new ComboBox
+            {
+                Location = new Point(100, 25), Width = 240,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top
+            };
+            preferredSshClient.Items.Add("PuTTY");
+            if (SshClientPreference.FindWindowsOpenSsh() != null)
+                preferredSshClient.Items.Add("Windows OpenSSH");
+            sshGroup.Controls.Add(preferredSshClient);
+            pluginGroups.Controls.Add(sshGroup);
 
             var puttyGroup = new GroupBox { Text = "PuTTY", Height = 113, Margin = new Padding(3, 3, 3, 10) };
             enablePutty = new CheckBox
@@ -86,6 +101,7 @@ namespace Terminals.Forms.OptionPanels
                     control.Left = puttyControls.Width - 76;
             }
             otherPlugins.Width = width - 24;
+            preferredSshClient.Width = Math.Max(150, width - 124);
         }
 
         private static TextBox AddExecutableRow(Panel parent, string caption, string filename, int y)
@@ -129,6 +145,20 @@ namespace Terminals.Forms.OptionPanels
                         otherPlugins.Items.Add(plugin, plugin.Enabled);
                 }
 
+                var chosen = SshClientPreference.Parse(Settings.Instance.PreferredSshClient);
+                if (chosen == SshClientKind.WindowsOpenSSH)
+                {
+                    // Keep an unavailable saved preference visible; never silently
+                    // rewrite an existing user's chosen SSH backend to PuTTY.
+                    if (!preferredSshClient.Items.Contains("Windows OpenSSH"))
+                        preferredSshClient.Items.Add("Windows OpenSSH (not installed)");
+                    preferredSshClient.SelectedIndex = preferredSshClient.Items.IndexOf(
+                        SshClientPreference.FindWindowsOpenSsh() == null
+                            ? "Windows OpenSSH (not installed)" : "Windows OpenSSH");
+                }
+                else
+                    preferredSshClient.SelectedItem = "PuTTY";
+
                 enablePutty.Enabled = puttyPlugin != null;
                 enablePutty.Checked = puttyPlugin != null && puttyPlugin.Enabled;
                 puttyPath.Text = DisplayPath("putty.exe", Settings.Instance.PuttyExecutablePath);
@@ -152,6 +182,10 @@ namespace Terminals.Forms.OptionPanels
             if (validation.Cancel)
                 throw new InvalidOperationException("Enable at least one plugin and correct any invalid executable paths.");
 
+            var choice = (preferredSshClient.SelectedItem as string ?? "").StartsWith("Windows OpenSSH", StringComparison.Ordinal)
+                ? SshClientKind.WindowsOpenSSH : SshClientKind.PuTTY;
+            Settings.Instance.PreferredSshClient = choice.ToString();
+            SshClientPreference.Selected = choice;
             pluginsSelection.SaveSelected(GetPluginsFromUI());
             SaveExecutablePath(puttyPath, "putty.exe", value => Settings.Instance.PuttyExecutablePath = value);
             SaveExecutablePath(pageantPath, "pageant.exe", value => Settings.Instance.PageantExecutablePath = value);
@@ -173,7 +207,9 @@ namespace Terminals.Forms.OptionPanels
             base.OnValidating(e);
             if (loading) return;
 
-            e.Cancel = !GetPluginsFromUI().Any(p => p.Enabled);
+            e.Cancel = !GetPluginsFromUI().Any(p => p.Enabled) &&
+                !(puttyPlugin != null && (preferredSshClient.SelectedItem as string ?? "")
+                  .StartsWith("Windows OpenSSH", StringComparison.Ordinal));
             errorProvider.SetError(otherPlugins, e.Cancel ? Resources.PluginSelectionErrorMessage : string.Empty);
             if (e.Cancel) return;
 

@@ -17,16 +17,22 @@ namespace Terminals.Connections
             this.enabledPlugins = settings.DisabledPlugins;
             ExternalExecutablePaths.Putty = settings.PuttyExecutablePath;
             ExternalExecutablePaths.Pageant = settings.PageantExecutablePath;
+            SshClientPreference.Selected = SshClientPreference.Parse(settings.PreferredSshClient);
         }
 
         public IEnumerable<IConnectionPlugin> Load()
         {
-            List<string> allPluginAssemblies = FindPluginAssemblies()
-                .Where(p => !enabledPlugins.Contains(p))
-                .ToList();
-
-            var availablePlugins = allPluginAssemblies.SelectMany(LoadAssemblyPlugins)
-                    .ToList();
+            // The PuTTY assembly also supplies SSH. If disabled, retain only
+            // SSH when Windows OpenSSH is selected; Telnet remains disabled.
+            var availablePlugins = FindPluginAssemblies().SelectMany(path =>
+            {
+                if (!enabledPlugins.Contains(path))
+                    return LoadAssemblyPlugins(path);
+                return SshClientPreference.Selected == SshClientKind.WindowsOpenSSH &&
+                       Path.GetFileName(path).Equals("Terminals.Plugins.Putty.dll", StringComparison.OrdinalIgnoreCase)
+                    ? LoadAssemblyPlugins(path).Where(plugin => plugin.PortName == "SSH")
+                    : Enumerable.Empty<IConnectionPlugin>();
+            }).ToList();
 
             if (!availablePlugins.Any())
                 throw new ApplicationException("No available protocol plugin was loaded.");

@@ -147,6 +147,17 @@ namespace Tests
         }
 
         [TestMethod]
+        public void PreferredSshClient_SaveAndReload()
+        {
+            settings.PreferredSshClient = "WindowsOpenSSH";
+            settings.ForceReload();
+            Assert.AreEqual("WindowsOpenSSH", settings.PreferredSshClient);
+            settings.PreferredSshClient = "PuTTY";
+            settings.ForceReload();
+            Assert.AreEqual("PuTTY", settings.PreferredSshClient);
+        }
+
+        [TestMethod]
         public void ExternalExecutablePaths_SaveAndReload()
         {
             settings.PuttyExecutablePath = @"C:\Tools\PuTTY\putty.exe";

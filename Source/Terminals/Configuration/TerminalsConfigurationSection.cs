@@ -903,6 +903,13 @@ namespace Terminals
             set { this["pageantExecutablePath"] = value; }
         }
 
+        [ConfigurationProperty("preferredSshClient", DefaultValue = "PuTTY")]
+        public string PreferredSshClient
+        {
+            get { return (string)this["preferredSshClient"]; }
+            set { this["preferredSshClient"] = value; }
+        }
+
         private const string DISABLED_PLUGINS_NAME = "disabledPlugins";
 
         [ConfigurationProperty(DISABLED_PLUGINS_NAME)]

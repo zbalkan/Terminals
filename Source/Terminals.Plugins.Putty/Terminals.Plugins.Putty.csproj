@@ -73,6 +73,7 @@
     </Compile>
     <Compile Include="TelnetConnectionPlugin.cs" />
     <Compile Include="SshConnectionPlugin.cs" />
+    <Compile Include="WindowsOpenSshConnection.cs" />
     <Compile Include="PuttyOptions.cs" />
     <Compile Include="SshOptionsControl.cs">
       <SubType>UserControl</SubType>

@@ -111,6 +111,37 @@ namespace Tests.Putty
             Assert.AreEqual(expected, Executables.GetPageantBinaryPath());
         }
 
+        [TestMethod]
+        public void UnrecognizedSshClient_FallsBackToPutty()
+        {
+            Assert.AreEqual(SshClientKind.PuTTY, SshClientPreference.Parse(null));
+            Assert.AreEqual(SshClientKind.PuTTY, SshClientPreference.Parse("invalid"));
+            Assert.AreEqual(SshClientKind.WindowsOpenSSH, SshClientPreference.Parse("WindowsOpenSSH"));
+        }
+
+        [TestMethod]
+        public void WindowsOpenSshCommand_UsesFavoriteHostPortAndUsername()
+        {
+            Assert.AreEqual("-p 2222 -l \"alice\" -- \"server.example.com\"",
+                WindowsOpenSshConnection.BuildArguments("server.example.com", 2222, "alice"));
+        }
+
+        [TestMethod]
+        public void WindowsOpenSshArguments_PreserveDomainSeparator()
+        {
+            Assert.AreEqual("-p 22 -l \"DOMAIN\\alice\" -- \"server.example.com\"",
+                WindowsOpenSshConnection.BuildArguments("server.example.com", 22, @"DOMAIN\alice"));
+        }
+
+        [TestMethod]
+        public void WindowsOpenSshArguments_RejectInvalidTargets()
+        {
+            Assert.ThrowsExactly<ArgumentException>(() =>
+                WindowsOpenSshConnection.BuildArguments("-invalid\n", 22, "alice"));
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+                WindowsOpenSshConnection.BuildArguments("server.example.com", 0, "alice"));
+        }
+
         private string CreateExecutable(string folder, string fileName)
         {
             string directory = Path.Combine(root, folder);
