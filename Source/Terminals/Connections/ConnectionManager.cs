@@ -86,6 +86,8 @@ namespace Terminals.Connections
 
         internal Connection CreateConnection(IFavorite favorite)
         {
+            if (string.Equals(favorite.Protocol, "VMRC", StringComparison.OrdinalIgnoreCase))
+                throw new NotSupportedException("Microsoft Virtual Server VMRC is no longer supported.");
             IConnectionPlugin plugin = FindPlugin(favorite.Protocol);
             return plugin.CreateConnection();
         }
@@ -116,7 +118,6 @@ namespace Terminals.Connections
         /// </summary>
         internal string GetPortName(int port)
         {
-            // hack to let the VNC take precedence over the VMRC
             var plugin = this.plugins.Values.OrderBy(p => p.PortName.Length)
                 .FirstOrDefault(p => PluginIsOnPort(port, p));
 

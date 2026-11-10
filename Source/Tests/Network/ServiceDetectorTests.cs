@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Terminals.Connections;
-using Terminals.Connections.VMRC;
 using Terminals.Connections.VNC;
 using Terminals.Network;
 
@@ -23,25 +22,6 @@ namespace Tests.Network
             Assert.AreEqual(dummyPlugin.PortName, resolved, MESSAGE);
         }
 
-        [TestMethod]
-        public void WrokingVncVmrcPlugins_ResolveServiceName_ReturnsVnc()
-        {
-            IConnectionPlugin vnc = new VncConnectionPlugin((ip, port) => {});
-            var resolved = Resolve(vnc.Port, new VmrcConnectionPlugin(), vnc);
-            Assert.AreEqual(vnc.PortName, resolved, "If extra check is successfull, than that plugins is resolved.");
-        }
-        
-        [TestMethod]
-        public void VmrcFailingVncPlugin_ResolveServiceName_ReturnsVmrc()
-        {
-            IConnectionPlugin vnc = new VncConnectionPlugin((ip, port) =>
-            {
-                throw new Exception();
-            });
-            var vmrc = new VmrcConnectionPlugin();
-            var resolved = Resolve(vnc.Port, vmrc, vnc);
-            Assert.AreEqual(vmrc.PortName, resolved, "If extra check fails standard plugin is resolved.");
-        }
 
         private static string Resolve(int port, params IConnectionPlugin[] plugins)
         {

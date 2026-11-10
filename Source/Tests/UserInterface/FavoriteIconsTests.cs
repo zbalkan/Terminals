@@ -7,7 +7,6 @@ using Terminals.Common.Connections;
 using Terminals.Connections;
 using Terminals.Connections.ICA;
 using Terminals.Connections.Rdp;
-using Terminals.Connections.VMRC;
 using Terminals.Connections.VNC;
 using Terminals.Connections.Web;
 using Terminals.Data;
@@ -42,7 +41,6 @@ namespace Tests.UserInterface
                 new Tuple<string, string>(KnownConnectionConstants.HTTPS, "treeIcon_HTTPS"),
 
                 // undefined icons use default icon
-                new Tuple<string, string>(VmrcConnectionPlugin.VMRC, "treeIcon_VMRC"),
                 new Tuple<string, string>(ICAConnectionPlugin.ICA_CITRIX, "treeIcon_ICA Citrix")     
             };
 
@@ -80,7 +78,6 @@ namespace Tests.UserInterface
 
                 // undefined icons use default icon
                 new Tuple<string, Image>(ICAConnectionPlugin.ICA_CITRIX, Connection.Terminalsicon),
-                new Tuple<string, Image>(VmrcConnectionPlugin.VMRC, Connection.Terminalsicon)
             };
 
             bool iconsEquals = testData.All(this.AssertGetFavoriteIcon);

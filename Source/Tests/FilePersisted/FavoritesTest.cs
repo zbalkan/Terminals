@@ -48,6 +48,15 @@ namespace Tests.FilePersisted
         }
 
         [TestMethod]
+        public void RetiredVmrc_AddFavorite_IsRejected()
+        {
+            IFavorite favorite = this.Persistence.Factory.CreateFavorite();
+            favorite.ChangeProtocol("VMRC", new EmptyOptions());
+            Assert.ThrowsExactly<NotSupportedException>(() => this.Favorites.Add(favorite));
+            Assert.IsFalse(this.Favorites.Any(f => f.Protocol == "VMRC"));
+        }
+
+        [TestMethod]
         public void DisabledPlugins_LoadFavorites_ReturnsOnlyAvailableProtocols()
         {
             this.AddVncRdpFavorites();

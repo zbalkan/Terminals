@@ -7,7 +7,6 @@ using Moq;
 using Terminals.Common.Connections;
 using Terminals.Connections;
 using Terminals.Connections.ICA;
-using Terminals.Connections.VMRC;
 using Terminals.Connections.VNC;
 using Terminals.Connections.Web;
 using Terminals.Data;
@@ -40,7 +39,7 @@ namespace Tests.Connections
         public void GetAvailableProtocols_ReturnsAll()
         {
             int knownProtocols = GetUniqueProtocols().Count();
-            Assert.AreEqual(8, knownProtocols, "All other test in this SUT operate on wrong data.");
+            Assert.AreEqual(7, knownProtocols, "All other test in this SUT operate on wrong data.");
         }
 
         [TestMethod]
@@ -50,8 +49,6 @@ namespace Tests.Connections
             {
                 new Tuple<string, Type>(KnownConnectionConstants.RDP, typeof(RDPConnection)),
                 new Tuple<string, Type>(VncConnectionPlugin.VNC, typeof(VNCConnection)),
-                // VMRCConnection creation may fail in some test runners.
-                //new Tuple<string, Type>(VmrcConnectionPlugin.VMRC, typeof(VMRCConnection)),
                 new Tuple<string, Type>(TelnetConnectionPlugin.TELNET, typeof(PuttyConnection)),
                 new Tuple<string, Type>(SshConnectionPlugin.SSH, typeof(PuttyConnection)),
                 new Tuple<string, Type>(KnownConnectionConstants.HTTP, typeof(HTTPConnection)),
@@ -88,6 +85,17 @@ namespace Tests.Connections
             this.TestContext.WriteLine(message);
         }
 
+
+        [TestMethod]
+        public void RetiredVmrc_CreateConnection_ThrowsUnsupportedInsteadOfCreatingDummyConnection()
+        {
+            var mockFavorite = new Mock<IFavorite>();
+            mockFavorite.SetupGet(f => f.Protocol).Returns("VMRC");
+            Assert.IsFalse(connectionManager.IsKnownProtocol("VMRC"));
+            Assert.ThrowsExactly<NotSupportedException>(() =>
+                connectionManager.CreateConnection(mockFavorite.Object));
+        }
+
         [TestMethod]
         public void UnknownProtocol_GetPort_Returns0()
         {
@@ -103,7 +111,6 @@ namespace Tests.Connections
             {
                 new Tuple<string, int>(KnownConnectionConstants.RDP, KnownConnectionConstants.RDPPort),
                 new Tuple<string, int>(VncConnectionPlugin.VNC, VncConnectionPlugin.VncPort),
-                new Tuple<string, int>(VmrcConnectionPlugin.VMRC, VmrcConnectionPlugin.VMRCPort),
                 new Tuple<string, int>(TelnetConnectionPlugin.TELNET, TelnetConnectionPlugin.TelnetPort),
                 new Tuple<string, int>(SshConnectionPlugin.SSH, SshConnectionPlugin.SSHPort),
                 new Tuple<string, int>(KnownConnectionConstants.HTTP, KnownConnectionConstants.HTTPPort),
@@ -139,8 +146,6 @@ namespace Tests.Connections
             {
                 new Tuple<int, string>(KnownConnectionConstants.RDPPort, KnownConnectionConstants.RDP),
                 new Tuple<int, string>(VncConnectionPlugin.VncPort, VncConnectionPlugin.VNC),
-                // imposible to distinquish vnc and vmrc, if both operate on the same port.
-                // new Tuple<int, string>(VmrcConnectionPlugin.VMRCPort, VmrcConnectionPlugin.VMRC),
                 new Tuple<int, string>(TelnetConnectionPlugin.TelnetPort, TelnetConnectionPlugin.TELNET),
                 new Tuple<int, string>(SshConnectionPlugin.SSHPort, SshConnectionPlugin.SSH),
                 new Tuple<int, string>(KnownConnectionConstants.HTTPPort, KnownConnectionConstants.HTTP),
@@ -175,7 +180,6 @@ namespace Tests.Connections
                 VncConnectionPlugin.VNC,
                 SshConnectionPlugin.SSH,
                 TelnetConnectionPlugin.TELNET,
-                VmrcConnectionPlugin.VMRC
             };
             
             bool nonHttp = nonHttpPorts.All(connectionManager.IsProtocolWebBased);
@@ -244,7 +248,6 @@ namespace Tests.Connections
             return new []{
                 new Tuple<string, int, string>(KnownConnectionConstants.RDP, 5, "Terminals.Forms.EditFavorite.RdpDisplayControl"),
                 new Tuple<string, int, string>(VncConnectionPlugin.VNC, 1, "Terminals.Forms.EditFavorite.VncControl"),
-                new Tuple<string, int, string>(VmrcConnectionPlugin.VMRC, 1, "Terminals.Forms.EditFavorite.VmrcControl"),
                 new Tuple<string, int, string>(TelnetConnectionPlugin.TELNET, 1, "Terminals.Plugins.Putty.PuttyOptionsControl"),
                 new Tuple<string, int, string>(SshConnectionPlugin.SSH, 1, "Terminals.Plugins.Putty.SshOptionsControl"),
                 new Tuple<string, int, string>(ICAConnectionPlugin.ICA_CITRIX, 1, "Terminals.Forms.EditFavorite.CitrixControl")
@@ -279,7 +282,7 @@ namespace Tests.Connections
         {
             var mockProvider = new Mock<ICurrenctConnectionProvider>();
             var extensions = this.connectionManager.CreateToolbarExtensions(mockProvider.Object).Count();
-            Assert.AreEqual(3, extensions, "All known extensions have to be registered");
+            Assert.AreEqual(2, extensions, "All known extensions have to be registered");
         }
         
         [TestMethod]
@@ -302,7 +305,6 @@ namespace Tests.Connections
                 "Terminals.Integration.Export.TerminalsIcaExport",
                 "Terminals.Plugins.Putty.TerminalsSshExport",
                 "Terminals.Plugins.Putty.TerminalsTelnetExport",
-                "Terminals.Integration.Export.TerminalsVmrcExport"
             };
 
             ITerminalsOptionsExport[] exporters = this.connectionManager.GetTerminalsOptionsExporters();
@@ -315,7 +317,7 @@ namespace Tests.Connections
         {
             IEnumerable<Type> optionTypes = this.connectionManager.GetAllKnownProtocolOptionTypes()
                 .Distinct();
-            Assert.AreEqual(8, optionTypes.Count(), "To be able serialize all known protocols we have to list all.");
+            Assert.AreEqual(7, optionTypes.Count(), "To be able serialize all known protocols we have to list all.");
         }
         
         [TestMethod]
@@ -334,7 +336,7 @@ namespace Tests.Connections
                 new Tuple<int, IEnumerable<string>>(KnownConnectionConstants.RDPPort, 
                     new List<string>() { "Terminals.Connections.Rdp.RdpConnectionPlugin"}),
                 new Tuple<int, IEnumerable<string>>(VncConnectionPlugin.VncPort,
-                    new List<string>() { "Terminals.Connections.VNC.VncConnectionPlugin", "Terminals.Connections.VMRC.VmrcConnectionPlugin"}),
+                    new List<string>() { "Terminals.Connections.VNC.VncConnectionPlugin"}),
                 new Tuple<int, IEnumerable<string>>(TelnetConnectionPlugin.TelnetPort, 
                     new List<string>() { "Terminals.Plugins.Putty.TelnetConnectionPlugin"}),
                 new Tuple<int, IEnumerable<string>>(SshConnectionPlugin.SSHPort, 

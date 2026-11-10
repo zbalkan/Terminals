@@ -5,7 +5,6 @@ using Moq;
 using Terminals.Common.Connections;
 using Terminals.Connections;
 using Terminals.Connections.ICA;
-using Terminals.Connections.VMRC;
 using Terminals.Connections.VNC;
 using Terminals.Data;
 using Terminals.Data.Credentials;
@@ -122,14 +121,6 @@ namespace Tests.UserInterface
                   EXPECTED_NUMBER);
         }
 
-        [TestMethod]
-        public void Vmrc_LoadSave_KeepsReducedColorsMode()
-        {
-            this.AssertExpectedPropertyValue<VMRCOptions, bool>(VmrcConnectionPlugin.VMRC,
-                  (options, newValue) => options.ReducedColorsMode = newValue,
-                  options => options.ReducedColorsMode,
-                  true);
-        }
 
         [TestMethod]
         public void Ica_LoadSave_KeepsReducedApplicationName()
@@ -207,11 +198,6 @@ namespace Tests.UserInterface
             this.AssertLoadedControlsImplementInterface(TelnetConnectionPlugin.TELNET);
         }
 
-        [TestMethod]
-        public void Vmrc_ReloadControls_ImplementIProtocolOptionsControl()
-        {
-            this.AssertLoadedControlsImplementInterface(VmrcConnectionPlugin.VMRC);
-        }
 
         [TestMethod]
         public void Ica_ReloadControls_ImplementIProtocolOptionsControl()

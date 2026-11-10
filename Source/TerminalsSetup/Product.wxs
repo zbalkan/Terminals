@@ -21,7 +21,6 @@
       <ComponentGroupRef Id="MainComponents" />
       <ComponentGroupRef Id="IcaComponents" />
       <ComponentGroupRef Id="RdpComponents" />
-      <ComponentGroupRef Id="VmrcComponents" />
       <ComponentGroupRef Id="VncComponents" />
       <ComponentGroupRef Id="WebComponents" />
       <ComponentGroupRef Id="PuttyComponents" />
@@ -49,7 +48,6 @@
             <Directory Id="RDPFOLDER" Name="Rdp" />
             <Directory Id="PUTTYFOLDER" Name="Putty" >
             </Directory>    
-            <Directory Id="VMRCFOLDER" Name="Vmrc" />
             <Directory Id="VNCFOLDER" Name="Vnc" />
             <Directory Id="WEBFOLDER" Name="Web" />
           </Directory>

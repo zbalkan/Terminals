@@ -14,7 +14,6 @@ namespace Tests.Connections
     [DeploymentItem(VNC_PLUGIN, VNC_TARGET)]
     [DeploymentItem(ICA_PLUGIN, ICA_TARGET)]
     [DeploymentItem(PUTTY_PLUGIN, PUTTY_TARGET)]
-    [DeploymentItem(VMRC_PLUGIN, VMRC_TARGET)]
     [DeploymentItem(WEB_PLUGIN, WEB_TARGET)]
     [DeploymentItem(RDP_PLUGIN, RDP_TARGET)]
     [TestClass]
@@ -32,9 +31,7 @@ namespace Tests.Connections
         
         private const string PUTTY_TARGET = @"Plugins\Putty";
         
-        private const string VMRC_PLUGIN = "Terminals.Plugins.Vmrc.dll";
         
-        private const string VMRC_TARGET = @"Plugins\Vmrc";
         
         private const string WEB_PLUGIN = "Terminals.Plugins.Web.dll";
         
@@ -54,7 +51,6 @@ namespace Tests.Connections
                 Path.Combine(deploymentDirectory, VNC_TARGET, VNC_PLUGIN),
                 Path.Combine(deploymentDirectory, ICA_TARGET, ICA_PLUGIN),
                 Path.Combine(deploymentDirectory, PUTTY_TARGET, PUTTY_PLUGIN),
-                Path.Combine(deploymentDirectory, VMRC_TARGET, VMRC_PLUGIN),
                 Path.Combine(deploymentDirectory, WEB_TARGET, WEB_PLUGIN),
                 Path.Combine(deploymentDirectory, RDP_TARGET, RDP_PLUGIN),
             };

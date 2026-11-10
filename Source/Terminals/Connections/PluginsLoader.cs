@@ -122,7 +122,10 @@ namespace Terminals.Connections
 
         private static IEnumerable<string> FindAllPluginAssemblies(string[] pluginDirectories)
         {
-            return pluginDirectories.SelectMany(FindPluginAssemblies);
+            return pluginDirectories.SelectMany(FindPluginAssemblies)
+                // An old installed plugin must not reactivate retired Microsoft Virtual Server support.
+                .Where(path => !Path.GetFileName(path).Equals("Terminals.Plugins.Vmrc.dll",
+                    StringComparison.OrdinalIgnoreCase));
         }
 
         private static string[] FindPluginAssemblies(string pluginDirectory)

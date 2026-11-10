@@ -3,7 +3,6 @@ using Moq;
 using Terminals.Connections;
 using Terminals.Connections.ICA;
 using Terminals.Connections.Rdp;
-using Terminals.Connections.VMRC;
 using Terminals.Connections.VNC;
 using Terminals.Connections.Web;
 using Terminals.Data;
@@ -19,7 +18,6 @@ namespace Tests.Connections
             new HttpConnectionPlugin(),
             new HttpsConnectionPlugin(),
             new VncConnectionPlugin(),
-            new VmrcConnectionPlugin(),
             new TelnetConnectionPlugin(),
             new SshConnectionPlugin(),
             new ICAConnectionPlugin()

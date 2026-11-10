@@ -57,17 +57,10 @@
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="AxInterop.VMRCClientControlLib">
-      <HintPath>..\..\Resources\Libraries\VMRC\AxInterop.VMRCClientControlLib.dll</HintPath>
-    </Reference>
     <Reference Include="AxWFICALib">
       <HintPath>..\..\Resources\Libraries\Citrix\AxWFICALib.dll</HintPath>
     </Reference>
-      <Reference Include="Interop.VMRCClientControlLib">
-      <HintPath>..\..\Resources\Libraries\VMRC\Interop.VMRCClientControlLib.dll</HintPath>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="System" />
+      <Reference Include="System" />
       <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core">
@@ -179,7 +172,6 @@
     <Compile Include="UserInterface\FavoriteIconsTests.cs" />
     <Compile Include="UserInterface\ToolTipBuilderTests.cs" />
     <Compile Include="UserInterface\VncMenuVisitorTests.cs" />
-    <Compile Include="UserInterface\VmrcMenuVisitorTests.cs" />
     <Compile Include="Validation\DbValidationTests.cs" />
     <Compile Include="Validation\FavoriteNameValidatorTests.cs" />
     <Compile Include="Validation\FileValidationTests.cs" />
@@ -220,10 +212,6 @@
     <ProjectReference Include="..\Terminals.Plugins.Rdp\Terminals.Plugins.Rdp.csproj">
       <Project>{f0c60ed2-9a47-4364-af57-505bc3e953d5}</Project>
       <Name>Terminals.Plugins.Rdp</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Terminals.Plugins.Vmrc\Terminals.Plugins.Vmrc.csproj">
-      <Project>{c841ccf6-4793-41b7-835e-f749e2525963}</Project>
-      <Name>Terminals.Plugins.Vmrc</Name>
     </ProjectReference>
     <ProjectReference Include="..\Terminals.Plugins.Vnc\Terminals.Plugins.Vnc.csproj">
       <Project>{123562C5-8D66-4E30-9676-D47B4C03EE7F}</Project>

@@ -73,6 +73,10 @@ namespace Terminals.Data.DB
 
         public void Add(List<IFavorite> favorites)
         {
+            // Reject unsupported additions before starting database work or modifying the cache.
+            if (favorites.Any(favorite => string.Equals(favorite.Protocol, "VMRC", StringComparison.OrdinalIgnoreCase)))
+                throw new NotSupportedException("Creating new Microsoft Virtual Server VMRC favorites is no longer supported.");
+
             try
             {
                 this.TryAdd(favorites);

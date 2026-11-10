@@ -208,7 +208,9 @@ namespace Tests.Integrations
 
         private static int ExpectedFavoritesCount(List<FavoriteConfigurationElement> toImport)
         {
-            return toImport.Select(favorite => favorite.Name)
+            // Only installed, supported protocols can be imported; the legacy fixture includes VMRC.
+            return toImport.Where(favorite => TestConnectionManager.Instance.IsKnownProtocol(favorite.Protocol))
+                           .Select(favorite => favorite.Name)
                            .Distinct(StringComparer.CurrentCultureIgnoreCase)
                            .Count();
         }

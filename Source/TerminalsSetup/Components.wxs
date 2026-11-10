@@ -97,19 +97,7 @@
       <Component Id="PluginRdp" Guid="E33BF837-A732-41A7-81C4-8F90282DCBC1">
         <File Source="$(var.Terminals.Plugins.Rdp.TargetPath)" KeyPath="yes" Checksum="yes"/>
       </Component>
-    </ComponentGroup>
-    <ComponentGroup Id="VmrcComponents" Directory="VMRCFOLDER">
-      <Component Id="VMRCLibDll" Guid="F9944517-DA84-4846-BF81-606494EA96FA">
-        <File Source="..\..\Resources\Libraries\VMRC\AxInterop.VMRCClientControlLib.dll" KeyPath="yes" Checksum="yes"/>
-      </Component>
-      <Component Id="VMRCInterOpDll" Guid="5631D23A-0599-40FA-8937-39BC422A9377">
-        <File Source="..\..\Resources\Libraries\VMRC\Interop.VMRCClientControlLib.dll" KeyPath="yes" Checksum="yes"/>
-      </Component>
-      <Component Id="PluginVmrc" Guid="5486A465-AB4D-42D6-B1ED-B6C56F281429">
-        <File Source="$(var.Terminals.Plugins.Vmrc.TargetPath)" KeyPath="yes" Checksum="yes"/>
-      </Component>
-    </ComponentGroup>
-    <ComponentGroup Id="VncComponents" Directory="VNCFOLDER">
+    </ComponentGroup>    <ComponentGroup Id="VncComponents" Directory="VNCFOLDER">
       <Component Id="VncSharpDll" Guid="C15DFED3-F776-43BE-90BE-483DE2D2E86E">
         <File Source="$(var.VncSharp.TargetPath)" KeyPath="yes" Checksum="yes"/>
       </Component>

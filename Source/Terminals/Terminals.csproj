@@ -1577,7 +1577,6 @@
     <Folder Include="Connections\ICA\" />
     <Folder Include="Connections\Rdp\" />
     <Folder Include="Connections\Terminal\" />
-    <Folder Include="Connections\VMRC\" />
     <Folder Include="Connections\VNC\" />
     <Folder Include="Connections\Web\" />
     <Folder Include="Logging\" />

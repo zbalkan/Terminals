@@ -57,7 +57,7 @@ namespace Terminals.Data.FilePersisted
 
         private List<XElement> FilterUnknownFavoritesForGroup(XElement favoritesInGroup, string[] unknownFavoriteIds)
         {
-            return favoritesInGroup.XPathSelectElements("//t:guid", this.namespaceManager)
+            return favoritesInGroup.XPathSelectElements("t:Favorites/t:guid", this.namespaceManager)
                 .Where(guid => unknownFavoriteIds.Contains(guid.Value))
                 .Select(this.ExtractFavoriteGuid)
                 .ToList();

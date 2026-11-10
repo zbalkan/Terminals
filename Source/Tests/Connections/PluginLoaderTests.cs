@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -17,7 +18,6 @@ namespace Tests.Connections
             {
                 new Tuple<string, string>("VNC", "Terminals.Plugins.Vnc"),
                 new Tuple<string, string>("ICA", "Terminals.Plugins.Ica"),
-                new Tuple<string, string>("VMRC", "Terminals.Plugins.Vmrc"),
                 new Tuple<string, string>("Putty", "Terminals.Plugins.Putty"),
                 new Tuple<string, string>("HTTP and HTTPS", "Terminals.Plugins.Web"),
                 new Tuple<string, string>("RDP", "Terminals.Plugins.Rdp")
@@ -38,6 +38,30 @@ namespace Tests.Connections
         {
             var disabled = new string[] { @"C:\PathTo\IncompatiblePluging.dll" };
             this.AssertAllPluginsAreLoaded(disabled);
+        }
+
+
+        [TestMethod]
+        public void RetiredVmrcAssembly_IsExcludedFromDiscovery()
+        {
+            string folder = Path.Combine(PluginsLoader.FindBasePluginDirectory(), "Vmrc");
+            Directory.CreateDirectory(folder);
+            string staleAssembly = Path.Combine(folder, "Terminals.Plugins.Vmrc.dll");
+            bool createdByTest = !File.Exists(staleAssembly);
+            if (createdByTest)
+                File.WriteAllText(staleAssembly, "Retired plugin assembly must never be inspected or loaded.");
+            try
+            {
+                var loader = CreateLoader(new string[0]);
+                Assert.IsFalse(loader.FindAvailablePlugins().Any(p =>
+                    p.FullPath.Equals(staleAssembly, StringComparison.OrdinalIgnoreCase)));
+                Assert.IsFalse(loader.Load().Any(p => p.PortName == "VMRC"));
+            }
+            finally
+            {
+                if (createdByTest)
+                    File.Delete(staleAssembly);
+            }
         }
 
         [TestMethod]

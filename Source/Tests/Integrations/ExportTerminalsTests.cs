@@ -5,7 +5,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Terminals;
 using Terminals.Common.Connections;
 using Terminals.Connections.ICA;
-using Terminals.Connections.VMRC;
 using Terminals.Connections.VNC;
 using Terminals.Data;
 using Terminals.Integration.Export;
@@ -38,7 +37,6 @@ namespace Tests.Integrations
                 new Tuple<string, string>(KnownConnectionConstants.RDP, "tsgwUsageMethod"),
                 new Tuple<string, string>(KnownConnectionConstants.RDP, "executeBeforeConnect"), // applies to all protocols
                 new Tuple<string, string>(VncConnectionPlugin.VNC, "vncAutoScale"),
-                new Tuple<string, string>(VmrcConnectionPlugin.VMRC, "vmrcadministratormode"),
                 new Tuple<string, string>(TelnetConnectionPlugin.TELNET, "telnetSessionName"),
                 new Tuple<string, string>(TelnetConnectionPlugin.TELNET, "telnetVerbose"),
                 new Tuple<string, string>(SshConnectionPlugin.SSH, "sshSessionName"),

@@ -210,6 +210,7 @@ namespace Terminals.Data
 
         public void Add(IFavorite favorite)
         {
+            RejectRetiredVmrc(favorite);
             if (AddToCache(favorite))
             {
                 this.dispatcher.ReportFavoriteAdded(favorite);
@@ -222,9 +223,18 @@ namespace Terminals.Data
             if (favorites == null)
                 return;
 
+            // Validate the entire batch before inserting anything.
+            favorites.ForEach(RejectRetiredVmrc);
+
             List<IFavorite> added = this.AddToCacheAndReport(favorites);
             if (added.Count > 0)
                 this.persistence.SaveImmediatelyIfRequested();
+        }
+
+        private static void RejectRetiredVmrc(IFavorite favorite)
+        {
+            if (string.Equals(favorite.Protocol, "VMRC", StringComparison.OrdinalIgnoreCase))
+                throw new NotSupportedException("Creating new Microsoft Virtual Server VMRC favorites is no longer supported.");
         }
 
         private List<IFavorite> AddToCacheAndReport(List<IFavorite> favorites)

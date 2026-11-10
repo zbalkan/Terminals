@@ -67,6 +67,38 @@ namespace Tests.SqlPersisted
             Assert.AreEqual(2, this.addedCount, "Event wasn't delivered");
         }
 
+
+        [TestMethod]
+        public void RetiredVmrc_NewFavorite_IsRejectedBeforeDatabaseInsert()
+        {
+            DbFavorite favorite = this.CreateTestFavorite();
+            favorite.ChangeProtocol("VMRC", new EmptyOptions());
+            Assert.ThrowsExactly<System.NotSupportedException>(() => this.PrimaryFavorites.Add(favorite));
+            Assert.AreEqual(0, this.CheckFavorites.Count());
+        }
+
+        [TestMethod]
+        public void RetiredVmrc_RowAndOptionsSurviveActiveFavoriteChanges()
+        {
+            DbFavorite retired = this.AddFavoriteToPrimaryPersistence();
+            var stored = this.CheckFavorites.Single(f => f.Id == retired.Id);
+            stored.Protocol = "VMRC";
+            this.CheckDatabase.SaveChanges();
+
+            const string legacyOptions = "<VMRCOptions><AdministratorMode>true</AdministratorMode><ReducedColorsMode>true</ReducedColorsMode></VMRCOptions>";
+            this.CheckDatabase.UpdateFavoriteProtocolProperties(retired.Id, legacyOptions);
+
+            // The unsupported favorite is filtered from the active view, never deleted or converted.
+            SqlPersistence reloaded = TestsLab.CreateSqlPersistence(TestConnectionManager.Instance);
+            Assert.IsFalse(reloaded.Favorites.Any(f => f.Protocol == "VMRC"));
+
+            DbFavorite active = this.CreateTestFavorite();
+            active.Name = "ActiveRdp";
+            this.PrimaryFavorites.Add(active);
+            Assert.AreEqual("VMRC", this.CheckFavorites.Single(f => f.Id == retired.Id).Protocol);
+            Assert.AreEqual(legacyOptions, this.CheckDatabase.GetProtocolPropertiesByFavorite(retired.Id));
+        }
+
         [TestMethod]
         public void StoredFavorite_Delete_RemovesFromDatabaseTablesAndFiresEvent()
         {
