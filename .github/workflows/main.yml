@@ -1,8 +1,9 @@
 name: CI
 
 on:
+  # Feature branches are checked by pull_request; pushing them must not start a duplicate CI run.
   push:
-    branches: [ '**' ]
+    branches: [ master ]
     paths-ignore:
       - '**/*.md'
       - '**/*.markdown'
@@ -12,7 +13,8 @@ on:
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/PULL_REQUEST_TEMPLATE/**'
   pull_request:
-    branches: [ '*' ]
+    # Cover PRs targeting any branch while avoiding duplicate feature-branch push runs.
+    branches: [ '**' ]
     paths-ignore:
       - '**/*.md'
       - '**/*.markdown'
@@ -24,6 +26,11 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+
+concurrency:
+  # Superseded PR commits cancel obsolete runs; master and manual runs remain independent.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   SLN_FILE_PATH: Source/Terminals.sln
@@ -65,6 +72,9 @@ jobs:
           }
       - name: Build solution
         run: msbuild ${{ env.SLN_FILE_PATH }} -t:rebuild -property:Configuration=Release
+      - name: Audit shared ZIP and Inno payload
+        shell: pwsh
+        run: ./Build/Assert-PackagePayload.ps1 -OutputDirectory ./Build/Output/Release
       - name: Verify generated MSTSC COM wrappers
         shell: pwsh
         run: |
@@ -119,3 +129,81 @@ jobs:
           name: ${{ matrix.suite }} MSTests
           path: TestResults/test_results.trx
           reporter: dotnet-trx
+
+  package:
+    name: Build and test Inno Setup and portable ZIP
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v3
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v3
+      - name: Restore solution dependencies
+        run: msbuild Source/Terminals.sln -t:Restore -property:RestorePackagesConfig=true -property:Configuration=Release
+      - name: Ensure .NET Framework 4.8.1 targeting assemblies
+        shell: pwsh
+        run: |
+          $destination = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Reference Assemblies/Microsoft/Framework/.NETFramework/v4.8.1'
+          if (-not (Test-Path (Join-Path $destination 'mscorlib.dll'))) {
+            $packageDir = Join-Path $env:RUNNER_TEMP 'net481-reference'
+            nuget install Microsoft.NETFramework.ReferenceAssemblies.net481 -Version 1.0.3 -Source https://api.nuget.org/v3/index.json -OutputDirectory $packageDir -ExcludeVersion -NonInteractive
+            if ($LASTEXITCODE -ne 0) { throw 'Failed to download net481 reference assemblies' }
+            $source = Join-Path $packageDir 'Microsoft.NETFramework.ReferenceAssemblies.net481/build/.NETFramework/v4.8.1'
+            if (-not (Test-Path (Join-Path $source 'mscorlib.dll'))) { throw 'Missing net481 reference assemblies' }
+            New-Item -ItemType Directory -Path $destination -Force | Out-Null
+            Copy-Item (Join-Path $source '*') $destination -Recurse -Force
+          }
+      - name: Build application Release
+        shell: pwsh
+        run: |
+          msbuild Source/Terminals.sln -t:Rebuild '-p:Configuration=Release' '-p:Platform=Any CPU' -m
+          if ($LASTEXITCODE -ne 0) { throw 'Release build failed' }
+      - name: Prepare ZIP and installer payload twice
+        shell: pwsh
+        run: |
+          ./Build/PackOutput.ps1
+          ./Build/PackOutput.ps1
+      - name: Install verified Inno Setup 7.1.1 compiler
+        shell: pwsh
+        run: |
+          $uri = 'https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe'
+          $sha256 = '8a5a6711c3766a6e5fb74f280ba0e3551e719ce94538d901fdbd1f8f9920b3f0'
+          $download = Join-Path $env:RUNNER_TEMP 'innosetup-7.1.1-x64.exe'
+          $directory = Join-Path $env:RUNNER_TEMP 'InnoSetup7'
+          Invoke-WebRequest -Uri $uri -OutFile $download
+          $actual = (Get-FileHash -LiteralPath $download -Algorithm SHA256).Hash
+          if ($actual -ne $sha256) { throw "Inno compiler SHA256 mismatch: $actual" }
+          $process = Start-Process -FilePath $download -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$directory") -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Inno compiler installer exited $($process.ExitCode)" }
+          $compiler = Join-Path $directory 'ISCC.exe'
+          if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) { throw "ISCC missing: $compiler" }
+          "INNO_ISCC_PATH=$compiler" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Compile Inno Setup EXE
+        shell: pwsh
+        run: ./Build/Build-Inno.ps1
+      - name: Validate Inno distribution and ZIP file integrity
+        shell: pwsh
+        run: ./Build/Assert-InnoDistribution.ps1
+      - name: Silent install and uninstall smoke test
+        shell: pwsh
+        run: ./Build/Test-InnoInstall.ps1
+      - name: Reject legacy MSI and portable-data collisions
+        shell: pwsh
+        run: ./Build/Test-InnoSafety.ps1
+      - name: Upload installer diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminals-inno-logs
+          path: Build/Output/InstallerLogs/*.log
+          if-no-files-found: warn
+      - name: Upload ZIP and Inno EXE
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminals-distribution
+          path: |
+            Build/Output/Terminals_v*.zip
+            Build/Output/TerminalsSetup_*.exe
+          if-no-files-found: warn

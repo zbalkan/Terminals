@@ -166,6 +166,11 @@ namespace Terminals.Configuration
 
         private System.Configuration.Configuration GetConfiguration()
         {
+            // An unassigned path is a programming error, not a corrupt configuration.
+            // Never enter recovery or overwrite files until startup has assigned it.
+            if (String.IsNullOrEmpty(fileLocations.Configuration))
+                throw new InvalidOperationException("Configuration file location is not initialized.");
+
             try
             {
                 CreateConfigFileIfNotExist();
@@ -197,9 +202,14 @@ namespace Terminals.Configuration
         {
             ExeConfigurationFileMap configFileMap = CreateConfigFileMap();
             fileLock.WaitOne();
-            System.Configuration.Configuration config = ConfigurationManager.OpenMappedExeConfiguration(configFileMap, ConfigurationUserLevel.None);
-            fileLock.ReleaseMutex();
-            return config;
+            try
+            {
+                return ConfigurationManager.OpenMappedExeConfiguration(configFileMap, ConfigurationUserLevel.None);
+            }
+            finally
+            {
+                fileLock.ReleaseMutex();
+            }
         }
 
         private void BackUpConfigFile()
@@ -247,10 +257,21 @@ namespace Terminals.Configuration
             // get a temp filename to hold the current settings which are failing
             string tempFile = Path.GetTempFileName();
 
-            fileWatcher.StopObservation();
-            MoveAndDeleteFile(fileLocations.Configuration, tempFile);
-            SaveDefaultConfigFile();
-            fileWatcher.StartObservation();
+            if (String.IsNullOrEmpty(fileLocations.Configuration))
+                throw new InvalidOperationException("Configuration file location is not initialized.");
+
+            if (fileWatcher != null)
+                fileWatcher.StopObservation();
+            try
+            {
+                MoveAndDeleteFile(fileLocations.Configuration, tempFile);
+                SaveDefaultConfigFile();
+            }
+            finally
+            {
+                if (fileWatcher != null)
+                    fileWatcher.StartObservation();
+            }
             System.Configuration.Configuration c = OpenConfiguration();
 
             // get a list of the properties on the Settings object (static props)
@@ -361,6 +382,10 @@ namespace Terminals.Configuration
 
         private TerminalsConfigurationSection GetSection()
         {
+            // Path initialization is a programming error, not a corrupt config file.
+            if (String.IsNullOrEmpty(fileLocations.Configuration))
+                throw new InvalidOperationException("Configuration file location is not initialized.");
+
             try
             {
                 return Config.GetSection("settings") as TerminalsConfigurationSection;

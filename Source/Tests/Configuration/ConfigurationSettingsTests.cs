@@ -46,6 +46,25 @@ namespace Tests
         }
 
         [TestMethod]
+        public void UnassignedConfigurationPath_FailsWithoutAttemptingRecovery()
+        {
+            var uninitialized = new Settings(this.mockFileWatch.Object);
+            var error = Assert.ThrowsExactly<InvalidOperationException>(() =>
+            {
+                var ignored = uninitialized.CitrixSelfServiceExecutablePath;
+            });
+            StringAssert.Contains(error.Message, "not initialized");
+            this.mockFileWatch.Verify(watcher => watcher.StopObservation(), Times.Never);
+        }
+
+        [TestMethod]
+        public void TrmProtocolHandler_QuotesExecutablePath()
+        {
+            Assert.AreEqual(@"""C:\Program Files\Terminals\Terminals.exe"" /reuse /url:""%1""",
+                ProtocolHandler.BuildOpenCommand(@"C:\Program Files\Terminals\Terminals.exe"));
+        }
+
+        [TestMethod]
         public void Ssh_SaveDefaultFavorite_IsSaved()
         {
             var favorite = new FavoriteConfigurationElement();

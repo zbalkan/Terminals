@@ -41,9 +41,10 @@ namespace Terminals
             Logging.Info("Start state 3 Complete: Set application properties");
 
             var settings = Settings.Instance;
+            // Assign configuration paths before reading any settings-backed values.
+            CommandLineArgs commandLine = ParseCommandline(settings);
             ExternalExecutablePaths.CitrixSelfService = settings.CitrixSelfServiceExecutablePath;
             ExternalExecutablePaths.CitrixStorebrowse = settings.CitrixStorebrowseExecutablePath;
-            CommandLineArgs commandLine = ParseCommandline(settings);
             Logging.Info("Start state 4 Complete: Parse command line");
 
             if (!EnsureDataAreWriteAble())
