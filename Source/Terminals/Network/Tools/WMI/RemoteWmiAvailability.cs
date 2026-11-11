@@ -1,5 +1,7 @@
 using System;
 using System.Windows.Forms;
+using System.Management;
+using System.Runtime.InteropServices;
 using Terminals.Common.Network;
 
 namespace Terminals.Network.WMI
@@ -31,6 +33,16 @@ namespace Terminals.Network.WMI
 
         internal static void Failed(string host, Exception error)
         {
+            // ManagementException may wrap WBEM_E_TRANSPORT_FAILURE without
+            // exposing the underlying COMException. Do not suppress access
+            // denied, invalid classes, namespaces or provider-level errors.
+            var management = error as ManagementException;
+            if (management != null && management.ErrorCode == ManagementStatus.TransportFailure)
+            {
+                RemoteProtocolStatusCache.ReportFailure(host, Protocol,
+                    new COMException("WMI transport failure", unchecked((int)0x80041015)));
+                return;
+            }
             RemoteProtocolStatusCache.ReportFailure(host, Protocol, error);
         }
     }
