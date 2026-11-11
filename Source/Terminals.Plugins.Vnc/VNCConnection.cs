@@ -10,11 +10,11 @@ namespace Terminals.Connections
 
         public override bool Connected { get { return this.connected; } }
 
-        private VncSharp.RemoteDesktop rd;
+        private VncSharpCore.RemoteDesktop rd;
 
         private string vncPassword = string.Empty;
 
-        public void SendSpecialKeys(VncSharp.SpecialKeys Keys)
+        public void SendSpecialKeys(VncSharpCore.SpecialKeys Keys)
         {
             rd.SendSpecialKeys(Keys);
         }
@@ -23,7 +23,7 @@ namespace Terminals.Connections
         {
             try
             {
-                rd = new VncSharp.RemoteDesktop();
+                rd = new VncSharpCore.RemoteDesktop();
                 Controls.Add(rd);
 
                 string pass = this.ResolveFavoriteCredentials().Password;
@@ -31,12 +31,12 @@ namespace Terminals.Connections
 
                 if (string.IsNullOrEmpty(vncPassword)) return false;
 
-                //rd.SendSpecialKeys(VncSharp.SpecialKeys);            
+                //rd.SendSpecialKeys(VncSharpCore.SpecialKeys);            
                 rd.Parent = this.Parent;
                 rd.Dock = DockStyle.Fill;
 
                 rd.VncPort = Favorite.Port;
-                rd.ConnectComplete += new VncSharp.ConnectCompleteHandler(rd_ConnectComplete);
+                rd.ConnectComplete += new VncSharpCore.ConnectCompleteHandler(rd_ConnectComplete);
                 rd.ConnectionLost += new EventHandler(rd_ConnectionLost);
                 rd.GetPassword = VNCPassword;
                 Text = "Connecting to VNC Server...";
@@ -67,14 +67,14 @@ namespace Terminals.Connections
             return vncPassword;
         }
 
-        private void rd_ConnectComplete(object sender, VncSharp.ConnectEventArgs e)
+        private void rd_ConnectComplete(object sender, VncSharpCore.ConnectEventArgs e)
         {
             // Update Form to match geometry of remote desktop
             //ClientSize = new Size(e.DesktopWidth, e.DesktopHeight);
             try
             {
                 connected = true;
-                VncSharp.RemoteDesktop rd = (VncSharp.RemoteDesktop)sender;
+                VncSharpCore.RemoteDesktop rd = (VncSharpCore.RemoteDesktop)sender;
                 rd.Visible = true;
                 rd.BringToFront();
                 rd.FullScreenUpdate();

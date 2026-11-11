@@ -37,6 +37,9 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="1Remote.VncSharpCore" Version="1.2.1" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -77,10 +80,7 @@
       <Name>Terminals.Common</Name>
       <Private>False</Private>
     </ProjectReference>
-    <ProjectReference Include="..\VncSharp\VncSharp.csproj">
-      <Project>{e0695f0f-0faf-44bc-ae55-a1fcbfe70271}</Project>
-      <Name>VncSharp</Name>
-    </ProjectReference>
+
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">

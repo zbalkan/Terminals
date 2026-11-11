@@ -128,23 +128,23 @@ namespace Terminals.Connections
                 {
                     if (key == sendALTF4KeyToolStripMenuItem.Text)
                     {
-                        vnc.SendSpecialKeys(VncSharp.SpecialKeys.AltF4);
+                        vnc.SendSpecialKeys(VncSharpCore.SpecialKeys.AltF4);
                     }
                     else if (key == sendALTKeyToolStripMenuItem.Text)
                     {
-                        vnc.SendSpecialKeys(VncSharp.SpecialKeys.Alt);
+                        vnc.SendSpecialKeys(VncSharpCore.SpecialKeys.Alt);
                     }
                     else if (key == sendCTRLESCKeysToolStripMenuItem.Text)
                     {
-                        vnc.SendSpecialKeys(VncSharp.SpecialKeys.CtrlEsc);
+                        vnc.SendSpecialKeys(VncSharpCore.SpecialKeys.CtrlEsc);
                     }
                     else if (key == sendCTRLKeyToolStripMenuItem.Text)
                     {
-                        vnc.SendSpecialKeys(VncSharp.SpecialKeys.Ctrl);
+                        vnc.SendSpecialKeys(VncSharpCore.SpecialKeys.Ctrl);
                     }
                     else if (key == sentCTRLALTDELETEKeysToolStripMenuItem.Text)
                     {
-                        vnc.SendSpecialKeys(VncSharp.SpecialKeys.CtrlAltDel);
+                        vnc.SendSpecialKeys(VncSharpCore.SpecialKeys.CtrlAltDel);
                     }
                 }
             }

@@ -8,7 +8,7 @@ using Terminals.Forms.EditFavorite;
 using Terminals.Integration.Export;
 using Terminals.Plugins.Vnc;
 using Terminals.Plugins.Vnc.Properties;
-using VncSharp;
+using VncSharpCore;
 
 namespace Terminals.Connections.VNC
 {

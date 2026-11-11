@@ -225,10 +225,7 @@
       <Project>{9ECB9FEF-89D1-4144-BAD4-5F3218545B2B}</Project>
       <Name>Terminals</Name>
     </ProjectReference>
-    <ProjectReference Include="..\VncSharp\VncSharp.csproj">
-      <Project>{E0695F0F-0FAF-44BC-AE55-A1FCBFE70271}</Project>
-      <Name>VncSharp</Name>
-    </ProjectReference>
+
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\..\Resources\TestData\EmptyCredentials.xml">

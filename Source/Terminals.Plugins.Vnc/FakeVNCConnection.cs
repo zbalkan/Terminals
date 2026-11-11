@@ -4,7 +4,7 @@ namespace Terminals.Connections
     {
         public override bool Connected { get { return true; } }
 
-        public void SendSpecialKeys(VncSharp.SpecialKeys Keys)
+        public void SendSpecialKeys(VncSharpCore.SpecialKeys Keys)
         {
         }
 
