@@ -51,6 +51,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+      - name: Reject tracked build outputs and obsolete source-control bindings
+        shell: pwsh
+        run: ./Build/Test-TrackedArtifacts.ps1
       - name: Setup-msbuild
         uses: microsoft/setup-msbuild@v3
       - name: Setup NuGet
@@ -142,6 +145,9 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v6
+      - name: Reject tracked build outputs and obsolete source-control bindings
+        shell: pwsh
+        run: ./Build/Test-TrackedArtifacts.ps1
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v3
       - name: Setup NuGet
