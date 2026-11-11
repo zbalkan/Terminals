@@ -355,6 +355,7 @@
     <Compile Include="Integration\Import\RdcMan\Settings.cs" />
     <Compile Include="Network\AD\ActiveDirectorySearchParams.cs" />
     <Compile Include="Network\RemoteManagement.cs" />
+    <Compile Include="Network\Tools\WMI\RemoteWmiAvailability.cs" />
     <Compile Include="Network\Tools\WMI\Share.cs" />
     <Compile Include="Properties\Common.AssemblyInfo.cs" />
     <Compile Include="Configuration\FormsCollection.cs" />

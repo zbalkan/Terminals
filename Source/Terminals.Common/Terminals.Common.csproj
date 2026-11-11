@@ -57,6 +57,7 @@
     <Compile Include="..\Terminals\Properties\Common.AssemblyInfo.cs">
       <Link>Properties\Common.AssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Network\RemoteProtocolStatusCache.cs" />
     <Compile Include="Configuration\AuthMethod.cs" />
     <Compile Include="Configuration\ExternalExecutablePaths.cs" />
     <Compile Include="Configuration\ExternalVncViewers.cs" />
