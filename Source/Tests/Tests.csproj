@@ -90,9 +90,6 @@
     </CodeAnalysisDependentAssemblyPaths>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\CustomSetupAction\UpgradeConfigFiles.cs">
-      <Link>UpgradeConfigFiles.cs</Link>
-    </Compile>
     <Compile Include="..\Terminals\Properties\Common.AssemblyInfo.cs">
       <Link>Properties\Common.AssemblyInfo.cs</Link>
     </Compile>
@@ -158,7 +155,6 @@
     <Compile Include="SqlPersisted\ServerInstancesSearcherTests.cs" />
     <Compile Include="SqlPersisted\TestsLab.cs" />
     <Compile Include="SqlPersisted\CredentialsTest.cs" />
-    <Compile Include="CustomSetupActionTest.cs" />
     <Compile Include="PersistenceFactoryTests.cs" />
     <Compile Include="Upgrade\V401ContentUpgradeTests.cs" />
     <Compile Include="UserInterface\MenuVisitorSut.cs" />

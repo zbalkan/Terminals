@@ -12,10 +12,9 @@ namespace Terminals
         {
             try
             {
-                if(IsTrmKeyRegistred())
-                  return;
-
-                CreateTrmRegistrySubKey();
+                // HKCR merges HKLM and HKCU; ignore stale machine-level MSI registrations.
+                if (!IsTrmKeyRegistred())
+                    CreateTrmRegistrySubKey();
             }
             catch(Exception ex)
             {
@@ -26,7 +25,7 @@ namespace Terminals
 
         private static void CreateTrmRegistrySubKey()
         {
-            using (RegistryKey trmKey = Registry.ClassesRoot.CreateSubKey(TRM_REGISTRY))
+            using (RegistryKey trmKey = Registry.CurrentUser.CreateSubKey(@"Software\Classes\" + TRM_REGISTRY))
             {
                 trmKey.SetValue(null, "URL:Terminals Protocol");
                 trmKey.SetValue("URL Protocol", "");
@@ -35,22 +34,30 @@ namespace Terminals
                     shellKey.SetValue(null, "open");
                     using (RegistryKey commandKey = shellKey.CreateSubKey("open\\command"))
                     {
-                        commandKey.SetValue(null, Application.ExecutablePath + " /reuse /url:\"%1\"");
+                        commandKey.SetValue(null, BuildOpenCommand(Application.ExecutablePath));
                     }
                 }
             }
         }
 
+        // Quoting the executable prevents spaces in Program Files paths from breaking the handler.
+        internal static string BuildOpenCommand(string executablePath)
+        {
+            return "\"" + executablePath + "\" /reuse /url:\"%1\"";
+        }
+
         private static bool IsTrmKeyRegistred()
         {
-            RegistryKey trmKey = Registry.ClassesRoot.OpenSubKey(TRM_REGISTRY);
-            if (trmKey != null)
+            using (RegistryKey commandKey = Registry.CurrentUser.OpenSubKey(
+                @"Software\Classes\" + TRM_REGISTRY + @"\shell\open\command"))
             {
-                trmKey.Close();
-                return true;
-            }
+                if (commandKey == null)
+                    return false;
 
-            return false;
+                string command = commandKey.GetValue(null) as string;
+                return String.Equals(command, BuildOpenCommand(Application.ExecutablePath),
+                    StringComparison.OrdinalIgnoreCase);
+            }
         }
 
         public static void Parse(string url, out string server, out int port)
