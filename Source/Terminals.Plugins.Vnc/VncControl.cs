@@ -6,9 +6,16 @@ namespace Terminals.Forms.EditFavorite
 {
     internal partial class VncControl : UserControl, IProtocolOptionsControl
     {
+        private int legacyDisplayNumber;
+
         public VncControl()
         {
             InitializeComponent();
+            this.Controls.Add(new Label
+            {
+                Text = "TightVNC Viewer opens separately and prompts for authentication. Saved VNC passwords are not forwarded.",
+                Size = new System.Drawing.Size(550, 40), Location = new System.Drawing.Point(6, 85)
+            });
         }
 
         public void SaveTo(IFavorite favorite)
@@ -17,8 +24,10 @@ namespace Terminals.Forms.EditFavorite
             if (vncOptions == null)
                 return;
 
+            // Preserve legacy display numbers when editing favorites, even though
+            // the external viewer uses the favorite's explicit port.
+            vncOptions.DisplayNumber = this.legacyDisplayNumber;
             vncOptions.AutoScale = this.vncAutoScaleCheckbox.Checked;
-            vncOptions.DisplayNumber = (Int32)this.vncDisplayNumberInput.Value;
             vncOptions.ViewOnly = this.VncViewOnlyCheckbox.Checked;
         }
 
@@ -27,8 +36,8 @@ namespace Terminals.Forms.EditFavorite
             VncOptions vncOptions = favorite.ProtocolProperties as VncOptions;
             if (vncOptions == null)
                 return;
+            this.legacyDisplayNumber = vncOptions.DisplayNumber;
             this.vncAutoScaleCheckbox.Checked = vncOptions.AutoScale;
-            this.vncDisplayNumberInput.Value = vncOptions.DisplayNumber;
             this.VncViewOnlyCheckbox.Checked = vncOptions.ViewOnly;
         }
     }

@@ -17,6 +17,12 @@ namespace Terminals.Connections
             this.enabledPlugins = settings.DisabledPlugins;
             ExternalExecutablePaths.Putty = settings.PuttyExecutablePath;
             ExternalExecutablePaths.Pageant = settings.PageantExecutablePath;
+            ExternalExecutablePaths.VncViewer = settings.VncViewerExecutablePath;
+            ExternalVncViewers.Selected = ExternalVncViewers.IsSupported(settings.PreferredVncViewer)
+                ? settings.PreferredVncViewer : ExternalVncViewers.TightVnc;
+            ExternalVncViewers.UltraVncPath = settings.UltraVncExecutablePath;
+            ExternalVncViewers.TigerVncPath = settings.TigerVncExecutablePath;
+            ExternalVncViewers.RealVncPath = settings.RealVncExecutablePath;
             SshClientPreference.Selected = SshClientPreference.Parse(settings.PreferredSshClient);
         }
 

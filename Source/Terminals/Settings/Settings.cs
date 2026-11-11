@@ -1058,6 +1058,56 @@ namespace Terminals.Configuration
             }
         }
 
+        public string VncViewerExecutablePath
+        {
+            get { return GetSection().VncViewerExecutablePath; }
+            set
+            {
+                GetSection().VncViewerExecutablePath = value ?? string.Empty;
+                SaveImmediatelyIfRequested();
+            }
+        }
+
+        public string PreferredVncViewer
+        {
+            get { return GetSection().PreferredVncViewer; }
+            set
+            {
+                GetSection().PreferredVncViewer = value ?? "TightVNC";
+                SaveImmediatelyIfRequested();
+            }
+        }
+
+        public string UltraVncExecutablePath
+        {
+            get { return GetSection().UltraVncExecutablePath; }
+            set
+            {
+                GetSection().UltraVncExecutablePath = value ?? string.Empty;
+                SaveImmediatelyIfRequested();
+            }
+        }
+
+        public string TigerVncExecutablePath
+        {
+            get { return GetSection().TigerVncExecutablePath; }
+            set
+            {
+                GetSection().TigerVncExecutablePath = value ?? string.Empty;
+                SaveImmediatelyIfRequested();
+            }
+        }
+
+        public string RealVncExecutablePath
+        {
+            get { return GetSection().RealVncExecutablePath; }
+            set
+            {
+                GetSection().RealVncExecutablePath = value ?? string.Empty;
+                SaveImmediatelyIfRequested();
+            }
+        }
+
         public string[] DisabledPlugins
         {
             get

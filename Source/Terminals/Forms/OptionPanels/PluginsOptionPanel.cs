@@ -25,6 +25,13 @@ namespace Terminals.Forms.OptionPanels
         private readonly Panel puttyControls;
         private SelectedPlugin puttyPlugin;
         private SelectedPlugin citrixPlugin;
+        private SelectedPlugin vncPlugin;
+        private readonly CheckBox enableVnc;
+        private readonly Panel vncControls;
+        private readonly TextBox vncViewerPath;
+        private readonly Dictionary<string, string> vncViewerPaths = new Dictionary<string, string>();
+        private readonly ComboBox preferredVncViewer;
+        private string displayedVncViewer;
         private readonly CheckBox enableCitrix;
         private readonly Panel citrixControls;
         private readonly TextBox selfServicePath;
@@ -86,6 +93,62 @@ namespace Terminals.Forms.OptionPanels
             citrixGroup.Controls.Add(citrixControls);
             pluginGroups.Controls.Add(citrixGroup);
 
+            var vncGroup = new GroupBox { Text = "VNC viewer", Height = 154, Margin = new Padding(3, 3, 3, 10) };
+            enableVnc = new CheckBox { Text = "Enable VNC", AutoSize = true, Location = new Point(12, 21) };
+            preferredVncViewer = new ComboBox
+            {
+                Location = new Point(110, 44), Width = 240,
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            preferredVncViewer.Items.AddRange(new object[] {
+                ExternalVncViewers.TightVnc, ExternalVncViewers.UltraVnc,
+                ExternalVncViewers.TigerVnc, ExternalVncViewers.RealVnc
+            });
+            vncGroup.Controls.Add(new Label { Text = "Selected viewer:", Location = new Point(12, 47), Width = 100 });
+            vncGroup.Controls.Add(preferredVncViewer);
+            vncControls = new Panel { Location = new Point(12, 76), Height = 32 };
+            vncControls.Controls.Add(new Label { Text = "Path", Location = new Point(0, 4), Width = 63 });
+            vncViewerPath = new TextBox { Location = new Point(65, 0), Width = 200 };
+            vncViewerPath.TextChanged += (sender, args) =>
+            {
+                if (!loading && displayedVncViewer != null)
+                    vncViewerPaths[displayedVncViewer] = vncViewerPath.Text;
+            };
+            vncControls.Controls.Add(vncViewerPath);
+            var browseVnc = new Button { Text = "Browse", Location = new Point(270, -1), Size = new Size(74, 23) };
+            browseVnc.Click += (sender, args) =>
+            {
+                string vendor = preferredVncViewer.SelectedItem as string;
+                if (vendor == null) return;
+                string filename = ExternalVncViewers.ExecutableName(vendor);
+                using (var dialog = new OpenFileDialog
+                {
+                    Title = "Locate " + vendor + " viewer",
+                    Filter = "Executable files (*.exe)|*.exe",
+                    FileName = filename,
+                    CheckFileExists = true
+                })
+                {
+                    if (dialog.ShowDialog(vncControls) == DialogResult.OK)
+                        vncViewerPath.Text = dialog.FileName;
+                }
+            };
+            vncControls.Controls.Add(browseVnc);
+            enableVnc.CheckedChanged += (sender, args) =>
+            {
+                preferredVncViewer.Enabled = enableVnc.Checked;
+                UpdateVncPathControls();
+            };
+            preferredVncViewer.SelectedIndexChanged += (sender, args) => UpdateVncPathControls();
+            vncGroup.Controls.Add(enableVnc);
+            vncGroup.Controls.Add(vncControls);
+            vncGroup.Controls.Add(new Label
+            {
+                Text = "Only the selected viewer is launched. Authentication stays in the viewer.",
+                Location = new Point(12, 114), Size = new Size(530, 30)
+            });
+            pluginGroups.Controls.Add(vncGroup);
+
             var otherGroup = new GroupBox { Text = "Other protocol plugins", Height = 164, Margin = new Padding(3) };
             otherPlugins = new CheckedListBox
             {
@@ -123,8 +186,30 @@ namespace Terminals.Forms.OptionPanels
                 else if (control is Button)
                     control.Left = citrixControls.Width - 76;
             }
+            vncControls.Width = width - 24;
+            foreach (Control control in vncControls.Controls)
+            {
+                if (control is TextBox)
+                    control.Width = Math.Max(80, vncControls.Width - 165);
+                else if (control is Button)
+                    control.Left = vncControls.Width - 76;
+            }
+            preferredVncViewer.Width = Math.Max(150, width - 128);
             otherPlugins.Width = width - 24;
             preferredSshClient.Width = Math.Max(150, width - 124);
+        }
+
+        private void UpdateVncPathControls()
+        {
+            string selected = preferredVncViewer.SelectedItem as string;
+            vncControls.Enabled = enableVnc.Checked;
+            if (selected == displayedVncViewer) return;
+            if (!loading && displayedVncViewer != null)
+                vncViewerPaths[displayedVncViewer] = vncViewerPath.Text;
+            displayedVncViewer = selected;
+            string path;
+            vncViewerPath.Text = selected != null && vncViewerPaths.TryGetValue(selected, out path)
+                ? path : string.Empty;
         }
 
         private static TextBox AddExecutableRow(Panel parent, string caption, string filename, int y)
@@ -159,12 +244,16 @@ namespace Terminals.Forms.OptionPanels
             {
                 puttyPlugin = null;
                 citrixPlugin = null;
+                vncPlugin = null;
                 otherPlugins.Items.Clear();
                 foreach (SelectedPlugin plugin in pluginsSelection.LoadPlugins())
                 {
                     if (Path.GetFileName(plugin.FullPath).Equals("Terminals.Plugins.Putty.dll",
                         StringComparison.OrdinalIgnoreCase))
                         puttyPlugin = plugin;
+                    else if (Path.GetFileName(plugin.FullPath).Equals("Terminals.Plugins.Vnc.dll",
+                        StringComparison.OrdinalIgnoreCase))
+                        vncPlugin = plugin;
                     else if (Path.GetFileName(plugin.FullPath).Equals("Terminals.Plugins.Ica.dll",
                         StringComparison.OrdinalIgnoreCase))
                         citrixPlugin = plugin;
@@ -196,8 +285,33 @@ namespace Terminals.Forms.OptionPanels
                 selfServicePath.Text = DisplayPath("SelfService.exe", Settings.Instance.CitrixSelfServiceExecutablePath);
                 storebrowsePath.Text = DisplayPath("storebrowse.exe", Settings.Instance.CitrixStorebrowseExecutablePath);
                 citrixControls.Enabled = enableCitrix.Checked;
+                enableVnc.Enabled = vncPlugin != null;
+                enableVnc.Checked = vncPlugin != null && vncPlugin.Enabled;
+                preferredVncViewer.SelectedItem = ExternalVncViewers.IsSupported(Settings.Instance.PreferredVncViewer)
+                    ? Settings.Instance.PreferredVncViewer : ExternalVncViewers.TightVnc;
+                vncViewerPaths.Clear();
+                vncViewerPaths[ExternalVncViewers.TightVnc] =
+                    DisplayVncPath(ExternalVncViewers.TightVnc, Settings.Instance.VncViewerExecutablePath);
+                vncViewerPaths[ExternalVncViewers.UltraVnc] =
+                    DisplayVncPath(ExternalVncViewers.UltraVnc, Settings.Instance.UltraVncExecutablePath);
+                vncViewerPaths[ExternalVncViewers.TigerVnc] =
+                    DisplayVncPath(ExternalVncViewers.TigerVnc, Settings.Instance.TigerVncExecutablePath);
+                vncViewerPaths[ExternalVncViewers.RealVnc] =
+                    DisplayVncPath(ExternalVncViewers.RealVnc, Settings.Instance.RealVncExecutablePath);
+                displayedVncViewer = null;
+                preferredVncViewer.Enabled = enableVnc.Checked;
+                UpdateVncPathControls();
             }
             finally { loading = false; }
+        }
+
+        private static string DisplayVncPath(string vendor, string configured)
+        {
+            // Preserve an invalid or obsolete override verbatim so it can be repaired
+            // in the settings dialog; validation happens on save or launch.
+            if (!string.IsNullOrWhiteSpace(configured))
+                return configured;
+            return ExternalVncViewers.Find(vendor, null) ?? string.Empty;
         }
 
         private static string DisplayPath(string filename, string configured)
@@ -227,6 +341,29 @@ namespace Terminals.Forms.OptionPanels
             SaveExecutablePath(storebrowsePath, "storebrowse.exe", value => Settings.Instance.CitrixStorebrowseExecutablePath = value);
             ExternalExecutablePaths.CitrixSelfService = Settings.Instance.CitrixSelfServiceExecutablePath;
             ExternalExecutablePaths.CitrixStorebrowse = Settings.Instance.CitrixStorebrowseExecutablePath;
+            Settings.Instance.PreferredVncViewer = preferredVncViewer.SelectedItem as string ?? ExternalVncViewers.TightVnc;
+            if (displayedVncViewer != null)
+                vncViewerPaths[displayedVncViewer] = vncViewerPath.Text;
+            Settings.Instance.VncViewerExecutablePath = SavedVncPath(ExternalVncViewers.TightVnc);
+            Settings.Instance.UltraVncExecutablePath = SavedVncPath(ExternalVncViewers.UltraVnc);
+            Settings.Instance.TigerVncExecutablePath = SavedVncPath(ExternalVncViewers.TigerVnc);
+            Settings.Instance.RealVncExecutablePath = SavedVncPath(ExternalVncViewers.RealVnc);
+            ExternalVncViewers.Selected = Settings.Instance.PreferredVncViewer;
+            ExternalVncViewers.UltraVncPath = Settings.Instance.UltraVncExecutablePath;
+            ExternalVncViewers.TigerVncPath = Settings.Instance.TigerVncExecutablePath;
+            ExternalVncViewers.RealVncPath = Settings.Instance.RealVncExecutablePath;
+            ExternalExecutablePaths.VncViewer = Settings.Instance.VncViewerExecutablePath;
+        }
+
+        private string SavedVncPath(string vendor)
+        {
+            string value;
+            if (!vncViewerPaths.TryGetValue(vendor, out value))
+                return string.Empty;
+            value = value.Trim();
+            string detected = ExternalVncViewers.Find(vendor, null);
+            return string.Equals(value, detected ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+                ? string.Empty : value;
         }
 
         private static void SaveExecutablePath(TextBox textbox, string executable, Action<string> save)
@@ -253,15 +390,25 @@ namespace Terminals.Forms.OptionPanels
                 new { Name = "putty.exe", Field = puttyPath },
                 new { Name = "pageant.exe", Field = pageantPath },
                 new { Name = "SelfService.exe", Field = selfServicePath },
-                new { Name = "storebrowse.exe", Field = storebrowsePath }
+                new { Name = "storebrowse.exe", Field = storebrowsePath },
+                new { Name = "vnc-selected", Field = vncViewerPath }
             })
             {
                 errorProvider.SetError(row.Field, string.Empty);
                 bool isCitrixRow = row.Name == "SelfService.exe" || row.Name == "storebrowse.exe";
-                if (!(isCitrixRow ? enableCitrix.Checked : enablePutty.Checked) ||
+                string selectedVnc = preferredVncViewer.SelectedItem as string;
+                bool isVnc = row.Name == "vnc-selected";
+                string rowVendor = selectedVnc;
+                bool rowEnabled = isVnc ? enableVnc.Checked && selectedVnc == rowVendor :
+                    (isCitrixRow ? enableCitrix.Checked : enablePutty.Checked);
+                if (!rowEnabled ||
                     string.IsNullOrWhiteSpace(row.Field.Text))
                     continue;
-                try { ExternalExecutablePaths.Find(row.Name, row.Field.Text); }
+                try
+                {
+                    if (isVnc) ExternalVncViewers.Find(rowVendor, row.Field.Text);
+                    else ExternalExecutablePaths.Find(row.Name, row.Field.Text);
+                }
                 catch (Exception ex) when (ex is FileNotFoundException || ex is ArgumentException ||
                                            ex is NotSupportedException || ex is PathTooLongException)
                 {
@@ -284,6 +431,11 @@ namespace Terminals.Forms.OptionPanels
             {
                 citrixPlugin.Enabled = enableCitrix.Checked;
                 selected.Add(citrixPlugin);
+            }
+            if (vncPlugin != null)
+            {
+                vncPlugin.Enabled = enableVnc.Checked;
+                selected.Add(vncPlugin);
             }
             for (int i = 0; i < otherPlugins.Items.Count; i++)
             {

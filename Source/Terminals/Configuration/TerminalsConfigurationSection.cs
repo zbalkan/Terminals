@@ -917,6 +917,41 @@ namespace Terminals
             set { this["citrixStorebrowseExecutablePath"] = value; }
         }
 
+        [ConfigurationProperty("vncViewerExecutablePath", DefaultValue = "")]
+        public string VncViewerExecutablePath
+        {
+            get { return (string)this["vncViewerExecutablePath"]; }
+            set { this["vncViewerExecutablePath"] = value; }
+        }
+
+        [ConfigurationProperty("preferredVncViewer", DefaultValue = "TightVNC")]
+        public string PreferredVncViewer
+        {
+            get { return (string)this["preferredVncViewer"]; }
+            set { this["preferredVncViewer"] = value; }
+        }
+
+        [ConfigurationProperty("ultraVncExecutablePath", DefaultValue = "")]
+        public string UltraVncExecutablePath
+        {
+            get { return (string)this["ultraVncExecutablePath"]; }
+            set { this["ultraVncExecutablePath"] = value; }
+        }
+
+        [ConfigurationProperty("tigerVncExecutablePath", DefaultValue = "")]
+        public string TigerVncExecutablePath
+        {
+            get { return (string)this["tigerVncExecutablePath"]; }
+            set { this["tigerVncExecutablePath"] = value; }
+        }
+
+        [ConfigurationProperty("realVncExecutablePath", DefaultValue = "")]
+        public string RealVncExecutablePath
+        {
+            get { return (string)this["realVncExecutablePath"]; }
+            set { this["realVncExecutablePath"] = value; }
+        }
+
         [ConfigurationProperty("preferredSshClient", DefaultValue = "PuTTY")]
         public string PreferredSshClient
         {

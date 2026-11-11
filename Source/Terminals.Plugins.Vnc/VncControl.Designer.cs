@@ -76,8 +76,6 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.VncViewOnlyCheckbox);
-            this.Controls.Add(this.vncDisplayNumberInput);
-            this.Controls.Add(this.label37);
             this.Controls.Add(this.vncAutoScaleCheckbox);
             this.Name = "VncControl";
             this.Size = new System.Drawing.Size(590, 365);
