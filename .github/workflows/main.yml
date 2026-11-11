@@ -86,7 +86,7 @@ jobs:
           }
           if (Test-Path 'Resources/Libraries/mstsc/MSTSCLib.dll') { throw 'Vendored MSTSC wrapper still present' }
           if (Test-Path 'Resources/Libraries/mstsc/AxInterop.MSTSCLib.dll') { throw 'Vendored ActiveX wrapper still present' }
-      # MSTest.TestAdapter 4.5.2 depends on TestPlatform.ObjectModel 18.10.1.
+      # The MSTest adapter requires a matching VSTest platform (currently pinned below).
       # The Visual Studio 2022 image includes the older VSTest 17.14, which
       # causes deployment-time CodePages assembly identity conflicts.
       - name: Install matching VSTest platform
@@ -116,10 +116,17 @@ jobs:
           TEST_FILTER: ${{ matrix.filter }}
           TERMINALS_TEST_SQL_CONNECTION_STRING: ${{ matrix.suite == 'database' && 'Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TERMINALS;Integrated Security=True;' || '' }}
         run: |
-          $adapterRoot = Join-Path $env:USERPROFILE '.nuget/packages/mstest.testadapter/4.5.2'
+          [xml]$project = Get-Content -LiteralPath 'Source/Tests/Tests.csproj' -Raw
+          $reference = $project.SelectSingleNode("//*[local-name()='PackageReference' and @Include='MSTest.TestAdapter']")
+          if (-not $reference -or -not $reference.Version) { throw 'MSTest.TestAdapter version is missing from Tests.csproj' }
+          $packageRoot = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget/packages' }
+          $adapterRoot = Join-Path $packageRoot "mstest.testadapter/$($reference.Version)"
+          if (-not (Test-Path -LiteralPath $adapterRoot -PathType Container)) {
+            throw "MSTest.TestAdapter $($reference.Version) was not restored to $adapterRoot"
+          }
           $adapter = Get-ChildItem -LiteralPath $adapterRoot -Filter MSTest.TestAdapter.dll -Recurse -File |
             Where-Object { $_.FullName -match '[\\/]net462[\\/]' } | Select-Object -First 1
-          if (-not $adapter) { throw "MSTest adapter for .NET Framework not found under $adapterRoot" }
+          if (-not $adapter) { throw "MSTest .NET Framework adapter not found under $adapterRoot" }
           vstest.console.exe "Source\Tests\bin\Release\Tests.dll" "/TestAdapterPath:$($adapter.DirectoryName)" "/TestCaseFilter:$env:TEST_FILTER" '/logger:trx;LogFileName=test_results.trx'
           exit $LASTEXITCODE
       - name: Test Report
