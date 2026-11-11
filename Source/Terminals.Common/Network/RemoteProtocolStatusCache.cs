@@ -92,6 +92,7 @@ namespace Terminals.Common.Network
                     switch (unchecked((uint)com.ErrorCode))
                     {
                         case 0x800706BA:
+                        case 0x80041015: // WMI transport failure
                         case 0x80070035:
                         case 0x8007274C:
                         case 0x8007274D:
