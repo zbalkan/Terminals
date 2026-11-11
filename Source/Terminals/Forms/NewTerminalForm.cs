@@ -101,8 +101,7 @@ namespace Terminals
         /// </summary>
         private void BtnSave_Click(object sender, EventArgs e)
         {
-            this.favoritePropertiesControl1.SaveMRUs();
-            if (this.FillFavorite(false))
+            if (this.SaveFavoriteAndMRUs())
             {
                 this.DialogResult = TerminalFormDialogResult.SaveAndClose;
                 this.Close();
@@ -124,12 +123,11 @@ namespace Terminals
         /// </summary>
         private void SaveConnectToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            this.favoritePropertiesControl1.SaveMRUs();
-
-            if (this.FillFavorite(false))
+            if (this.SaveFavoriteAndMRUs())
+            {
                 this.DialogResult = TerminalFormDialogResult.SaveAndConnect;
-
-            this.Close();
+                this.Close();
+            }
         }
 
         /// <summary>
@@ -137,8 +135,7 @@ namespace Terminals
         /// </summary>
         private void SaveCopyToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            this.favoritePropertiesControl1.SaveMRUs();
-            if (this.FillFavorite(false))
+            if (this.SaveFavoriteAndMRUs())
             {
                 this.EditedId = Guid.Empty;
                 this.favoritePropertiesControl1.ResetServerNameControls(this.Favorite.Name);
@@ -155,8 +152,7 @@ namespace Terminals
         /// </summary>
         private void SaveNewToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            this.favoritePropertiesControl1.SaveMRUs();
-            if (this.FillFavorite(false))
+            if (this.SaveFavoriteAndMRUs())
             {
                 this.EditedId = Guid.Empty;
                 this.Init(String.Empty);
@@ -228,6 +224,24 @@ namespace Terminals
                 this.ShowErrorMessageBox(e.Message);
                 return false;
             }
+        }
+
+        // MRU persistence is ancillary: it must not block a successful favorite save.
+        private bool SaveFavoriteAndMRUs()
+        {
+            if (!this.FillFavorite(false))
+                return false;
+
+            try
+            {
+                this.favoritePropertiesControl1.SaveMRUs();
+            }
+            catch (Exception exception)
+            {
+                Logging.Info("Favorite saved; unable to update recent entries", exception);
+            }
+
+            return true;
         }
 
         private static void EntityLogValidationErrors(DbEntityValidationException entityValidation)

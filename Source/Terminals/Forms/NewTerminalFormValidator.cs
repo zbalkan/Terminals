@@ -126,13 +126,14 @@ namespace Terminals.Forms
             if (this.connectionManager.IsProtocolWebBased(protocol))
                 return true;
 
-            return this.ServerNameInvalid();
+            return this.IsServerNameValidForConnection();
         }
 
-        private bool ServerNameInvalid()
+        private bool IsServerNameValidForConnection()
         {
             string serverName = this.form.ServerNameText;
-            return !IsServerNameEmpty() || CustomValidationRules.IsValidServerName(serverName) == ValidationResult.Success;
+            return !IsServerNameEmpty() &&
+                CustomValidationRules.IsValidServerName(serverName) == ValidationResult.Success;
         }
 
         internal bool IsServerNameEmpty()
