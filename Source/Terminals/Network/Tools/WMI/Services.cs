@@ -20,6 +20,22 @@ namespace Terminals.Network.WMI
 
         private void LoadServices(string Username, string Password, string Computer)
         {
+            if (!RemoteWmiAvailability.AllowAttempt(Computer, this)) return;
+            try
+            {
+                LoadServicesCore(Username, Password, Computer);
+                RemoteWmiAvailability.Succeeded(Computer);
+            }
+            catch (Exception error)
+            {
+                RemoteWmiAvailability.Failed(Computer, error);
+                Terminals.Logging.Info("Windows Services query failed", error);
+                MessageBox.Show("Unable to query services: " + error.Message);
+            }
+        }
+
+        private void LoadServicesCore(string Username, string Password, string Computer)
+        {
             StringBuilder sb = new StringBuilder();
             string qry = "select AcceptPause, AcceptStop, Caption, CheckPoint, CreationClassName, Description, DesktopInteract, DisplayName, ErrorControl, ExitCode, InstallDate, Name, PathName, ProcessId,ServiceSpecificExitCode, ServiceType, Started, StartMode, StartName, State, Status, SystemCreationClassName, SystemName, TagId, WaitHint from win32_service";
             ManagementObjectSearcher searcher;
@@ -165,7 +181,9 @@ namespace Terminals.Network.WMI
                 System.Management.ManagementObject obj = FindWMIObject(name, "Name");
                 if (obj != null)
                 {
-                    obj.InvokeMethod("PauseService", null);
+                    if (!RemoteWmiAvailability.AllowAttempt(this.wmiServerCredentials1.SelectedServer, this)) return;
+                    try { obj.InvokeMethod("PauseService", null); RemoteWmiAvailability.Succeeded(this.wmiServerCredentials1.SelectedServer); }
+                    catch (Exception error) { RemoteWmiAvailability.Failed(this.wmiServerCredentials1.SelectedServer, error); MessageBox.Show(error.Message); return; }
                     LoadServices(this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password, this.wmiServerCredentials1.SelectedServer);
                 }
             }
@@ -179,7 +197,9 @@ namespace Terminals.Network.WMI
                 System.Management.ManagementObject obj = FindWMIObject(name, "Name");
                 if (obj != null)
                 {
-                    obj.InvokeMethod("StopService", null);
+                    if (!RemoteWmiAvailability.AllowAttempt(this.wmiServerCredentials1.SelectedServer, this)) return;
+                    try { obj.InvokeMethod("StopService", null); RemoteWmiAvailability.Succeeded(this.wmiServerCredentials1.SelectedServer); }
+                    catch (Exception error) { RemoteWmiAvailability.Failed(this.wmiServerCredentials1.SelectedServer, error); MessageBox.Show(error.Message); return; }
                     LoadServices(this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password, this.wmiServerCredentials1.SelectedServer);
                 }
 
@@ -194,7 +214,9 @@ namespace Terminals.Network.WMI
                 System.Management.ManagementObject obj = FindWMIObject(name, "Name");
                 if (obj != null)
                 {
-                    obj.InvokeMethod("StartService", null);
+                    if (!RemoteWmiAvailability.AllowAttempt(this.wmiServerCredentials1.SelectedServer, this)) return;
+                    try { obj.InvokeMethod("StartService", null); RemoteWmiAvailability.Succeeded(this.wmiServerCredentials1.SelectedServer); }
+                    catch (Exception error) { RemoteWmiAvailability.Failed(this.wmiServerCredentials1.SelectedServer, error); MessageBox.Show(error.Message); return; }
                     LoadServices(this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password, this.wmiServerCredentials1.SelectedServer);
                 }
 

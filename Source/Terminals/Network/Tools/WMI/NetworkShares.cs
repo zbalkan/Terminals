@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Management;
 using System.Windows.Forms;
+using System.Threading.Tasks;
+using Terminals.Network.WMI;
 
 namespace Terminals.Network
 {
@@ -12,31 +14,39 @@ namespace Terminals.Network
             InitializeComponent();
         }
 
-        private void LoadShares(string username, string password, string computer)
+        private async void LoadShares(string username, string password, string computer)
         {
+            if (!RemoteWmiAvailability.AllowAttempt(computer, this)) return;
             try
             {
                 this.connectButton.Enabled = false;
                 this.connectButton.Text = "Connecting...";
-                this.dataGridView1.DataSource = TryLoadShares(username, password, computer);
+                var shares = await Task.Run(() => TryLoadShares(username, password, computer));
+                if (IsDisposed) return;
+                RemoteWmiAvailability.Succeeded(computer);
+                this.dataGridView1.DataSource = shares;
             }
-            catch
+            catch (Exception exception)
             {
-                MessageBox.Show("Unable to loads shares for remote compuer.", "Loading shares",
+                RemoteWmiAvailability.Failed(computer, exception);
+                if (IsDisposed) return;
+                MessageBox.Show("Unable to load shares: " + exception.Message, "Loading shares",
                                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                this.connectButton.Enabled = true;
-                this.connectButton.Text = "Connect";
+                if (!IsDisposed)
+                {
+                    this.connectButton.Enabled = true;
+                    this.connectButton.Text = "Connect";
+                }
             }
         }
 
         private static List<Share> TryLoadShares(string username, string password, string computer)
         {
             var shares = new List<Share>();
-            ManagementObjectSearcher searcher = CreateSearcher(username, password, computer);
-
+            using (ManagementObjectSearcher searcher = CreateSearcher(username, password, computer))
             foreach (ManagementObject share in searcher.Get())
             {
                 var s = new Share();
