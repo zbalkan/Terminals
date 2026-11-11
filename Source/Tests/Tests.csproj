@@ -46,8 +46,8 @@
     <PackageReference Include="Castle.Core" Version="5.2.1" />
     <PackageReference Include="EntityFramework" Version="6.5.2" />
     <PackageReference Include="log4net" Version="3.5.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="4.5.2" />
-    <PackageReference Include="MSTest.TestFramework" Version="4.5.2" />
+    <PackageReference Include="MSTest.TestAdapter" Version="4.5.3" />
+    <PackageReference Include="MSTest.TestFramework" Version="4.5.3" />
     <PackageReference Include="Moq" Version="4.21.0" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
     <PackageReference Include="System.Buffers" Version="4.6.1" />
@@ -60,8 +60,8 @@
     <Reference Include="AxWFICALib">
       <HintPath>..\..\Resources\Libraries\Citrix\AxWFICALib.dll</HintPath>
     </Reference>
-      <Reference Include="System" />
-      <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -72,12 +72,12 @@
     <Reference Include="System.DirectoryServices" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Management" />
-      <Reference Include="System.Numerics" />
-        <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.ServiceProcess" />
-      <Reference Include="System.Transactions" />
+    <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Services" />
     <Reference Include="System.Windows.Forms" />
@@ -226,7 +226,6 @@
       <Project>{9ECB9FEF-89D1-4144-BAD4-5F3218545B2B}</Project>
       <Name>Terminals</Name>
     </ProjectReference>
-
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\..\Resources\TestData\EmptyCredentials.xml">
