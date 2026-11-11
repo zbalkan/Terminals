@@ -16,19 +16,20 @@ namespace Terminals.Network
 
         private async void LoadShares(string username, string password, string computer)
         {
-            if (!RemoteWmiAvailability.AllowAttempt(computer, this)) return;
+            string cacheHost = RemoteWmiAvailability.EffectiveHost(computer, username, password);
+            if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
             try
             {
                 this.connectButton.Enabled = false;
                 this.connectButton.Text = "Connecting...";
                 var shares = await Task.Run(() => TryLoadShares(username, password, computer));
                 if (IsDisposed) return;
-                RemoteWmiAvailability.Succeeded(computer);
+                RemoteWmiAvailability.Succeeded(cacheHost);
                 this.dataGridView1.DataSource = shares;
             }
             catch (Exception exception)
             {
-                RemoteWmiAvailability.Failed(computer, exception);
+                RemoteWmiAvailability.Failed(cacheHost, exception);
                 if (IsDisposed) return;
                 MessageBox.Show("Unable to load shares: " + exception.Message, "Loading shares",
                                 MessageBoxButtons.OK, MessageBoxIcon.Error);

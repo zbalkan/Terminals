@@ -20,15 +20,16 @@ namespace Terminals.Network.WMI
 
         private void LoadServices(string Username, string Password, string Computer)
         {
-            if (!RemoteWmiAvailability.AllowAttempt(Computer, this)) return;
+            string cacheHost = RemoteWmiAvailability.EffectiveHost(Computer, Username, Password);
+            if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
             try
             {
                 LoadServicesCore(Username, Password, Computer);
-                RemoteWmiAvailability.Succeeded(Computer);
+                RemoteWmiAvailability.Succeeded(cacheHost);
             }
             catch (Exception error)
             {
-                RemoteWmiAvailability.Failed(Computer, error);
+                RemoteWmiAvailability.Failed(cacheHost, error);
                 Terminals.Logging.Info("Windows Services query failed", error);
                 MessageBox.Show("Unable to query services: " + error.Message);
             }
@@ -181,9 +182,10 @@ namespace Terminals.Network.WMI
                 System.Management.ManagementObject obj = FindWMIObject(name, "Name");
                 if (obj != null)
                 {
-                    if (!RemoteWmiAvailability.AllowAttempt(this.wmiServerCredentials1.SelectedServer, this)) return;
-                    try { obj.InvokeMethod("PauseService", null); RemoteWmiAvailability.Succeeded(this.wmiServerCredentials1.SelectedServer); }
-                    catch (Exception error) { RemoteWmiAvailability.Failed(this.wmiServerCredentials1.SelectedServer, error); MessageBox.Show(error.Message); return; }
+                    string cacheHost = RemoteWmiAvailability.EffectiveHost(this.wmiServerCredentials1.SelectedServer, this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password);
+                    if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
+                    try { obj.InvokeMethod("PauseService", null); RemoteWmiAvailability.Succeeded(cacheHost); }
+                    catch (Exception error) { RemoteWmiAvailability.Failed(cacheHost, error); MessageBox.Show(error.Message); return; }
                     LoadServices(this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password, this.wmiServerCredentials1.SelectedServer);
                 }
             }
@@ -197,9 +199,10 @@ namespace Terminals.Network.WMI
                 System.Management.ManagementObject obj = FindWMIObject(name, "Name");
                 if (obj != null)
                 {
-                    if (!RemoteWmiAvailability.AllowAttempt(this.wmiServerCredentials1.SelectedServer, this)) return;
-                    try { obj.InvokeMethod("StopService", null); RemoteWmiAvailability.Succeeded(this.wmiServerCredentials1.SelectedServer); }
-                    catch (Exception error) { RemoteWmiAvailability.Failed(this.wmiServerCredentials1.SelectedServer, error); MessageBox.Show(error.Message); return; }
+                    string cacheHost = RemoteWmiAvailability.EffectiveHost(this.wmiServerCredentials1.SelectedServer, this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password);
+                    if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
+                    try { obj.InvokeMethod("StopService", null); RemoteWmiAvailability.Succeeded(cacheHost); }
+                    catch (Exception error) { RemoteWmiAvailability.Failed(cacheHost, error); MessageBox.Show(error.Message); return; }
                     LoadServices(this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password, this.wmiServerCredentials1.SelectedServer);
                 }
 
@@ -214,9 +217,10 @@ namespace Terminals.Network.WMI
                 System.Management.ManagementObject obj = FindWMIObject(name, "Name");
                 if (obj != null)
                 {
-                    if (!RemoteWmiAvailability.AllowAttempt(this.wmiServerCredentials1.SelectedServer, this)) return;
-                    try { obj.InvokeMethod("StartService", null); RemoteWmiAvailability.Succeeded(this.wmiServerCredentials1.SelectedServer); }
-                    catch (Exception error) { RemoteWmiAvailability.Failed(this.wmiServerCredentials1.SelectedServer, error); MessageBox.Show(error.Message); return; }
+                    string cacheHost = RemoteWmiAvailability.EffectiveHost(this.wmiServerCredentials1.SelectedServer, this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password);
+                    if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
+                    try { obj.InvokeMethod("StartService", null); RemoteWmiAvailability.Succeeded(cacheHost); }
+                    catch (Exception error) { RemoteWmiAvailability.Failed(cacheHost, error); MessageBox.Show(error.Message); return; }
                     LoadServices(this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password, this.wmiServerCredentials1.SelectedServer);
                 }
 
