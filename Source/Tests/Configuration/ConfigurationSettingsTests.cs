@@ -181,11 +181,26 @@ namespace Tests
         {
             settings.PuttyExecutablePath = @"C:\Tools\PuTTY\putty.exe";
             settings.PageantExecutablePath = @"C:\Tools\PuTTY\pageant.exe";
+            settings.VncViewerExecutablePath = @"C:\Tools\TightVNC\tvnviewer.exe";
+            settings.PreferredVncViewer = "TigerVNC";
+            settings.UltraVncExecutablePath = @"C:\Tools\UltraVNC\vncviewer.exe";
+            settings.TigerVncExecutablePath = @"C:\Tools\TigerVNC\vncviewer64.exe";
+            settings.RealVncExecutablePath = @"C:\Tools\RealVNC\vncviewer.exe";
             settings.ForceReload();
             Assert.AreEqual(@"C:\Tools\PuTTY\putty.exe", settings.PuttyExecutablePath);
             Assert.AreEqual(@"C:\Tools\PuTTY\pageant.exe", settings.PageantExecutablePath);
+            Assert.AreEqual(@"C:\Tools\TightVNC\tvnviewer.exe", settings.VncViewerExecutablePath);
+            Assert.AreEqual("TigerVNC", settings.PreferredVncViewer);
+            Assert.AreEqual(@"C:\Tools\UltraVNC\vncviewer.exe", settings.UltraVncExecutablePath);
+            Assert.AreEqual(@"C:\Tools\TigerVNC\vncviewer64.exe", settings.TigerVncExecutablePath);
+            Assert.AreEqual(@"C:\Tools\RealVNC\vncviewer.exe", settings.RealVncExecutablePath);
             settings.PuttyExecutablePath = string.Empty;
             settings.PageantExecutablePath = string.Empty;
+            settings.VncViewerExecutablePath = string.Empty;
+            settings.PreferredVncViewer = "TightVNC";
+            settings.UltraVncExecutablePath = string.Empty;
+            settings.TigerVncExecutablePath = string.Empty;
+            settings.RealVncExecutablePath = string.Empty;
         }
 
         [TestMethod]

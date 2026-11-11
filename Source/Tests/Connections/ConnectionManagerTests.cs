@@ -289,7 +289,7 @@ namespace Tests.Connections
         {
             var mockProvider = new Mock<ICurrenctConnectionProvider>();
             var extensions = this.connectionManager.CreateToolbarExtensions(mockProvider.Object).Count();
-            Assert.AreEqual(2, extensions, "All known extensions have to be registered");
+            Assert.AreEqual(1, extensions, "Only the RDP toolbar extension remains; external VNC has no in-tab toolbar.");
         }
         
         [TestMethod]

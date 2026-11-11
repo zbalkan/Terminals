@@ -172,7 +172,7 @@
     <Compile Include="UserInterface\ProtocolImageListBuilderTests.cs" />
     <Compile Include="UserInterface\FavoriteIconsTests.cs" />
     <Compile Include="UserInterface\ToolTipBuilderTests.cs" />
-    <Compile Include="UserInterface\VncMenuVisitorTests.cs" />
+    <Compile Include="Connections\ExternalVncTests.cs" />
     <Compile Include="Validation\DbValidationTests.cs" />
     <Compile Include="Validation\FavoriteNameValidatorTests.cs" />
     <Compile Include="Validation\FileValidationTests.cs" />
