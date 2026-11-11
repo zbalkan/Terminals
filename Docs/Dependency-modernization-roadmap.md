@@ -1,0 +1,67 @@
+# Terminals 5.0.0 modernization roadmap
+
+This is the **single status tracker** for the Terminals modernization program. The goal is to remove obsolete dependencies, preserve useful functionality and existing user data, improve responsiveness, and deliver a tested **5.0.0** release on the current **.NET Framework 4.8.1** baseline. Work is implemented on independent branches. **PR #6 is a permanent documentation-only planning branch: never merge it.** RDP PR #5 remains deferred.
+
+**Snapshot:** November 11, 2026; `master` `dd9871feea5b`; [Windows CI 43103151018](https://github.com/zbalkan/Terminals/actions/runs/43103151018) **passed** (file/general, SQL/database, Inno/ZIP). This validates the automated checks, not interactive runtime, licensing, upgrade, or interoperability acceptance. The user confirmed external VNC works in runtime testing; this does not establish that all four viewer implementations and configurations were tested.
+
+**How to read the matrix:** **Done** means the recorded implementation or removal is on `master`; **Partial** means some work is merged but defined acceptance or further implementation remains; **Todo** means no completed implementation is established; **Deferred** means intentionally postponed. A completed implementation can still have release acceptance pending. The **Next** entries are execution order, **Later** entries follow modernization, and **Release** entries are 5.0.0 gates. IDs are optional references, not priorities.
+
+## Consolidated work matrix
+
+| When | Work item | Status | Completed / verified | Remaining work or acceptance |
+|---|---|---|---|---|
+| Done | DNS dependency replacement (DEP-01) | **Done** | Bdev DNS replaced with DnsClient 1.8.0 | DNS tool responsiveness and semantics tracked separately below |
+| Done | Packet capture dependency (DEP-02) | **Done** | Vendored SharpPcap replaced by SharpPcap 6.3.1 and PacketDotNet 1.4.8 | Npcap runtime and redistribution covered in release acceptance |
+| Done | Metro network libraries (DEP-03) | **Done** | Metro removed; TCP-connect scanner and managed APIs substituted | Scanner behavior is a separate pending item |
+| Done | Hex editor (DEP-04) | **Done** | Vendored HexEditor replaced with HexBox NuGet | Manual WinForms viewer/designer acceptance remains |
+| Done | Graphing library (DEP-05) | **Done** | Bundled ZedGraph replaced with NuGet 5.2.1 | Verify Ping/Traceroute graph behavior in runtime testing |
+| Done | VNC implementation (DEP-06) | **Done** | Embedded VncSharp/zlib and interim VncSharpCore removed; external TightVNC, UltraVNC, TigerVNC and RealVNC support implemented; user confirmed runtime functionality | Per-viewer options, favorites, installed/portable payload and non-bundling checks remain as release acceptance |
+| Done | Cloud integrations (DEP-07/08) | **Done** | AWS S3 and Flickr uploads retired | Historical configuration compatibility is a separate release item |
+| Done | Legacy/orphan dependencies (DEP-13–16) | **Done** | Orphan WMI/RSS binaries, Mentalis SOCKS, ThreeSharp, archives and TerminalsLauncher removed | Verify old external shortcuts and `trm://` activation during release testing |
+| Done | MSTest modernization (DEP-17) | **Done** | MSTest 4.5.2 with `PackageReference` and matching test platform | Current automated CI is green |
+| Done | Packaging modernization (DEP-18 / REL-01) | **Done** | WiX/DTF replaced with Inno Setup 7 EXE and portable ZIP | MSI upgrade and installed-machine compatibility are distinct release gates |
+| Done | EF6 migration (DEP-19) | **Done** | EF6 6.5.2 references and legacy EDMX remnants cleaned in active projects | Existing SQL database migration remains pending |
+| Done | Browser favorites (WEB-01) | **Done** | HTTP favorites retired in favor of HTTPS with migration choices | File/SQL persistence, redirects and downgrade behavior require release checks |
+| Done | Favorite save flow (UI-FAV-01) | **Done** | Save & Close ordering, validation and failure handling corrected; automated tests passed | Interactive file/SQL save and edit acceptance remains |
+| Done | External process lifecycle (PROC-01) | **Done** | Shared nonblocking process launcher added for external tools | Interactive process lifecycle tests remain |
+| Done | VNC, ICA and VMRC retirement (DEP-12 / BIN-07/08) | **Done** | ICA ActiveX replaced with external Citrix Workspace launcher; Microsoft Virtual Server VMRC retired | Workspace authentication and historical favorites remain release checks |
+| Done | MSTSC wrappers (DEP-11 / BIN-06) | **Done** | Windows SDK generates MSTSC COM wrappers rather than committing DLLs | RDP ActiveX runtime, bitness and registration acceptance remain |
+| Done | PuTTY and OpenSSH foundations (BIN-05A / SSH-01) | **Done** | Bundled PuTTY executables removed; external client paths, global PuTTY/Windows OpenSSH preference implemented | Pageant/PuTTYgen menu paths and password exposure tracked separately |
+| Done | Removed unused input hook | **Done** | `UserActivityHook` and obsolete `Terminals.External` source-control bindings removed (`f8aaf30b`) | Do not restore global input hooks without a specific justified feature |
+| Done | Passive remote protocol failure cache | **Done** | In-memory DCOM/WMI transport failures shared across WMI Explorer, Services and Shares; explicit Retry; merged as `d7abc49f` | Validate concurrent consumers, error attribution and recovery below; **no active probes**, WSMan discovery or automatic checks |
+| Done | Tracked-artifact cleanup (BIN-01a) | **Done** | Removed remaining tracked `.vspscc`, `.vssscc` and RSS `obj` file; added CI artifact guard (`dd9871fe`) | Provenance inventory is a separate unfinished task |
+| Next 1 | `Terminals.External` consumer audit | **Partial** | Input hook removed; active encryption, Office 2007 theming and NTP/WHOIS consumers identified | Establish uses of `IconHandler`, XML/binary serialization and `StreamHelper`; remove only proven orphans; preserve credential and data compatibility; retain current theming |
+| Next 2 | WMI Explorer and Windows Services responsiveness | **Partial** | Passive failure reuse integrated | Move queries and service operations off UI thread; preserve retries, errors and control lifecycle; test slow/unreachable hosts |
+| Next 3 | Network Shares and passive-cache acceptance | **Partial** | Shares enumeration moved to background worker; remote failure cache integrated | Validate disposal, concurrent attempts, Retry, short-lived errors, successful recovery and correct failure classification |
+| Next 4 | Ping | **Todo** | Existing async ICMP sends retained | Async initial DNS, safe WinForms timer access, avoid synchronous `Invoke`/`DoEvents`, batch graph/grid refresh and test cancellation |
+| Next 5 | Traceroute | **Todo** | Existing asynchronous ICMP path retained | Async initial/reverse DNS and secondary ping; bounded hop operations, cancellation and UI updates without synchronous `Invoke` |
+| Next 6 | NTP | **Todo** | Existing utility remains functional but blocking | Remove synchronous DNS/UDP and `Thread.Sleep`; bound timeouts, dispose sockets, avoid reverse-DNS PropertyGrid blocking; do not set system clock implicitly |
+| Next 7 | WHOIS | **Todo** | Existing utility retained | Async DNS/TCP and referral handling; cancellation, overall deadline and response-size limit |
+| Next 8 | DNS Lookup (REL-07) | **Todo** | DnsClient migration complete | Async `QueryAsync` and adapter/WMI enumeration; handle cancellation, NXDOMAIN, NODATA, empty answers and IPv4/IPv6 |
+| Next 9 | Network interfaces and local connections | **Todo** | Existing local enumeration supported | Offload synchronous WMI/interface and TCP snapshots; prevent overlapping refreshes and full-grid rebinding |
+| Next 10 | Packet Capture (REL-05) | **Todo** | SharpPcap and PacketDotNet package migration done | Bound packet queues/history, safe dump output, batched UI notifications and high-rate capture tests |
+| Next 11 | Port Scanner (REL-03/04) | **Partial** | Async TCP probing with bounded concurrency implemented | Prevent reentrant starts, stale cancellation and whole-grid rebuilds; require explicit adapter/subnet scope and user consent |
+| Next 12 | Wake-on-LAN | **Todo** | Magic packet implementation retained | Offload synchronous UDP send and verify errors without changing packet behavior |
+| Next 13 | RAS (REL-06) | **Partial** | TransPort2006 replaced with Windows RAS P/Invoke | Validate native structure layouts, x86/x64, phonebooks, dial/hangup and UI responsiveness before enabling |
+| Next 14 | Dependency provenance inventory (BIN-01b) | **Partial** | No tracked conventional DLL/EXE/OCX/MSI/PDB/ZIP outputs in current tree; commit guard added | Inventory restored/runtime payloads, SHA-256, size, architecture, source, licenses and build/optional/runtime consumers; validate Npcap and COM redistribution |
+| Next 15 | PuTTY menu tools (BIN-05B) | **Todo** | Shared `ExternalExecutablePaths` resolver exists | Replace obsolete `Putty/Resources` references for Pageant/PuTTYgen; respect configured paths and PATH; test missing/disabled clients |
+| Next 16 | Remaining orphan cleanup (REL-09) | **Partial** | Vendored source and tracked artifact cleanup progressed | Audit uncompiled cloud panels, obsolete T4/design artifacts and abandoned projects before deletion |
+| Next 17 | CI hardening (REL-08) | **Partial** | Windows file, SQL and Inno/ZIP CI passed on current `master` | Pin third-party actions appropriately; minimize permissions; remove runner-specific net481 reference workarounds where possible |
+| Next 18 | Existing SQL databases (REL-10) | **Todo** | Clean database CI covered | Test upgrades using actual prior-version SQL fixtures, data and schema evolution |
+| Later | VNC release checks | **Partial** | User-confirmed runtime pass; external viewer architecture implemented | Check each viewer's command-line options, authentication, nonstandard ports, lifecycle, file/SQL favorites, Inno/ZIP no-bundling |
+| Later | TabControl (DEP-09) | **Deferred** | Existing control retained | Document docking, ordering, focus, accessibility and designer parity before choosing any replacement |
+| Later | VMware Remote Console (EXE-10) | **Deferred** | No implementation committed | Separate external `vmrc.exe` plugin; verify URI/VM identifiers, configuration, authentication and lifecycle |
+| Later | Hyper-V VMConnect (EXE-11) | **Deferred** | No implementation committed | Separate external `vmconnect.exe` plugin; verify Windows support, host/VM parameters and favorite persistence |
+| Release | Required-check governance (0.2) | **Deferred** | CI is green; not equivalent to mandatory checks | Require appropriate checks for future merges |
+| Release | PuTTY secret handling (1.1) | **Deferred** | Existing `-pw` exposure remains | Remove plaintext password arguments; use supported agent/user-managed or secure IPC mechanism |
+| Release | PuTTY capability gate (1.2) | **Deferred** | External client selection available | Enforce minimum supported capabilities for secure auth; no fallback to `-pw` |
+| Release | Credential vault/KDF (1.3) | **Deferred** | Existing format retained for compatibility | Versioned, authenticated storage and stronger KDF; preserve upstream passwords, DPAPI modes and rollback |
+| Release | Upstream 4.0.1 migration / retired config (REL-02) | **Deferred** | Obsolete integrations removed and some legacy favorite conversion provided | Test old file/SQL fixtures, HTTP/VMRC/ICA favorites, AWS/Flickr options, group memberships, encryption, backup and no silent data loss |
+| Release | Release signing and distribution (4.3) | **Deferred** | Inno EXE and portable ZIP builds exist | Signing, provenance/hashes, SmartScreen expectations, Chocolatey MSI references and MSI-to-Inno transition guidance |
+| Release | .NET runtime decision (2.1) | **Deferred** | Current target is net481 | Evaluate modern .NET using WinForms, COM, EF6, plugins and deployment; do not require an unimplemented migration for 5.0.0 |
+| Release | End-to-end installed acceptance | **Deferred** | Automated packaging and unit/integration CI pass | Verify installed and portable builds, external clients, RDP/Citrix, VNC edge cases, Npcap, file/SQL stores, Windows prerequisites and prior-version migration |
+| Release | 5.0.0 publication (0.1) | **Deferred** | Breaking-change release planned | Publish only after applicable security, interoperability and migration gates; provide compatibility matrix, migration notes and article |
+
+The planned sequence completes dependency reduction and reliability work before the deferred 5.0.0 publication gates. A normal user operation may update the passive remote protocol failure cache; expiration alone **never initiates network traffic**. User-reported VNC runtime success is recorded without inferring full vendor interoperability.
+
+Supporting documents serve as references, **not second status trackers**: [Historical dependency inventory](Dependency-inventory.md), [External-process contract](External-Process-Lifecycle.md), [Application options](Application-Options.md), [External VNC viewers](External-VNC-Viewers.md), [Citrix Workspace](Citrix-Workspace.md), and [General roadmap](Road-map.md). Historical IDs `1.4`, `3.1`, `4.2` and `5.1` lack sufficient definitions to add distinct tasks; do not invent them.

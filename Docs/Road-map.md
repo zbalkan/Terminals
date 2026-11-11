@@ -1,12 +1,7 @@
-Because each product needs its vision here is our plan for next releases, so called long term vision.
-These features are "big rocks" and they explain long period between some previous releases, where such large features required lot of design changes...
+# Long-term roadmap
 
-* Putty integration - putty as defacto industry standard allows integration into other products and provides lot of features and supported protocols, which allow terminals to extend range of supported protocols with minimum effort. This is the most requested feature ever and will also fix lot of issues in current ssh and terminal UI.
+The [modernization work matrix](Dependency-modernization-roadmap.md) is the **only status and priority tracker** for Terminals 5.0.0. **PR #6 is permanent documentation-only planning work and must never be merged.**
 
-* UI tabs enhancements - Current UI is limited with possible customization and will allow new features like dock the tabs, dock favorites to other sides, close button directly on the tab etc.
+The active program is to finish the `Terminals.External` consumer audit, modernize WMI and other network tools without blocking the WinForms UI, complete package provenance and external PuTTY utility discovery, then address residual modernization defects. External VNC runtime functionality has been user-confirmed; release acceptance is narrower than a blanket certification of all viewers.
 
-* Database optimizations - Database was implemented with low performance and to allow larger environments we will need to enhance its implementation.
-
-* External credentials providers integrations - Keepass and Windows credentials store are logical extension of credentials providers.
-
-* Citrix Workspace modernization (CITRIX-01–07): **implemented on the feature branch; manual compatibility acceptance pending**. Replace legacy embedded ICA ActiveX with a launch-only Citrix Workspace protocol, preserve historical ICA favorites for inspection, and remove bundled Receiver and COM dependencies. See [Citrix Workspace integration](Citrix-Workspace.md). Validation gates: Windows CI (file and SQL), Workspace current/LTSR Cloud SSO and StoreFront, UI behavior, and MSI upgrade checks.
+After modernization, the deferred 5.0.0 gates cover password-safe PuTTY authentication, credential storage/KDF, historical file/SQL and configuration migrations, required CI checks, signing, deployment and end-to-end testing. Potential VMware/Hyper-V consoles and a TabControl replacement remain optional, not committed release blockers. All statuses and detailed exit criteria reside in the work matrix, not here.

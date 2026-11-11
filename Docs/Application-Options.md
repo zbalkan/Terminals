@@ -1,52 +1,50 @@
-# Application Options
-Because application contains large number of options used to configure its behavior and it is not possible to describe the behavior directly in the option, here is list of the options and their explanations. To configure the application options go to "Tools > Options" (Shortcut {"Ctrl+Shift+P"}).
+# Application options
 
-NOTE: This page is under construction!
+Open **Tools → Options** (`Ctrl+Shift+P`). This describes the 5.0.0 development baseline, not a completed release. For work status and outstanding acceptance, use the [single modernization matrix](Dependency-modernization-roadmap.md).
 
-## Startup & Shutdown
-* Allow a single instance of the application: When starting Terminals it is checked, if the application is running. If running, the command line arguments are executed on the running instance. If disabled, you are able to start more than one instance of Terminals.
-* Don't keep me up-to-date on Terminals project: If enabled, shows information about new releases during application start up.
-* Show close confirmation dialog: When closing Terminals main window, you will be prompted, if you want to do so.
-* Save connections on close: If enabled and you are closing the application, you can store list of opened connections and Terminals will try to restore them after you start the app again.
+## Startup and interface
 
-## Interface
-* Show user name in tab title: If enabled, Not only the connection name, but also the user information will be shown in connection tab title
-* Show connection information in tooltips: If enabled, favorite detail information (server address, port, protocol and user name) tool tip will be shown when mouse over the favorites tree or connection tab. Also when selecting connection its information is shown in application main window title.
-* Show full information: Like previous option, but tool tip will contain more detailed information (Groups, Notes)
-* Minimize to System Tray: If enabled, click on the application icon in the Windows task bar, Terminals will minimize (disappear) from the task bar and only its icon will be available in system tray. 
-* Enable Groups menu: When disabled, removes "Groups" menu from the main window main menu.
-* Theme: Defines color of the tool bars and application main menu. Choose Normal to define usual color.
-* Favorites:
-	* Enable Favorites panel: When disabled favorites panel (Favorites tree and History) is removed from main window
-	* Auto expand (show) favorites Panel, when hidden: Favorites panel is automatically expanded whe mouse is over its collapse/expand handle.
-	* Favorites sorting: Used to sort favorites in favorites tree and all menus, where favorites are listed
+| Setting | Behavior |
+|---|---|
+| Single instance / updates | Reuse an existing application instance for incoming arguments; optionally check for updates |
+| Close confirmation / save connections | Confirm closing Terminals and optionally restore previously open connections |
+| Tab title and tooltips | Include user name, endpoint/protocol and, with full details enabled, groups and notes |
+| System tray and main-window restore | Minimize to tray and optionally restore the window after the last connection closes |
+| Favorites/Groups | Toggle Favorites panel and Groups menu; configure auto-expand and sorting |
+| Theme | Select toolbar and menu appearance |
 
-## Security
-* Master password: You can change the application master password. This password is used to protect all passwords you store in the app. Even if not defined, your passwords are not readable to others, but are weak to be hacked. You may be prompt to provide it during application upgrades. NOTE: **Requires application restart**.
-* Default password: Credentials to be used only when opening new connection and no credentials are provided by the favorite. 
-* Amazon S3 Service: Synchronize your Terminals.config file only to the Cloud provided by Amazon S3 service. Use "Backup" button to upload the file or "Restore" button to replace your current file by the service store.
+## Security and connections
 
-## Connections
-* Validate Server names: When editing favorite, the "Server Name" field is validate to be valid computer name or IP address. If not valid you can't save the favorite
-* Show confirm dialog on Close or warn or disconnect: If connection is lost or you are closing the connection, you are prompted, if you want to close the connection. This allows you to be informed, that the connection is lost. If not enabled and connection is lost opened connection is closed without warning (except RDP, see next option)
-* Ask to reconnect when connection is lost due Shutdown or reboot: This option applies to RDP only and replaces previous option if enabled. If connection is lost a reconnecting dialog is shown and you are able to manually ask to be reconnected (when machine is available again) or close the connection. This options is helpful in a case you or someone else is restarting the server and you want to be reconnected later. Terminals tries to reconnect one hour, if server is not available, the connection is closed.
-* Automatically restore the main window when the last connection is closed: Helpful, if you are using Terminals minimized to system tray and you want to continue in the app with another connection or favorite
-* [Default Desktop Share](Configure-connection-share.md)
-* Port scanner timeout: Number in seconds, the maximum time the networking tool "Port scanner" will try to check opened port on target machine. Range 0 - 60, default value is 5.
-* Execute before connect: This options allow you to execute some application (or script) each time you open new connection. Applies to all connections and the configured command starts on your computer locally.
-* Proxy: Applies only to Download manger to inform you about latest releases. If not defined, the application will use the system proxy defined for your browsers. Currently doesn't apply to the HTTP or HTTPS favorites.
+| Setting | Behavior |
+|---|---|
+| Master password | Protect stored credentials; changes require restart. **Vault/KDF modernization is deferred**, so do not claim that the present format meets current password-hardening expectations |
+| Default credentials | Used when a connection has no favorite-specific credentials |
+| Server-name validation | Check endpoints when saving favorites; current Save & Close validation correction merged and CI is green, but manual file/SQL testing remains open |
+| Close/reconnect prompts | Warn on disconnection; RDP can offer reconnection after reboot/shutdown |
+| Default Desktop Share | See [connection sharing](Configure-connection-share.md) |
+| Port scanner timeout | Maximum TCP connection attempt time (default 5 seconds) |
+| Execute before connect | Run configured global and favorite commands in order; `Wait for exit` delays connection without blocking the UI |
+| Proxy | Applies to update/download operations, not HTTPS favorites |
 
-## Screen capture
-See also: ([How to use screen capture](Capture-connection-screen.md))
-* Enable screen capture to clipboard: When you press button to capture screen the screen shot is stored into the Windows clipboard.
-* Enable screen capture to folder: Like the previous option, but the picture is saved to the directory, configured as Screen capture root folder.
-* Auto switch to Capture manager on capture: After taking a screen capture, Capture manager tool is automatically opened.
-* Screen capture root folder: Folder used to store captured pictures and is shown as root folder when opening Capture manager. By default the capture manager points to "Terminals Captures" in your "Pictures" directory.
-* Flicker: Online service which allows to synchronize and publish your pictures online. Authorize first and then you can access your service. 
+Legacy **Amazon S3 backup** and **Flickr upload** settings are removed; their old configuration attributes require compatibility testing before 5.0.0 release.
 
-## Data Store
-NOTE: **Requires application restart**.
-* Files in local profile (Default): All application and configuration files are stored in your user profile or application directory in case of portable version. Read more about files configuration and usage in  [Backup and restore settings files](Backup-and-restore-settings-files.md). Read more about portable version in  [Upgrade to version 3.0](Upgrade-to-version-3.0.md).
-* [Microsoft SQL database server](Store-data-in-SQL-database.md)
-## Citrix Workspace
-* [Citrix Workspace launcher and legacy ICA favorites](Citrix-Workspace.md): configure SelfService and Storebrowse executable paths, published resources, and the HTTPS store URL. Sessions open in Citrix Workspace rather than Terminals tabs. Legacy ICA Citrix favorites remain readable but are non-launchable.
+## Screen capture and data store
+
+Screen capture supports **clipboard** and **folder** destinations, an optional automatic switch to Capture Manager, and a configurable root folder (default under Pictures). Legacy Flickr synchronization is unavailable.
+
+The data store is **local-profile files** by default or **Microsoft SQL Server**; changing the storage mode requires restart. See [file backup](Backup-and-restore-settings-files.md) and [SQL storage](Store-data-in-SQL-database.md).
+
+## Protocol clients and plugins
+
+- **Citrix Workspace:** independently installed; SelfService/Storebrowse paths and HTTPS store URL are configured separately. Sessions launch outside Terminals; retired ICA favorites remain readable but non-launchable. See [Citrix guide](Citrix-Workspace.md).
+- **SSH client:** global `preferredSshClient` selects **PuTTY** (existing default) or available **Windows OpenSSH**. PuTTY remains tab-embedded; OpenSSH opens a separate console, uses its own authentication and host-key prompts, and is located under Windows `System32\OpenSSH` (or `Sysnative`). No ConPTY embedding or per-favorite SSH client override. Telnet requires PuTTY.
+- **PuTTY/Pageant:** independently installed. Plugins page exposes enable state, executable path textboxes and Browse buttons. Explicit configured paths take precedence; automatic discovery checks **user PATH then machine PATH**, not arbitrary Program Files directories. Disabling the plugin retains paths but disables entry. Other protocol toggles are independent.
+- **Known gap (BIN-05B):** main-menu **Open SSH Agent** and **Open SSH Keygen** still refer to obsolete bundled locations rather than external discovery; their behavior is not guaranteed.
+- **VNC:** launches independently installed TightVNC, UltraVNC, TigerVNC or RealVNC, configured in Plugins. The user confirmed VNC works at runtime on November 11, 2026. Individual viewers, favorite migration and Inno/ZIP non-bundling remain release checks. See [External VNC viewers](External-VNC-Viewers.md).
+- **Retired protocols:** legacy HTTP, Microsoft Virtual Server VMRC and ICA ActiveX are not offered as new connection types. VMware VMRC and Hyper-V VMConnect are future, **unimplemented** proposals.
+
+External processes use the [shared nonblocking lifecycle](External-Process-Lifecycle.md). Connection owners manage their child processes; independent tools remain detached. The existing PuTTY `-pw` secret-in-arguments behavior is a **deferred pre-publication security gate**, not fixed by the asynchronous launcher.
+
+## New Favorite save behavior
+
+**Save & Close** commits validated favorites before optional MRU updates. **Save & Connect** stays open if saving fails; empty server names are rejected. CI passed [run 43044264860](https://github.com/zbalkan/Terminals/actions/runs/43044264860). Interactive save, edit and persistence tests for file/SQL stores remain pending.
