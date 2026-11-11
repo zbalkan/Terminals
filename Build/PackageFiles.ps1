@@ -65,7 +65,6 @@
     "Plugins\Rdp\AxInterop.MSTSCLib.dll",
     "Plugins\Rdp\MSTSCLib.dll",
     "Plugins\Rdp\Terminals.Plugins.Rdp.dll",
-    "Plugins\Vnc\VncSharpCore.dll",
     "Plugins\Vnc\Terminals.Plugins.Vnc.dll",
     "Plugins\Web\Terminals.Plugins.Web.dll",
     "Plugins\Putty\Terminals.Plugins.Putty.dll"

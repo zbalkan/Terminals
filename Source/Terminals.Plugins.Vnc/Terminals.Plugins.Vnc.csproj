@@ -37,9 +37,6 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="1Remote.VncSharpCore" Version="1.2.1" />
-  </ItemGroup>
-  <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -49,9 +46,6 @@
   <ItemGroup>
     <Compile Include="..\Terminals\Properties\Common.AssemblyInfo.cs">
       <Link>Properties\Common.AssemblyInfo.cs</Link>
-    </Compile>
-    <Compile Include="FakeVNCConnection.cs">
-      <SubType>Component</SubType>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
@@ -70,7 +64,6 @@
     <Compile Include="VncControl.Designer.cs">
       <DependentUpon>VncControl.cs</DependentUpon>
     </Compile>
-    <Compile Include="VncMenuVisitor.cs" />
     <Compile Include="VncOptions.cs" />
     <Compile Include="VncOptionsConverter.cs" />
   </ItemGroup>

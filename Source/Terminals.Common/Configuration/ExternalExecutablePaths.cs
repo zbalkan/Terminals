@@ -13,6 +13,7 @@ namespace Terminals.Common.Configuration
     {
         public static string Putty { get; set; }
         public static string Pageant { get; set; }
+        public static string VncViewer { get; set; }
         public static string CitrixSelfService { get; set; }
         public static string CitrixStorebrowse { get; set; }
 

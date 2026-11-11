@@ -1,90 +1,85 @@
 using System;
-using System.Windows.Forms;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
+using Terminals.Common.Configuration;
+using Terminals.Common.Forms;
 using Terminals.Data;
 
 namespace Terminals.Connections
 {
-    internal class VNCConnection : Connection
+    // External TightVNC Viewer owns its window, authentication and session.
+    internal sealed class VNCConnection : Connection
     {
-        private bool connected = false;
-
-        public override bool Connected { get { return this.connected; } }
-
-        private VncSharpCore.RemoteDesktop rd;
-
-        private string vncPassword = string.Empty;
-
-        public void SendSpecialKeys(VncSharpCore.SpecialKeys Keys)
-        {
-            rd.SendSpecialKeys(Keys);
-        }
+        public override bool LaunchOnly { get { return true; } }
 
         public override bool Connect()
         {
-            try
-            {
-                rd = new VncSharpCore.RemoteDesktop();
-                Controls.Add(rd);
-
-                string pass = this.ResolveFavoriteCredentials().Password;
-                this.vncPassword = pass;
-
-                if (string.IsNullOrEmpty(vncPassword)) return false;
-
-                //rd.SendSpecialKeys(VncSharpCore.SpecialKeys);            
-                rd.Parent = this.Parent;
-                rd.Dock = DockStyle.Fill;
-
-                rd.VncPort = Favorite.Port;
-                rd.ConnectComplete += new VncSharpCore.ConnectCompleteHandler(rd_ConnectComplete);
-                rd.ConnectionLost += new EventHandler(rd_ConnectionLost);
-                rd.GetPassword = VNCPassword;
-                Text = "Connecting to VNC Server...";
-
-                VncOptions options = this.Favorite.ProtocolProperties as VncOptions;
-                rd.Connect(Favorite.ServerName, options.DisplayNumber, options.ViewOnly, options.AutoScale);
-
-                rd.BringToFront();
-                return true;
-
-            }
-            catch (Exception exc)
-            {
-                Logging.Error("Connecting to VNC", exc);
-                return false;
-            }
+            throw new NotSupportedException("The external VNC viewer is launch-only. Use LaunchAsync.");
         }
 
-        private void rd_ConnectionLost(object sender, EventArgs e)
+        public override async Task LaunchAsync()
         {
-            Logging.Fatal("VNC Connection Lost" + this.Favorite.Name);
-            this.connected = false;
-            this.FireDisconnected();
+            if (Favorite == null)
+                throw new InvalidOperationException("A VNC favorite is required.");
+            var options = Favorite.ProtocolProperties as VncOptions;
+            var start = BuildStartInfo(Favorite.ServerName, Favorite.Port, options);
+            await ExternalProcessLauncher.ExecuteAsync(start, false).ConfigureAwait(false);
+            // Process creation does not establish VNC authentication or connectivity.
         }
 
-        string VNCPassword()
+        internal static ProcessStartInfo BuildStartInfo(string server, int port, VncOptions options)
         {
-            return vncPassword;
-        }
+            if (port < 1 || port > 65535)
+                throw new ArgumentOutOfRangeException("port", "VNC port must be between 1 and 65535.");
+            if (string.IsNullOrWhiteSpace(server))
+                throw new ArgumentException("A VNC hostname or IP address is required.", "server");
 
-        private void rd_ConnectComplete(object sender, VncSharpCore.ConnectEventArgs e)
-        {
-            // Update Form to match geometry of remote desktop
-            //ClientSize = new Size(e.DesktopWidth, e.DesktopHeight);
-            try
+            string host = server.Trim();
+            if (host.StartsWith("[", StringComparison.Ordinal) &&
+                host.EndsWith("]", StringComparison.Ordinal))
+                host = host.Substring(1, host.Length - 2);
+
+            if (Uri.CheckHostName(host) == UriHostNameType.Unknown)
+                throw new ArgumentException("Invalid VNC hostname or IP address.", "server");
+            if (host.IndexOf(':') >= 0)
+                host = "[" + host + "]";
+
+            string viewer = ExternalVncViewers.Selected;
+            string executable = ExternalVncViewers.Require(viewer);
+            bool viewOnly = options != null && options.ViewOnly;
+            bool autoScale = options != null && options.AutoScale;
+            string target = "\"" + host + "::" + port + "\"";
+            string arguments;
+            switch (viewer)
             {
-                connected = true;
-                VncSharpCore.RemoteDesktop rd = (VncSharpCore.RemoteDesktop)sender;
-                rd.Visible = true;
-                rd.BringToFront();
-                rd.FullScreenUpdate();
-                rd.Enabled = true;
+                case ExternalVncViewers.TightVnc:
+                    arguments = (viewOnly ? "-viewonly=yes " : "") +
+                        (autoScale ? "-scale=auto " : "") + target;
+                    break;
+                case ExternalVncViewers.UltraVnc:
+                    arguments = (viewOnly ? "-viewonly " : "") +
+                        (autoScale ? "-autoscaling " : "") + "-connect " + target;
+                    break;
+                case ExternalVncViewers.TigerVnc:
+                    // TigerVNC does not document the TightVNC auto-scale switch.
+                    arguments = (viewOnly ? "-ViewOnly " : "") + target;
+                    break;
+                case ExternalVncViewers.RealVnc:
+                    arguments = (viewOnly ? "-SendKeyEvents=FALSE -SendPointerEvents=FALSE " : "") +
+                        (autoScale ? "-Scaling=FitAutoAspect " : "") + target;
+                    break;
+                default:
+                    throw new ArgumentException("Unsupported VNC viewer.", "viewer");
             }
-            catch (Exception Exc)
+            // Never transfer favorite credentials via command line or environment.
+            return new ProcessStartInfo
             {
-                Logging.Error("ConnectComplete to VNC", Exc);
-            }
-            // Change the Form's title to match desktop name
+                FileName = executable,
+                Arguments = arguments,
+                UseShellExecute = false,
+                WorkingDirectory = Path.GetDirectoryName(executable)
+            };
         }
     }
 }

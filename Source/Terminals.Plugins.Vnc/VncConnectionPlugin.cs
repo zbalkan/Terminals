@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Drawing;
-using System.Security.Cryptography;
 using System.Windows.Forms;
 using Terminals.Common.Connections;
 using Terminals.Data;
@@ -8,12 +7,12 @@ using Terminals.Forms.EditFavorite;
 using Terminals.Integration.Export;
 using Terminals.Plugins.Vnc;
 using Terminals.Plugins.Vnc.Properties;
-using VncSharpCore;
+using System.Net.Sockets;
 
 namespace Terminals.Connections.VNC
 {
     internal class VncConnectionPlugin : IConnectionPlugin, IOptionsExporterFactory,
-        IToolbarExtenderFactory, IExtraDetection, IOptionsConverterFactory
+        IOptionsConverterFactory, IExtraDetection
     {
         internal const string VNC = "VNC";
 
@@ -25,21 +24,8 @@ namespace Terminals.Connections.VNC
 
         public string PortName { get { return VNC; } }
 
-        // because there is no interface on Vnc RemoteDesktop to wrapp.
-        private readonly Action<string, int> serviceCheck;
-
-        public VncConnectionPlugin() : this(CheckRealService)
-        {
-        }
-
-        internal VncConnectionPlugin(Action<string, int> serviceCheck)
-        {
-            this.serviceCheck = serviceCheck;
-        }
-
         public Connection CreateConnection()
         {
-            //return new FakeVNCConnection();
             return new VNCConnection();
         }
 
@@ -63,11 +49,6 @@ namespace Terminals.Connections.VNC
             return new TerminalsVncExport();
         }
 
-        public IToolbarExtender CreateToolbarExtender(ICurrenctConnectionProvider provider)
-        {
-            return new VncMenuVisitor(provider);
-        }
-
         public Image GetIcon()
         {
             return TreeIconVnc;
@@ -77,30 +58,41 @@ namespace Terminals.Connections.VNC
         {
             try
             {
-                this.serviceCheck(ipAddress, port);
-                return true;
+                using (var client = new TcpClient())
+                {
+                    IAsyncResult pending = client.BeginConnect(ipAddress, port, null, null);
+                    using (pending.AsyncWaitHandle)
+                    {
+                        if (!pending.AsyncWaitHandle.WaitOne(1500))
+                            return false;
+                    }
+                    client.EndConnect(pending);
+                    using (NetworkStream stream = client.GetStream())
+                    {
+                        stream.ReadTimeout = 1500;
+                        var banner = new byte[12];
+                        int received = 0;
+                        while (received < banner.Length)
+                        {
+                            int count = stream.Read(banner, received, banner.Length - received);
+                            if (count <= 0) return false;
+                            received += count;
+                        }
+                        if (banner[0] != 'R' || banner[1] != 'F' ||
+                            banner[2] != 'B' || banner[3] != ' ' ||
+                            banner[7] != '.' || banner[11] != '\n')
+                            return false;
+                        for (int i = 4; i <= 10; i++)
+                            if (i != 7 && (banner[i] < '0' || banner[i] > '9'))
+                                return false;
+                        return true;
+                    }
+                }
             }
-            catch (CryptographicException ce)
+            catch (Exception ex) when (ex is SocketException || ex is System.IO.IOException ||
+                                       ex is ArgumentException || ex is InvalidOperationException)
             {
-                // ignore this kind of exception, because of detecting with empty password may fail.
-                Logging.Info(string.Empty, ce);
-                return true;
-            }
-            catch (Exception exc)
-            {
-                Logging.Error("VNC Port Scan Failed", exc);
                 return false;
-            }
-        }
-
-        private static void CheckRealService(string ipAddress, int port)
-        {
-            using (var rd = new RemoteDesktop())
-            {
-                rd.VncPort = port;
-                rd.GetPassword = new AuthenticateDelegate(() => string.Empty);
-                rd.Connect(ipAddress);
-                rd.Disconnect();
             }
         }
 

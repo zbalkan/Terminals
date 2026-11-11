@@ -59,6 +59,7 @@
     </Compile>
     <Compile Include="Configuration\AuthMethod.cs" />
     <Compile Include="Configuration\ExternalExecutablePaths.cs" />
+    <Compile Include="Configuration\ExternalVncViewers.cs" />
     <Compile Include="Configuration\SshClientPreference.cs" />
     <Compile Include="Configuration\KeysSection.cs" />
     <Compile Include="Connections\IFocusable.cs" />
