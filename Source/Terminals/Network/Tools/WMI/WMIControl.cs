@@ -632,9 +632,9 @@ namespace WMITestClient
                     }
 
                 }
-            }
                 if (!string.IsNullOrWhiteSpace(QueryTextBox.Text))
                     RemoteWmiAvailability.Succeeded(Computer);
+            }
             catch (Exception exc)
             {
                 RemoteWmiAvailability.Failed(Computer, exc);
