@@ -11,6 +11,16 @@ namespace Terminals.Network.WMI
         private const RemoteProtocolStatusCache.Protocol Protocol =
             RemoteProtocolStatusCache.Protocol.WmiDcom;
 
+        // Existing WMI consumers fall back to local WMI unless all three
+        // remote connection fields are populated. Do not cache a remote
+        // endpoint when the actual query runs against the local machine.
+        internal static string EffectiveHost(string host, string username, string password)
+        {
+            return string.IsNullOrWhiteSpace(host) ||
+                   string.IsNullOrWhiteSpace(username) ||
+                   string.IsNullOrWhiteSpace(password) ? null : host;
+        }
+
         internal static bool AllowAttempt(string host, IWin32Window owner)
         {
             RemoteProtocolStatusCache.Failure failure;
