@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Windows.Forms;
 using System.Data.Entity.Core;
 using System.Management;
+using Terminals.Network.WMI;
 using System.Data;
 
 namespace WMITestClient
@@ -519,6 +520,8 @@ namespace WMITestClient
 
         private void QueryButton_Click(object sender, System.EventArgs e)
         {
+            string cacheHost = RemoteWmiAvailability.EffectiveHost(Computer, Username, Password);
+            if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
             AddToHistory();
             this.StilRunning = true;
             this.QueryButton.Enabled = false;
@@ -630,9 +633,12 @@ namespace WMITestClient
                     }
 
                 }
+                if (!string.IsNullOrWhiteSpace(QueryTextBox.Text))
+                    RemoteWmiAvailability.Succeeded(cacheHost);
             }
             catch (Exception exc)
             {
+                RemoteWmiAvailability.Failed(cacheHost, exc);
                 Terminals.Logging.Info("Query Button Failed", exc);
                 MessageBox.Show("Error Thrown:" + exc.Message);
             }
