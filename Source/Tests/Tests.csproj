@@ -124,6 +124,7 @@
     <Compile Include="Integrations\ExportTerminalsTests.cs" />
     <Compile Include="Network\RemoteProtocolStatusCacheTests.cs" />
     <Compile Include="Network\DnsLookupTests.cs" />
+    <Compile Include="External\SerializationCompatibilityTests.cs" />
     <Compile Include="Network\HexBoxProviderTests.cs" />
     <Compile Include="Network\RasNativeTests.cs" />
     <Compile Include="Network\TcpConnectScannerTests.cs" />
