@@ -685,7 +685,6 @@
     </Compile>
     <Compile Include="Network\PortScanner\ConnectionState.cs" />
     <Compile Include="Network\PortScanner\NetworkScanResult.cs" />
-    <Compile Include="Network\Services\ShareFavoritesEventArgs.cs" />
     <Compile Include="Network\SubnetMask.cs" />
     <Compile Include="Network\Tools\TraceRoute\RouteHopFoundEventArgs.cs" />
     <Compile Include="Network\Tools\TraceRoute\TraceRoute.cs">
@@ -843,7 +842,6 @@
     <Compile Include="Network\PortScanner\NetworkScanner.Designer.cs">
       <DependentUpon>NetworkScanner.cs</DependentUpon>
     </Compile>
-    <Compile Include="Network\Services\Client.cs" />
     <Compile Include="Network\Tools\DNS\DNSLookup.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -899,14 +897,12 @@
     <Compile Include="Network\Tools\WMI\NetworkShares.Designer.cs">
       <DependentUpon>NetworkShares.cs</DependentUpon>
     </Compile>
-    <Compile Include="Network\Services\Server.cs" />
     <Compile Include="Network\ShareConnectionsForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Network\ShareConnectionsForm.Designer.cs">
       <DependentUpon>ShareConnectionsForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Network\Services\SharedFavorite.cs" />
     <Compile Include="Network\Tools\WhoIs\WhoIs.cs">
       <SubType>UserControl</SubType>
     </Compile>

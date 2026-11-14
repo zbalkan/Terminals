@@ -1,7 +1,6 @@
 
 using System;
 using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Xml.Serialization;
 
@@ -9,28 +8,6 @@ namespace Unified
 {
     public class Serialize
     {
-        public static MemoryStream SerializeBinary(object request)
-        {
-            BinaryFormatter binaryFormatter = new BinaryFormatter();
-            MemoryStream memoryStream1 = new MemoryStream();
-            binaryFormatter.Serialize(memoryStream1, request);
-            return memoryStream1;
-        }
-        public static byte[] SerializeBinaryAsBytes(object request)
-        {
-            using (MemoryStream stm = SerializeBinary(request))
-            {
-                return StreamHelper.StreamToBytes(stm);
-            }
-        }
-        public static object DeSerializeBinary(MemoryStream memStream)
-        {
-            memStream.Position = (long)0;
-            object local1 = new BinaryFormatter().Deserialize(memStream);
-            memStream.Close();
-            return local1;
-        }
-
         public static object DeSerializeXML(MemoryStream memStream, Type type, bool ThrowException)
         {
             object local2;

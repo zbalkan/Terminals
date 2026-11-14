@@ -71,6 +71,15 @@ namespace Tests.UserInterface
             Assert.AreEqual(IRELEVANT_LEFT, loadedLeft, "We need to be able read previously saved settings");
         }
 
+        [TestMethod]
+        public void XmlSerializer_RoundTrip_PreservesValues()
+        {
+            var values = new[] { "rdp", "ssh" };
+            string xml = Unified.Serialize.SerializeXMLAsString(values);
+            var restored = (string[])Unified.Serialize.DeSerializeXML(xml, typeof(string[]));
+            CollectionAssert.AreEqual(values, restored);
+        }
+
         private static void SaveSampleSettings()
         {
             var newSettings = new ToolStripSettings();
