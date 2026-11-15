@@ -58,7 +58,7 @@ namespace Unified
         {
             using (MemoryStream stm = SerializeXML(request))
             {
-                return StreamHelper.StreamToBytes(stm);
+                return stm == null ? null : stm.ToArray();
             }
         }
 
@@ -92,7 +92,7 @@ namespace Unified
         {
             using (MemoryStream stm = SerializeXML(request, serializer))
             {
-                return StreamHelper.StreamToString(stm);
+                return stm == null ? null : Encoding.UTF8.GetString(stm.ToArray());
             }
         }
 
