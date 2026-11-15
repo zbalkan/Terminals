@@ -19,8 +19,6 @@ namespace Terminals
         private NetworkScanManager manager;
         private bool validation;
 
-        private readonly Server server;
-
         private readonly ConnectionManager connectionManager;
 
         internal NetworkScanner(IPersistence persistence, ConnectionManager connectionManager)
@@ -31,11 +29,9 @@ namespace Terminals
             this.connectionManager = connectionManager;
             this.checkListPorts.DataSource = this.connectionManager.GetAvailableProtocols();
             this.CheckAllPorts();
-            this.server = new Server(persistence, this.connectionManager);
             FillTextBoxesFromLocalIp();
             InitScanManager();
             this.gridScanResults.AutoGenerateColumns = false;
-            Client.OnServerConnection += new ServerConnectionHandler(Client_OnServerConnection);
             this.bsScanResults.DataSource = new SortableList<NetworkScanResult>();
         }
 
@@ -48,7 +44,6 @@ namespace Terminals
             this.CTextbox.Text = ipList[2];
             this.DTextbox.Text = "1";
             this.ETextbox.Text = "255";
-            this.ServerAddressLabel.Text = localIP;
         }
 
         private void InitScanManager()
@@ -186,56 +181,21 @@ namespace Terminals
             return tags;
         }
 
-        private void Button1_Click(object sender, EventArgs e)
-        {
-            if (this.server.ServerOnline)
-            {
-                this.button1.Text = "Start Server";
-                this.server.Stop();
-            }
-            else
-            {
-                this.button1.Text = "Stop Server";
-                this.server.Start();
-            }
-            if (this.server.ServerOnline)
-            {
-                this.ServerStatusLabel.Text = "Server is ONLINE";
-            }
-            else
-            {
-                this.ServerStatusLabel.Text = "Server is OFFLINE";
-            }
-        }
-
         private void ImportSelectedItems(List<FavoriteConfigurationElement> favoritesToImport)
         {
             var managedImport = new ImportWithDialogs(this, this.persistence, this.connectionManager);
             managedImport.Import(favoritesToImport);
         }
 
-        private void Client_OnServerConnection(ShareFavoritesEventArgs args)
-        {
-            ImportSelectedItems(args.Favorites);
-        }
-
-        private void Button2_Click(object sender, EventArgs e)
-        {
-            Client.Start(this.ServerAddressTextbox.Text);
-        }
-
         private void NetworkScanner_FormClosing(object sender, FormClosingEventArgs e)
         {
             try
             {
-                Client.OnServerConnection -= new ServerConnectionHandler(Client_OnServerConnection);
                 this.manager.StopScan();
-                this.server.Stop();
-                Client.Stop();
             }
             catch (Exception exc)
             {
-                Logging.Info("Network Scanner failed to stop server and client at close", exc);
+                Logging.Info("Network Scanner failed to stop scan at close", exc);
             }
         }
 
