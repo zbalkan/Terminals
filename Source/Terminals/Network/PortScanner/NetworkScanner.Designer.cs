@@ -40,8 +40,6 @@ namespace Terminals {
             this.TagsTextbox = new System.Windows.Forms.TextBox();
             this.AddAllButton = new System.Windows.Forms.Button();
             this.ButtonCancel = new System.Windows.Forms.Button();
-            this.button2 = new System.Windows.Forms.Button();
-            this.button1 = new System.Windows.Forms.Button();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.ScanStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.scanProgressBar = new System.Windows.Forms.ToolStripProgressBar();
@@ -55,16 +53,6 @@ namespace Terminals {
             this.hostNameDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.serviceNameDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.bsScanResults = new System.Windows.Forms.BindingSource(this.components);
-            this.tabPage2 = new System.Windows.Forms.TabPage();
-            this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.ServerAddressTextbox = new System.Windows.Forms.TextBox();
-            this.label5 = new System.Windows.Forms.Label();
-            this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.ServerAddressLabel = new System.Windows.Forms.Label();
-            this.ServerStatusLabel = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
-            this.label3 = new System.Windows.Forms.Label();
-            this.label2 = new System.Windows.Forms.Label();
             this.panel2 = new System.Windows.Forms.Panel();
             this.label6 = new System.Windows.Forms.Label();
             this.panel1.SuspendLayout();
@@ -74,9 +62,6 @@ namespace Terminals {
             this.tabPage1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.gridScanResults)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.bsScanResults)).BeginInit();
-            this.tabPage2.SuspendLayout();
-            this.groupBox2.SuspendLayout();
-            this.groupBox1.SuspendLayout();
             this.panel2.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -234,26 +219,6 @@ namespace Terminals {
             this.ButtonCancel.UseVisualStyleBackColor = true;
             this.ButtonCancel.Click += new System.EventHandler(this.CancelButton_Click);
             // 
-            // button2
-            // 
-            this.button2.Location = new System.Drawing.Point(150, 53);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(103, 23);
-            this.button2.TabIndex = 20;
-            this.button2.Text = "Connect to Server";
-            this.button2.UseVisualStyleBackColor = true;
-            this.button2.Click += new System.EventHandler(this.Button2_Click);
-            // 
-            // button1
-            // 
-            this.button1.Location = new System.Drawing.Point(20, 29);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(103, 23);
-            this.button1.TabIndex = 19;
-            this.button1.Text = "Start Server";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.Button1_Click);
-            // 
             // statusStrip1
             // 
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -282,7 +247,6 @@ namespace Terminals {
             // tabControl1
             // 
             this.tabControl1.Controls.Add(this.tabPage1);
-            this.tabControl1.Controls.Add(this.tabPage2);
             this.tabControl1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tabControl1.Location = new System.Drawing.Point(0, 0);
             this.tabControl1.Name = "tabControl1";
@@ -375,107 +339,6 @@ namespace Terminals {
             // 
             this.bsScanResults.DataSource = typeof(Terminals.Scanner.NetworkScanResult);
             // 
-            // tabPage2
-            // 
-            this.tabPage2.Controls.Add(this.groupBox2);
-            this.tabPage2.Controls.Add(this.groupBox1);
-            this.tabPage2.Controls.Add(this.label4);
-            this.tabPage2.Controls.Add(this.label3);
-            this.tabPage2.Controls.Add(this.label2);
-            this.tabPage2.Location = new System.Drawing.Point(4, 22);
-            this.tabPage2.Name = "tabPage2";
-            this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(481, 314);
-            this.tabPage2.TabIndex = 1;
-            this.tabPage2.Text = "Direct Connection";
-            this.tabPage2.UseVisualStyleBackColor = true;
-            // 
-            // groupBox2
-            // 
-            this.groupBox2.Controls.Add(this.button2);
-            this.groupBox2.Controls.Add(this.ServerAddressTextbox);
-            this.groupBox2.Controls.Add(this.label5);
-            this.groupBox2.Location = new System.Drawing.Point(170, 143);
-            this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(259, 158);
-            this.groupBox2.TabIndex = 27;
-            this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Client";
-            // 
-            // ServerAddressTextbox
-            // 
-            this.ServerAddressTextbox.Location = new System.Drawing.Point(73, 27);
-            this.ServerAddressTextbox.Name = "ServerAddressTextbox";
-            this.ServerAddressTextbox.Size = new System.Drawing.Size(180, 20);
-            this.ServerAddressTextbox.TabIndex = 21;
-            this.ServerAddressTextbox.Text = "127.0.0.1";
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(6, 29);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(61, 13);
-            this.label5.TabIndex = 25;
-            this.label5.Text = "IP Address:";
-            // 
-            // groupBox1
-            // 
-            this.groupBox1.Controls.Add(this.ServerAddressLabel);
-            this.groupBox1.Controls.Add(this.ServerStatusLabel);
-            this.groupBox1.Controls.Add(this.button1);
-            this.groupBox1.Location = new System.Drawing.Point(11, 143);
-            this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(153, 158);
-            this.groupBox1.TabIndex = 26;
-            this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Server";
-            // 
-            // ServerAddressLabel
-            // 
-            this.ServerAddressLabel.AutoSize = true;
-            this.ServerAddressLabel.Location = new System.Drawing.Point(43, 100);
-            this.ServerAddressLabel.Name = "ServerAddressLabel";
-            this.ServerAddressLabel.Size = new System.Drawing.Size(52, 13);
-            this.ServerAddressLabel.TabIndex = 21;
-            this.ServerAddressLabel.Text = "127.0.0.1";
-            // 
-            // ServerStatusLabel
-            // 
-            this.ServerStatusLabel.AutoSize = true;
-            this.ServerStatusLabel.Location = new System.Drawing.Point(20, 70);
-            this.ServerStatusLabel.Name = "ServerStatusLabel";
-            this.ServerStatusLabel.Size = new System.Drawing.Size(98, 13);
-            this.ServerStatusLabel.TabIndex = 20;
-            this.ServerStatusLabel.Text = "Server is OFFLINE.";
-            // 
-            // label4
-            // 
-            this.label4.Location = new System.Drawing.Point(8, 79);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(415, 45);
-            this.label4.TabIndex = 24;
-            this.label4.Text = "Step 2: On the machine which you would like to share your connections with, place" +
-    " your IP address in the \"IP Address\" box on the right, and then it the \"Connect " +
-    "to Server\" button.";
-            // 
-            // label3
-            // 
-            this.label3.Location = new System.Drawing.Point(8, 55);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(336, 23);
-            this.label3.TabIndex = 23;
-            this.label3.Text = "Step 1: Start the \"Server\" by hitting the \"Start Server\" button below.";
-            // 
-            // label2
-            // 
-            this.label2.Location = new System.Drawing.Point(8, 14);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(421, 30);
-            this.label2.TabIndex = 22;
-            this.label2.Text = "You can use this form to establish a direct connection with another machine on th" +
-    "e network in order to share connections.";
-            // 
             // panel2
             // 
             this.panel2.Controls.Add(this.AddAllButton);
@@ -521,11 +384,6 @@ namespace Terminals {
             this.tabPage1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.gridScanResults)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.bsScanResults)).EndInit();
-            this.tabPage2.ResumeLayout(false);
-            this.groupBox2.ResumeLayout(false);
-            this.groupBox2.PerformLayout();
-            this.groupBox1.ResumeLayout(false);
-            this.groupBox1.PerformLayout();
             this.panel2.ResumeLayout(false);
             this.panel2.PerformLayout();
             this.ResumeLayout(false);
@@ -543,20 +401,8 @@ namespace Terminals {
         private System.Windows.Forms.Button ButtonCancel;
         private System.Windows.Forms.Button AddAllButton;
         private System.Windows.Forms.TextBox TagsTextbox;
-        private System.Windows.Forms.Button button2;
-        private System.Windows.Forms.Button button1;
         private System.Windows.Forms.TabControl tabControl1;
         private System.Windows.Forms.TabPage tabPage1;
-        private System.Windows.Forms.TabPage tabPage2;
-        private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.TextBox ServerAddressTextbox;
-        private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.GroupBox groupBox2;
-        private System.Windows.Forms.GroupBox groupBox1;
-        private System.Windows.Forms.Label ServerAddressLabel;
-        private System.Windows.Forms.Label ServerStatusLabel;
         private System.Windows.Forms.Panel panel2;
         private System.Windows.Forms.Label label6;
         private Terminals.SortableUnboundGrid gridScanResults;
