@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Data.Entity.Core;
-using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Management;
 using System.Data;
@@ -13,88 +12,129 @@ namespace Terminals.Network.WMI
         public Services()
         {
             InitializeComponent();
+            Disposed += (sender, args) =>
+            {
+                if (!busy) DisposeCachedObjects();
+            };
         }
 
 
         private List<ManagementObject> list = new List<ManagementObject>();
+        private bool busy;
 
-        private void LoadServices(string Username, string Password, string Computer)
+        private sealed class ServicesResult
         {
-            string cacheHost = RemoteWmiAvailability.EffectiveHost(Computer, Username, Password);
+            internal readonly DataTable Table = new DataTable();
+            internal readonly List<ManagementObject> Objects = new List<ManagementObject>();
+        }
+
+        private void SetBusy(bool value)
+        {
+            busy = value;
+            button1.Enabled = !value;
+            dataGridView1.Enabled = !value;
+            contextMenuStrip1.Enabled = !value;
+        }
+
+        private async void LoadServices(string username, string password, string computer)
+        {
+            if (busy || IsDisposed) return;
+            string cacheHost = RemoteWmiAvailability.EffectiveHost(computer, username, password);
             if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
+
+            SetBusy(true);
+            ServicesResult result = null;
             try
             {
-                LoadServicesCore(Username, Password, Computer);
+                result = await Task.Run(() => LoadServicesCore(username, password, computer));
+                if (IsDisposed) return;
+                dataGridView1.DataSource = result.Table;
+                List<ManagementObject> oldObjects = list;
+                list = result.Objects;
+                DisposeObjects(oldObjects);
+                result = null;
                 RemoteWmiAvailability.Succeeded(cacheHost);
             }
             catch (Exception error)
             {
                 RemoteWmiAvailability.Failed(cacheHost, error);
                 Terminals.Logging.Info("Windows Services query failed", error);
-                MessageBox.Show("Unable to query services: " + error.Message);
+                if (!IsDisposed)
+                    MessageBox.Show(this, "Unable to query services: " + error.Message);
+            }
+            finally
+            {
+                if (result != null)
+                    DisposeObjects(result.Objects);
+                if (IsDisposed)
+                    DisposeCachedObjects();
+                else
+                    SetBusy(false);
             }
         }
 
-        private void LoadServicesCore(string Username, string Password, string Computer)
+        private void DisposeCachedObjects()
         {
-            StringBuilder sb = new StringBuilder();
-            string qry = "select AcceptPause, AcceptStop, Caption, CheckPoint, CreationClassName, Description, DesktopInteract, DisplayName, ErrorControl, ExitCode, InstallDate, Name, PathName, ProcessId,ServiceSpecificExitCode, ServiceType, Started, StartMode, StartName, State, Status, SystemCreationClassName, SystemName, TagId, WaitHint from win32_service";
-            ManagementObjectSearcher searcher;
+            DisposeObjects(list);
+            list.Clear();
+        }
+
+        private static void DisposeObjects(IEnumerable<ManagementObject> objects)
+        {
+            foreach (ManagementObject item in objects)
+                item.Dispose();
+        }
+
+        private static ServicesResult LoadServicesCore(string username, string password, string computer)
+        {
+            const string qry = "select AcceptPause, AcceptStop, Caption, CheckPoint, CreationClassName, Description, DesktopInteract, DisplayName, ErrorControl, ExitCode, InstallDate, Name, PathName, ProcessId,ServiceSpecificExitCode, ServiceType, Started, StartMode, StartName, State, Status, SystemCreationClassName, SystemName, TagId, WaitHint from win32_service";
             ObjectQuery query = new ObjectQuery(qry);
-
-            if (Username != "" && Password != "" && Computer != "" && !Computer.StartsWith(@"\\localhost"))
+            ManagementObjectSearcher searcher;
+            if (username != "" && password != "" && computer != "" && !computer.StartsWith(@"\\localhost"))
             {
-                System.Management.ConnectionOptions oConn = new System.Management.ConnectionOptions();
-                oConn.Username = Username;
-                oConn.Password = Password;
-                if (!Computer.StartsWith(@"\\")) Computer = @"\\" + Computer;
-                if (!Computer.ToLower().EndsWith(@"\root\cimv2")) Computer = Computer + @"\root\cimv2";
-                System.Management.ManagementScope oMs = new System.Management.ManagementScope(Computer, oConn);
-
-                searcher = new System.Management.ManagementObjectSearcher(oMs, query);
+                var options = new ConnectionOptions { Username = username, Password = password };
+                if (!computer.StartsWith(@"\\")) computer = @"\\" + computer;
+                if (!computer.ToLowerInvariant().EndsWith(@"\root\cimv2")) computer += @"\root\cimv2";
+                searcher = new ManagementObjectSearcher(new ManagementScope(computer, options), query);
             }
             else
             {
-                searcher = new System.Management.ManagementObjectSearcher(query);
+                searcher = new ManagementObjectSearcher(query);
             }
 
-            DataTable dt = new DataTable();
-            bool needsSchema = true;
-            int length = 0;
-            object[] values = null;
-            list.Clear();
-            foreach (System.Management.ManagementObject share in searcher.Get())
+            var result = new ServicesResult();
+            try
             {
-                Share s = new Share();
-                list.Add(share);
-                if (needsSchema)
+                using (searcher)
+                using (ManagementObjectCollection collection = searcher.Get())
                 {
-                    foreach (System.Management.PropertyData p in share.Properties)
+                    bool needsSchema = true;
+                    foreach (ManagementObject service in collection)
                     {
-                        System.Data.DataColumn col = new DataColumn(p.Name, ConvertCimType(p.Type));
-                        dt.Columns.Add(col);
-                    }
-                    length = share.Properties.Count;
-                    needsSchema = false;
-                }
+                        result.Objects.Add(service);
+                        if (needsSchema)
+                        {
+                            foreach (PropertyData property in service.Properties)
+                                result.Table.Columns.Add(new DataColumn(property.Name, ConvertCimType(property.Type)));
+                            needsSchema = false;
+                        }
 
-                if (values == null) values = new object[length];
-                int x = 0;
-                foreach (System.Management.PropertyData p in share.Properties)
-                {
-                    if (p != null && x < length)
-                    {
-                        values[x] = p.Value;
-                        x++;
+                        object[] values = new object[result.Table.Columns.Count];
+                        int column = 0;
+                        foreach (PropertyData property in service.Properties)
+                            if (column < values.Length)
+                                values[column++] = property.Value ?? DBNull.Value;
+                        result.Table.Rows.Add(values);
                     }
                 }
-                dt.Rows.Add(values);
-                values = null;
+                return result;
             }
-
-            this.dataGridView1.DataSource = dt;
+            catch
+            {
+                DisposeObjects(result.Objects);
+                throw;
+            }
         }
-
 
         private void Services_Load(object sender, EventArgs e)
         {
@@ -103,10 +143,11 @@ namespace Terminals.Network.WMI
 
         private void button1_Click(object sender, EventArgs e)
         {
-            LoadServices(this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password, this.wmiServerCredentials1.SelectedServer);
+            LoadServices(wmiServerCredentials1.Username, wmiServerCredentials1.Password,
+                wmiServerCredentials1.SelectedServer);
         }
 
-        private System.Type ConvertCimType(CimType ctValue)
+        private static System.Type ConvertCimType(CimType ctValue)
         {
             System.Type tReturnVal = null;
             switch (ctValue)
@@ -160,71 +201,81 @@ namespace Terminals.Network.WMI
             return tReturnVal;
         }
 
-        private System.Management.ManagementObject FindWMIObject(string name, string propname)
+        private static ManagementObject FindWMIObject(IEnumerable<ManagementObject> objects, string name)
         {
-            System.Management.ManagementObject foundObj = null;
-            foreach (System.Management.ManagementObject obj in list)
+            foreach (ManagementObject obj in objects)
             {
-                if (obj.Properties[propname].Value.ToString() == name)
+                PropertyData property = obj.Properties["Name"];
+                if (property != null && string.Equals(Convert.ToString(property.Value), name, StringComparison.Ordinal))
+                    return obj;
+            }
+            return null;
+        }
+
+        private async void RunServiceCommand(string method)
+        {
+            if (busy || IsDisposed || dataGridView1.SelectedCells.Count == 0) return;
+            var row = dataGridView1.Rows[dataGridView1.SelectedCells[0].RowIndex];
+            if (!dataGridView1.Columns.Contains("Name")) return;
+            string name = Convert.ToString(row.Cells["Name"].Value);
+            if (string.IsNullOrEmpty(name)) return;
+
+            string username = wmiServerCredentials1.Username;
+            string password = wmiServerCredentials1.Password;
+            string computer = wmiServerCredentials1.SelectedServer;
+            string cacheHost = RemoteWmiAvailability.EffectiveHost(computer, username, password);
+            if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
+
+            bool refresh = false;
+            SetBusy(true);
+            try
+            {
+                List<ManagementObject> current = list;
+                bool invoked = await Task.Run(() =>
                 {
-                    foundObj = obj;
-                    break;
+                    ManagementObject service = FindWMIObject(current, name);
+                    if (service == null) return false;
+                    service.InvokeMethod(method, null);
+                    return true;
+                });
+                if (IsDisposed) return;
+                if (invoked)
+                {
+                    RemoteWmiAvailability.Succeeded(cacheHost);
+                    refresh = true;
                 }
             }
-            return foundObj;
-
+            catch (Exception error)
+            {
+                RemoteWmiAvailability.Failed(cacheHost, error);
+                Terminals.Logging.Info("Windows Services command failed", error);
+                if (!IsDisposed) MessageBox.Show(this, error.Message);
+            }
+            finally
+            {
+                if (IsDisposed)
+                    DisposeCachedObjects();
+                else
+                {
+                    SetBusy(false);
+                    if (refresh) LoadServices(username, password, computer);
+                }
+            }
         }
+
         private void pauseToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string name = this.dataGridView1.Rows[this.dataGridView1.SelectedCells[0].RowIndex].Cells["Name"].Value.ToString();
-            if (name != null && name != "")
-            {
-                System.Management.ManagementObject obj = FindWMIObject(name, "Name");
-                if (obj != null)
-                {
-                    string cacheHost = RemoteWmiAvailability.EffectiveHost(this.wmiServerCredentials1.SelectedServer, this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password);
-                    if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
-                    try { obj.InvokeMethod("PauseService", null); RemoteWmiAvailability.Succeeded(cacheHost); }
-                    catch (Exception error) { RemoteWmiAvailability.Failed(cacheHost, error); MessageBox.Show(error.Message); return; }
-                    LoadServices(this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password, this.wmiServerCredentials1.SelectedServer);
-                }
-            }
+            RunServiceCommand("PauseService");
         }
 
         private void stopToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string name = this.dataGridView1.Rows[this.dataGridView1.SelectedCells[0].RowIndex].Cells["Name"].Value.ToString();
-            if (name != null && name != "")
-            {
-                System.Management.ManagementObject obj = FindWMIObject(name, "Name");
-                if (obj != null)
-                {
-                    string cacheHost = RemoteWmiAvailability.EffectiveHost(this.wmiServerCredentials1.SelectedServer, this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password);
-                    if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
-                    try { obj.InvokeMethod("StopService", null); RemoteWmiAvailability.Succeeded(cacheHost); }
-                    catch (Exception error) { RemoteWmiAvailability.Failed(cacheHost, error); MessageBox.Show(error.Message); return; }
-                    LoadServices(this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password, this.wmiServerCredentials1.SelectedServer);
-                }
-
-            }
+            RunServiceCommand("StopService");
         }
 
         private void startToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string name = this.dataGridView1.Rows[this.dataGridView1.SelectedCells[0].RowIndex].Cells["Name"].Value.ToString();
-            if (name != null && name != "")
-            {
-                System.Management.ManagementObject obj = FindWMIObject(name, "Name");
-                if (obj != null)
-                {
-                    string cacheHost = RemoteWmiAvailability.EffectiveHost(this.wmiServerCredentials1.SelectedServer, this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password);
-                    if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
-                    try { obj.InvokeMethod("StartService", null); RemoteWmiAvailability.Succeeded(cacheHost); }
-                    catch (Exception error) { RemoteWmiAvailability.Failed(cacheHost, error); MessageBox.Show(error.Message); return; }
-                    LoadServices(this.wmiServerCredentials1.Username, this.wmiServerCredentials1.Password, this.wmiServerCredentials1.SelectedServer);
-                }
-
-            }
+            RunServiceCommand("StartService");
         }
 
         private void wmiServerCredentials1_KeyUp(object sender, KeyEventArgs e)
