@@ -1,36 +1,82 @@
 using System;
-using System.Threading;
-using Terminals.Data;
+using System.Threading.Tasks;
 using Terminals.TerminalServices;
 
 namespace Terminals.Connections
 {
     internal class RdpService
     {
-        public TerminalServer Server { get; private set; }
+        private readonly object sync = new object();
+        private readonly Func<string, TerminalServer> loadServer;
+        private Task<TerminalServer> loadTask;
 
-        public bool IsTerminalServer { get; private set; }
-
-        public void CheckForTerminalServer(IFavorite favorite)
+        internal RdpService() : this(TerminalServer.LoadServer)
         {
-            this.IsTerminalServer = false;
-            ThreadPool.QueueUserWorkItem(new WaitCallback(this.CheckForTS), favorite);
         }
 
-        private void CheckForTS(object state)
+        internal RdpService(Func<string, TerminalServer> loadServer)
         {
-            IFavorite favorite = state as IFavorite;
+            this.loadServer = loadServer;
+        }
+
+        public TerminalServer Server
+        {
+            get
+            {
+                Task<TerminalServer> task = this.LoadTask;
+                return task != null && task.Status == TaskStatus.RanToCompletion ? task.Result : null;
+            }
+        }
+
+        public bool IsTerminalServer
+        {
+            get
+            {
+                TerminalServer server = this.Server;
+                return server != null && server.IsATerminalServer &&
+                    server.Sessions != null && server.Errors.Count == 0;
+            }
+        }
+
+        internal Task<TerminalServer> LoadTask
+        {
+            get
+            {
+                lock (this.sync)
+                    return this.loadTask;
+            }
+        }
+
+        // retry also permits an explicit refresh after a successful query.
+        // A query already in progress is never duplicated.
+        internal Task<TerminalServer> LoadTerminalServerAsync(string serverName, bool retry)
+        {
+            lock (this.sync)
+            {
+                if (this.loadTask == null || (retry && this.loadTask.IsCompleted))
+                {
+                    this.loadTask = Task.Factory.StartNew(() => this.TryLoad(serverName),
+                        System.Threading.CancellationToken.None,
+                        TaskCreationOptions.None, TaskScheduler.Default);
+                }
+                return this.loadTask;
+            }
+        }
+
+        private TerminalServer TryLoad(string serverName)
+        {
             try
             {
-                Thread.Sleep(3000);
-                this.Server = TerminalServer.LoadServer(favorite.ServerName);
-                this.IsTerminalServer = this.Server.IsATerminalServer;
+                TerminalServer server = this.loadServer(serverName);
+                if (server == null || !server.IsATerminalServer ||
+                    server.Sessions == null || server.Errors.Count != 0)
+                    return null;
+                return server;
             }
             catch (Exception exception)
             {
-                const string MESSAGE = "Checked to see if {0} is a terminal server. {0} is not a terminal server";
-                string message = String.Format(MESSAGE, favorite.ServerName);
-                Logging.Error(message, exception);
+                Logging.Error(String.Format("Unable to query Terminal Services on {0}", serverName), exception);
+                return null;
             }
         }
     }
