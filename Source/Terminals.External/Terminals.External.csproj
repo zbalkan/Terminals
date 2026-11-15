@@ -64,7 +64,6 @@
     <Compile Include="Unified\Encryption\Hash.cs" />
     <Compile Include="Unified\Network\NTPClient.cs" />
     <Compile Include="Unified\Serialization\Serialize.cs" />
-    <Compile Include="Unified\Serialization\StreamHelper.cs" />
     <Compile Include="WhoisResolver.cs" />
   </ItemGroup>
   <ItemGroup />

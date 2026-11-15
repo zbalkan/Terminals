@@ -163,6 +163,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Helpers\TestMocksFactory.cs" />
+    <Compile Include="External\SerializationCompatibilityTests.cs" />
     <Compile Include="UserInterface\ToolStripSettingsTest.cs" />
     <Compile Include="UserInterface\FavoritePropertiesControlTests.cs" />
     <Compile Include="Validation\NewTerminalFormValidatorTests.cs" />
