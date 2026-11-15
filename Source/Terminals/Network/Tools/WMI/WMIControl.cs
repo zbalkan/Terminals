@@ -7,6 +7,9 @@ using System.Data.Entity.Core;
 using System.Management;
 using Terminals.Network.WMI;
 using System.Data;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace WMITestClient
 {
@@ -39,7 +42,7 @@ namespace WMITestClient
         private IContainer components;
 
         private System.Collections.ArrayList history = new System.Collections.ArrayList();
-        private bool StilRunning = true;
+        private CancellationTokenSource activeQuery;
 
         public string Username { get; set; }
         public string Password { get; set; }
@@ -181,6 +184,8 @@ namespace WMITestClient
         {
             if (disposing)
             {
+                if (activeQuery != null)
+                    activeQuery.Cancel();
                 if (components != null)
                 {
                     components.Dispose();
@@ -518,134 +523,188 @@ namespace WMITestClient
             }
         }
 
-        private void QueryButton_Click(object sender, System.EventArgs e)
+        private sealed class QueryProperty
         {
-            string cacheHost = RemoteWmiAvailability.EffectiveHost(Computer, Username, Password);
-            if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
-            AddToHistory();
-            this.StilRunning = true;
-            this.QueryButton.Enabled = false;
-            this.StopButton.Enabled = true;
-            try
+            internal string Name;
+            internal string Type;
+            internal string Origin;
+            internal string Value;
+            internal bool IsLocal;
+            internal bool IsArray;
+            internal readonly List<string> ArrayValues = new List<string>();
+        }
+
+        private sealed class QueryObject
+        {
+            internal string ClassName;
+            internal readonly List<QueryProperty> Properties = new List<QueryProperty>();
+        }
+
+        private static List<QueryObject> ReadQuery(string queryText, string computer,
+            string username, string password, CancellationToken cancellation)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            var query = new ObjectQuery(queryText);
+            ManagementObjectSearcher searcher;
+            if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password) &&
+                !string.IsNullOrEmpty(computer) && !computer.StartsWith(@"\\localhost"))
             {
-                treeView1.Nodes.Clear();
-                if (this.QueryTextBox.Text != string.Empty)
+                var options = new ConnectionOptions { Username = username, Password = password };
+                searcher = new ManagementObjectSearcher(new ManagementScope(computer, options), query);
+            }
+            else
+            {
+                searcher = new ManagementObjectSearcher(query);
+            }
+
+            var results = new List<QueryObject>();
+            using (searcher)
+            using (ManagementObjectCollection collection = searcher.Get())
+            {
+                foreach (ManagementObject obj in collection)
                 {
-                    string qry = QueryTextBox.Text;
-                    System.Management.ManagementObjectSearcher searcher;
-                    System.Management.ObjectQuery query = new System.Management.ObjectQuery(qry);
-
-
-
-                    if (!string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(Password) && !string.IsNullOrEmpty(Computer) && !Computer.StartsWith(@"\\localhost"))
+                    using (obj)
                     {
-                        System.Management.ConnectionOptions oConn = new System.Management.ConnectionOptions();
-                        oConn.Username = Username;
-                        oConn.Password = Password;
-
-                        System.Management.ManagementScope oMs = new System.Management.ManagementScope(Computer, oConn);
-                        searcher = new System.Management.ManagementObjectSearcher(oMs, query);
-                    }
-                    else
-                    {
-                        searcher = new System.Management.ManagementObjectSearcher(query);
-                    }
-
-                    System.Windows.Forms.TreeNode root = new TreeNode(qry);
-                    root.Tag = "RootNode";
-                    root.Expand();
-                    treeView1.Nodes.Add(root);
-                    string path = "";
-                    foreach (System.Management.ManagementObject share in searcher.Get())
-                    {
-                        System.Windows.Forms.TreeNode item = new TreeNode(share.ClassPath.ClassName);
-                        item.Tag = "ClassNode";
-                        root.Nodes.Add(item);
-                        path = "Enumerating:" + share.ClassPath.ClassName;
-                        foreach (System.Management.PropertyData p in share.Properties)
+                        cancellation.ThrowIfCancellationRequested();
+                        var item = new QueryObject { ClassName = obj.ClassPath.ClassName };
+                        foreach (PropertyData property in obj.Properties)
                         {
-                            bool isLocal = p.IsLocal;
-                            string type = p.Type.ToString();
-                            string origin = p.Origin;
-                            string name = p.Name;
-                            path = "Enumerating:" + share.ClassPath.ClassName + "," + name;
-                            Application.DoEvents();
-
-                            bool IsArray = p.IsArray;
-                            string val = "NULL";
-                            if (p.Value != null) 
-                                val = p.Value.ToString();
-
-                            System.Windows.Forms.TreeNode node = new TreeNode(name);
-                            node.Tag = "PropertyNode";
-                            string display = "";
-                            if (type.ToLower() == "string")
+                            cancellation.ThrowIfCancellationRequested();
+                            object value = property.Value;
+                            var field = new QueryProperty
                             {
-                                display = "Value='" + val + "'";
-                            }
-                            else
+                                Name = property.Name,
+                                Type = property.Type.ToString(),
+                                Origin = property.Origin,
+                                IsLocal = property.IsLocal,
+                                IsArray = property.IsArray,
+                                Value = value == null ? "NULL" : value.ToString()
+                            };
+                            if (field.IsArray && value != null)
                             {
-                                display = "Value=" + val;
-                            }
-                            System.Windows.Forms.TreeNode ValueNode = new TreeNode(display);
-                            ValueNode.Tag = "ValueNode";
-                            System.Windows.Forms.TreeNode TypeNode = new TreeNode("Type='" + type + "'");
-                            TypeNode.Tag = "ValueNode";
-                            System.Windows.Forms.TreeNode localNode = new TreeNode("IsLocal=" + isLocal);
-                            localNode.Tag = "ValueNode";
-                            System.Windows.Forms.TreeNode OriginNode = new TreeNode("Origin='" + origin + "'");
-                            OriginNode.Tag = "ValueNode";
-                            System.Windows.Forms.TreeNode IsArrayNode = new TreeNode("IsArray=" + IsArray);
-                            IsArrayNode.Tag = "ValueNode";
-
-                            node.Nodes.Add(ValueNode);
-                            node.Nodes.Add(TypeNode);
-                            node.Nodes.Add(localNode);
-                            node.Nodes.Add(OriginNode);
-                            node.Nodes.Add(IsArrayNode);
-
-                            if (IsArray && p.Value != null)
-                            {
-                                System.Array a = (System.Array)p.Value;
-                                for (int x = 0; x < a.Length; x++)
+                                foreach (object element in (Array)value)
                                 {
-                                    string v = "";
-                                    if (a.GetValue(x) != null) 
-                                        v = a.GetValue(x).ToString();
-
-                                    System.Windows.Forms.TreeNode arrayNode = new TreeNode(name + "[" + x + "]=" + v);
-                                    arrayNode.Tag = "ArrayNode";
-                                    IsArrayNode.Nodes.Add(arrayNode);
-                                    IncrementBar();
+                                    cancellation.ThrowIfCancellationRequested();
+                                    field.ArrayValues.Add(element == null ? "" : element.ToString());
                                 }
                             }
-
-                            IncrementBar();
-
-                            item.Nodes.Add(node);
-                            Application.DoEvents();
-                            if (!this.StilRunning) 
-                                break;
+                            item.Properties.Add(field);
                         }
-
-                        if (!this.StilRunning) 
-                            break;
+                        results.Add(item);
                     }
-
                 }
-                if (!string.IsNullOrWhiteSpace(QueryTextBox.Text))
+            }
+            cancellation.ThrowIfCancellationRequested();
+            return results;
+        }
+
+        private static TreeNode CreatePropertyNode(QueryProperty property, CancellationToken cancellation)
+        {
+            var node = new TreeNode(property.Name) { Tag = "PropertyNode" };
+            string valueLabel = property.Type.Equals("String", StringComparison.OrdinalIgnoreCase)
+                ? "Value='" + property.Value + "'" : "Value=" + property.Value;
+            node.Nodes.Add(new TreeNode(valueLabel) { Tag = "ValueNode" });
+            node.Nodes.Add(new TreeNode("Type='" + property.Type + "'") { Tag = "ValueNode" });
+            node.Nodes.Add(new TreeNode("IsLocal=" + property.IsLocal) { Tag = "ValueNode" });
+            node.Nodes.Add(new TreeNode("Origin='" + property.Origin + "'") { Tag = "ValueNode" });
+            var arrays = new TreeNode("IsArray=" + property.IsArray) { Tag = "ValueNode" };
+            for (int i = 0; i < property.ArrayValues.Count; i++)
+            {
+                cancellation.ThrowIfCancellationRequested();
+                arrays.Nodes.Add(new TreeNode(property.Name + "[" + i + "]=" + property.ArrayValues[i])
+                    { Tag = "ArrayNode" });
+            }
+            node.Nodes.Add(arrays);
+            return node;
+        }
+
+        private async Task RenderQuery(string queryText, List<QueryObject> objects,
+            CancellationToken cancellation)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            var root = new TreeNode(queryText) { Tag = "RootNode" };
+            treeView1.Nodes.Add(root);
+            root.Expand();
+            // Yield periodically to keep the view responsive on large results.
+            int renderedProperties = 0;
+            for (int index = 0; index < objects.Count; index++)
+            {
+                cancellation.ThrowIfCancellationRequested();
+                QueryObject obj = objects[index];
+                var item = new TreeNode(obj.ClassName) { Tag = "ClassNode" };
+                foreach (QueryProperty property in obj.Properties)
+                {
+                    cancellation.ThrowIfCancellationRequested();
+                    item.Nodes.Add(CreatePropertyNode(property, cancellation));
+                    if (++renderedProperties % 64 == 0)
+                        await Task.Yield();
+                }
+                root.Nodes.Add(item);
+                if (index % 8 == 7)
+                    await Task.Yield();
+            }
+        }
+
+        private async void QueryButton_Click(object sender, System.EventArgs e)
+        {
+            if (activeQuery != null || IsDisposed) return;
+            string queryText = QueryTextBox.Text;
+            if (string.IsNullOrEmpty(queryText)) return;
+            string computer = Computer;
+            string username = Username;
+            string password = Password;
+            string cacheHost = RemoteWmiAvailability.EffectiveHost(computer, username, password);
+            if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
+
+            AddToHistory();
+            var cancellation = new CancellationTokenSource();
+            activeQuery = cancellation;
+            QueryButton.Enabled = false;
+            StopButton.Enabled = true;
+            progressBar1.Style = ProgressBarStyle.Marquee;
+            treeView1.Nodes.Clear();
+            try
+            {
+                List<QueryObject> result = await Task.Run(() =>
+                    ReadQuery(queryText, computer, username, password, cancellation.Token));
+                cancellation.Token.ThrowIfCancellationRequested();
+                if (IsDisposed) return;
+                await RenderQuery(queryText, result, cancellation.Token);
+                cancellation.Token.ThrowIfCancellationRequested();
+                if (!IsDisposed)
                     RemoteWmiAvailability.Succeeded(cacheHost);
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+                if (!IsDisposed)
+                    treeView1.Nodes.Clear();
             }
             catch (Exception exc)
             {
-                RemoteWmiAvailability.Failed(cacheHost, exc);
-                Terminals.Logging.Info("Query Button Failed", exc);
-                MessageBox.Show("Error Thrown:" + exc.Message);
+                if (cancellation.IsCancellationRequested)
+                {
+                    if (!IsDisposed) treeView1.Nodes.Clear();
+                }
+                else
+                {
+                    RemoteWmiAvailability.Failed(cacheHost, exc);
+                    Terminals.Logging.Info("Query Button Failed", exc);
+                    if (!IsDisposed)
+                        MessageBox.Show(this, "Error Thrown:" + exc.Message);
+                }
             }
-
-            this.progressBar1.Value = 0;
-            this.QueryButton.Enabled = true;
-            this.StopButton.Enabled = false;
+            finally
+            {
+                if (!IsDisposed)
+                {
+                    progressBar1.Style = ProgressBarStyle.Blocks;
+                    progressBar1.Value = 0;
+                    QueryButton.Enabled = true;
+                    StopButton.Enabled = false;
+                }
+                activeQuery = null;
+                cancellation.Dispose();
+            }
         }
 
         private void treeView1_DoubleClick(object sender, System.EventArgs e)
@@ -727,9 +786,11 @@ namespace WMITestClient
 
         private void button1_Click(object sender, System.EventArgs e)
         {
-            this.StilRunning = false;
-            this.QueryButton.Enabled = true;
-            this.StopButton.Enabled = false;
+            if (activeQuery != null)
+            {
+                StopButton.Enabled = false;
+                activeQuery.Cancel();
+            }
         }
 
         private void Form1_Load(object sender, System.EventArgs e)
@@ -1035,10 +1096,10 @@ namespace WMITestClient
 
             //                    item.Nodes.Add(node);
             //                    Application.DoEvents();
-            //                    if (!this.StilRunning) break;
+            //                    if the query is stopped, break;
 
             //                }
-            //                if (!this.StilRunning) break;
+            //                if the query is stopped, break;
             //            }
             //        }
             //    }
