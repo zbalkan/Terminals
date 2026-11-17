@@ -171,6 +171,7 @@
     <Compile Include="UserInterface\CredentialPanelTests.cs" />
     <Compile Include="UserInterface\IPAddressControlDesignerTests.cs" />
     <Compile Include="UserInterface\DesignerInitializationTests.cs" />
+    <Compile Include="UserInterface\WmiExplorerTreeTests.cs" />
     <Compile Include="UserInterface\CaptureManagerTests.cs" />
     <Compile Include="UserInterface\RdpMenuVisitorTests.cs" />
     <Compile Include="UserInterface\ProtocolImageListBuilderTests.cs" />

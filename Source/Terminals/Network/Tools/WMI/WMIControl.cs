@@ -594,7 +594,6 @@ namespace WMITestClient
                 {
                     nText = n.Attributes["Text"].Value;
                     this.IncrementBar();
-                    Application.DoEvents();
 
                     try
                     {
@@ -655,44 +654,44 @@ namespace WMITestClient
             LoadBasicTree(Terminals.Properties.Resources.BasicTree);
         }
 
-        private void LoadBasicTree(string xml)
+        internal void LoadBasicTree(string xml)
         {
-            this.progressBar1.Value = 0;
-
-            this.IncrementBar();
-            treeView2.Nodes.Clear();
-            Application.DoEvents();
-            this.IncrementBar();
-            Application.DoEvents();
-
-            this.IncrementBar();
-            Application.DoEvents();
-            System.Xml.XmlDocument x = new System.Xml.XmlDocument();
+            progressBar1.Value = 0;
+            treeView2.BeginUpdate();
             try
             {
-                x.LoadXml(xml);
+                treeView2.Nodes.Clear();
+                var document = new System.Xml.XmlDocument();
+                try
+                {
+                    document.LoadXml(xml);
+                }
+                catch (Exception error)
+                {
+                    Terminals.Logging.Error("Load Basic Tree Failed", error);
+                    return;
+                }
+
+                System.Xml.XmlNode xmlRoot = document.SelectSingleNode("/tree");
+                if (xmlRoot == null) return;
+
+                var root = new TreeNode();
+                treeView2.Nodes.Add(root);
+                LoadNode(xmlRoot, root);
+                root.Expand();
+                if (root.Nodes.Count > 0)
+                    root.Nodes[0].Expand();
             }
-            catch (Exception xexc)
+            finally
             {
-                Terminals.Logging.Error("Load Basic Tree Failed", xexc);
+                treeView2.EndUpdate();
+                progressBar1.Value = 0;
             }
-
-            System.Xml.XmlNode n = x.SelectSingleNode("/tree");
-            System.Windows.Forms.TreeNode root = new System.Windows.Forms.TreeNode();
-            this.treeView2.Nodes.Add(root);
-            Application.DoEvents();
-
-            this.LoadNode(n, root);
-            
-            root.Expand();
-            if(root.Nodes != null && root.Nodes.Count > 0) 
-                root.Nodes[0].Expand();
-
-            this.progressBar1.Value = 0;
         }
 
         private void treeView2_DoubleClick(object sender, System.EventArgs e)
         {
+            if (treeView2.Nodes.Count == 0) return;
             if (this.treeView2.Nodes[0].Text == "To load-> Double Click")
             {
                 BasicTreemenuItem_Click(null, null);
@@ -700,11 +699,8 @@ namespace WMITestClient
             else
             {
                 treeView1.Nodes.Clear();
-                Application.DoEvents();
                 treeView1_DoubleClick(treeView2, null);
-                Application.DoEvents();
                 QueryButton_Click(null, null);
-                Application.DoEvents();
             }
         }
 
