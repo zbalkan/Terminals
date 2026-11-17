@@ -189,5 +189,59 @@ namespace Terminals.Plugins.Rdp.Properties {
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
+        /// <summary>
+        ///   Looks up a localized string similar to Terminal Server.
+        /// </summary>
+        internal static string TerminalServerMenuTitle {
+            get {
+                return ResourceManager.GetString("TerminalServerMenuTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Query remote sessions using the current Windows account.
+        /// </summary>
+        internal static string TerminalServerQueryTooltip {
+            get {
+                return ResourceManager.GetString("TerminalServerQueryTooltip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Loading sessions....
+        /// </summary>
+        internal static string TerminalServerLoadingSessions {
+            get {
+                return ResourceManager.GetString("TerminalServerLoadingSessions", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unable to retrieve Terminal Services sessions.
+        /// </summary>
+        internal static string TerminalServerSessionsUnavailable {
+            get {
+                return ResourceManager.GetString("TerminalServerSessionsUnavailable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Retry.
+        /// </summary>
+        internal static string TerminalServerRetry {
+            get {
+                return ResourceManager.GetString("TerminalServerRetry", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Refresh sessions.
+        /// </summary>
+        internal static string TerminalServerRefreshSessions {
+            get {
+                return ResourceManager.GetString("TerminalServerRefreshSessions", resourceCulture);
+            }
+        }
+        
     }
 }

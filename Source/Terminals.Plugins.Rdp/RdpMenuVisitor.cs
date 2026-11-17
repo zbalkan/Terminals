@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Terminals.Plugins.Rdp.Properties;
 using Terminals.TerminalServices;
@@ -41,35 +42,121 @@ namespace Terminals.Connections
             this.TerminalServerMenuButton.ImageTransparentColor = Color.Magenta;
             this.TerminalServerMenuButton.Name = TERMINAL_SERVER_MENU_BUTTON_NAME;
             this.TerminalServerMenuButton.Size = new Size(29, 22);
-            this.TerminalServerMenuButton.Text = "Terminal Server";
+            this.TerminalServerMenuButton.Text = Resources.TerminalServerMenuTitle;
+            this.TerminalServerMenuButton.ToolTipText = Resources.TerminalServerQueryTooltip;
             this.TerminalServerMenuButton.DropDownOpening += new EventHandler(this.TerminalServerMenuButton_DropDownOpening);
             standardToolbar.Items.Add(this.TerminalServerMenuButton);
         }
 
         private void TerminalServerMenuButton_DropDownOpening(object sender, EventArgs e)
         {
-            TerminalServerMenuButton.DropDownItems.Clear();
-            var currentConnection = this.connectionProvider.CurrentConnection as RDPConnection;
-            if (currentConnection != null && currentConnection.IsTerminalServer)
+            var connection = this.connectionProvider.CurrentConnection as RDPConnection;
+            if (connection == null)
+                return;
+
+            this.ShowTerminalServerMenu(connection);
+        }
+
+        private void ShowTerminalServerMenu(RDPConnection connection)
+        {
+            this.TerminalServerMenuButton.DropDownItems.Clear();
+            Task<TerminalServer> task = connection.TerminalServerLoadTask;
+            if (task == null)
+                task = connection.LoadTerminalServerAsync(false);
+
+            if (!task.IsCompleted)
             {
+                this.AddStatusItem(Resources.TerminalServerLoadingSessions);
+                this.ObserveCompletion(connection, task);
+                return;
+            }
+
+            if (!connection.IsTerminalServer)
+            {
+                this.AddStatusItem(Resources.TerminalServerSessionsUnavailable);
+                var retry = new ToolStripMenuItem(Resources.TerminalServerRetry);
+                retry.Click += (sender, args) => this.ReloadSessions(connection);
+                this.TerminalServerMenuButton.DropDownItems.Add(retry);
+                return;
+            }
+
+            this.PopulateTerminalServerMenu(connection.Server);
+            this.AddRefreshMenuItem(connection);
+        }
+
+        private void AddRefreshMenuItem(RDPConnection connection)
+        {
+            this.TerminalServerMenuButton.DropDownItems.Add(new ToolStripSeparator());
+            var refresh = new ToolStripMenuItem(Resources.TerminalServerRefreshSessions);
+            refresh.Click += (sender, args) => this.ReloadSessions(connection);
+            this.TerminalServerMenuButton.DropDownItems.Add(refresh);
+        }
+
+        private void ReloadSessions(RDPConnection connection)
+        {
+            // Never refresh a connection which is no longer active.
+            if (!Object.ReferenceEquals(this.connectionProvider.CurrentConnection, connection))
+                return;
+
+            connection.LoadTerminalServerAsync(true);
+            this.ShowTerminalServerMenu(connection);
+        }
+
+        private void AddStatusItem(string text)
+        {
+            var status = new ToolStripMenuItem(text);
+            status.Enabled = false;
+            this.TerminalServerMenuButton.DropDownItems.Add(status);
+        }
+
+        private void ObserveCompletion(RDPConnection connection, Task<TerminalServer> task)
+        {
+            // The toolbar is a WinForms control; only its UI thread may change menu items.
+            ToolStrip owner = this.TerminalServerMenuButton.Owner;
+            if (owner == null)
+                return;
+
+            task.ContinueWith(completed =>
+            {
+                if (owner.IsDisposed || !owner.IsHandleCreated)
+                    return;
+                try
+                {
+                    owner.BeginInvoke((MethodInvoker)(() =>
+                    {
+                        if (!owner.IsDisposed && this.TerminalServerMenuButton.DropDown.Visible &&
+                            Object.ReferenceEquals(this.connectionProvider.CurrentConnection, connection) &&
+                            Object.ReferenceEquals(connection.TerminalServerLoadTask, completed))
+                            this.ShowTerminalServerMenu(connection);
+                    }));
+                }
+                catch (InvalidOperationException)
+                {
+                    // The toolbar was disposed while the remote query was running.
+                }
+            }, TaskScheduler.Default);
+        }
+
+        private void PopulateTerminalServerMenu(TerminalServer server)
+        {
                 var sessions = new ToolStripMenuItem(Resources.Sessions);
-                sessions.Tag = currentConnection.Server;
+                sessions.Tag = server;
                 TerminalServerMenuButton.DropDownItems.Add(sessions);
                 var svr = new ToolStripMenuItem(Resources.Server);
-                svr.Tag = currentConnection.Server;
+                svr.Tag = server;
                 TerminalServerMenuButton.DropDownItems.Add(svr);
                 var sd = new ToolStripMenuItem(Resources.Shutdown);
                 sd.Click += new EventHandler(sd_Click);
-                sd.Tag = currentConnection.Server;
+                sd.Tag = server;
                 svr.DropDownItems.Add(sd);
                 var rb = new ToolStripMenuItem(Resources.Reboot);
                 rb.Click += new EventHandler(sd_Click);
-                rb.Tag = currentConnection.Server;
+                rb.Tag = server;
                 svr.DropDownItems.Add(rb);
 
-                if (currentConnection.Server.Sessions != null)
+                if (server.Sessions != null)
                 {
-                    foreach (TerminalServices.Session session in currentConnection.Server.Sessions)
+                    foreach (TerminalServices.Session session in server.Sessions)
                     {
                         if (session.Client.ClientName != "")
                         {
@@ -96,11 +183,6 @@ namespace Terminals.Connections
                         }
                     }
                 }
-            }
-            else
-            {
-                TerminalServerMenuButton.Visible = false;
-            }
         }
 
         private void sd_Click(object sender, EventArgs e)
