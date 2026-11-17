@@ -1,5 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Net.Sockets;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Terminals.Common.Network;
 
@@ -49,5 +51,44 @@ namespace Tests.Network
                 RemoteProtocolStatusCache.Protocol.WmiDcom, new TimeoutException()));
             RemoteProtocolStatusCache.ReportSuccess(host, RemoteProtocolStatusCache.Protocol.WmiDcom);
         }
+        [TestMethod]
+        public void ConcurrentTransportReports_RemainVisibleAcrossConsumers()
+        {
+            string host = Guid.NewGuid().ToString("N") + ".example";
+            Parallel.For(0, 32, index =>
+            {
+                Assert.IsTrue(RemoteProtocolStatusCache.ReportFailure(host,
+                    RemoteProtocolStatusCache.Protocol.WmiDcom,
+                    new COMException("RPC unavailable", unchecked((int)0x800706BA))));
+            });
+
+            RemoteProtocolStatusCache.Failure failure;
+            Assert.IsTrue(RemoteProtocolStatusCache.TryGetFailure(host,
+                RemoteProtocolStatusCache.Protocol.WmiDcom, out failure));
+            Assert.IsTrue(failure.ExpiresAt > DateTimeOffset.UtcNow);
+
+            RemoteProtocolStatusCache.ReportSuccess(host, RemoteProtocolStatusCache.Protocol.WmiDcom);
+            Assert.IsFalse(RemoteProtocolStatusCache.TryGetFailure(host,
+                RemoteProtocolStatusCache.Protocol.WmiDcom, out failure));
+        }
+
+        [TestMethod]
+        public void NestedSocketFailuresAreTransportFailures_ButProviderErrorsAreNot()
+        {
+            string host = Guid.NewGuid().ToString("N") + ".example";
+            var transport = new InvalidOperationException("Wrapped", new SocketException((int)SocketError.HostUnreachable));
+            Assert.IsTrue(RemoteProtocolStatusCache.ReportFailure(host,
+                RemoteProtocolStatusCache.Protocol.WmiDcom, transport));
+
+            RemoteProtocolStatusCache.Retry(host, RemoteProtocolStatusCache.Protocol.WmiDcom);
+            Assert.IsFalse(RemoteProtocolStatusCache.ReportFailure(host,
+                RemoteProtocolStatusCache.Protocol.WmiDcom,
+                new COMException("Invalid class", unchecked((int)0x80041010))));
+
+            RemoteProtocolStatusCache.Failure failure;
+            Assert.IsFalse(RemoteProtocolStatusCache.TryGetFailure(host,
+                RemoteProtocolStatusCache.Protocol.WmiDcom, out failure));
+        }
+
     }
 }

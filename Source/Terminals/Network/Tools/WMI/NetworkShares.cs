@@ -14,32 +14,41 @@ namespace Terminals.Network
             InitializeComponent();
         }
 
+        private bool busy;
+
         private async void LoadShares(string username, string password, string computer)
         {
-            string cacheHost = RemoteWmiAvailability.EffectiveHost(computer, username, password);
-            if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
+            if (busy || IsDisposed) return;
+            busy = true;
             try
             {
-                this.connectButton.Enabled = false;
-                this.connectButton.Text = "Connecting...";
-                var shares = await Task.Run(() => TryLoadShares(username, password, computer));
-                if (IsDisposed) return;
-                RemoteWmiAvailability.Succeeded(cacheHost);
-                this.dataGridView1.DataSource = shares;
-            }
-            catch (Exception exception)
-            {
-                RemoteWmiAvailability.Failed(cacheHost, exception);
-                if (IsDisposed) return;
-                MessageBox.Show("Unable to load shares: " + exception.Message, "Loading shares",
-                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                string cacheHost = RemoteWmiAvailability.EffectiveHost(computer, username, password);
+                if (!RemoteWmiAvailability.AllowAttempt(cacheHost, this)) return;
+
+                connectButton.Enabled = false;
+                connectButton.Text = "Connecting...";
+                try
+                {
+                    var shares = await Task.Run(() => TryLoadShares(username, password, computer));
+                    if (IsDisposed) return;
+                    RemoteWmiAvailability.Succeeded(cacheHost);
+                    dataGridView1.DataSource = shares;
+                }
+                catch (Exception exception)
+                {
+                    RemoteWmiAvailability.Failed(cacheHost, exception);
+                    if (!IsDisposed)
+                        MessageBox.Show(this, "Unable to load shares: " + exception.Message, "Loading shares",
+                                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
             finally
             {
+                busy = false;
                 if (!IsDisposed)
                 {
-                    this.connectButton.Enabled = true;
-                    this.connectButton.Text = "Connect";
+                    connectButton.Enabled = true;
+                    connectButton.Text = "Connect";
                 }
             }
         }
@@ -48,11 +57,17 @@ namespace Terminals.Network
         {
             var shares = new List<Share>();
             using (ManagementObjectSearcher searcher = CreateSearcher(username, password, computer))
-            foreach (ManagementObject share in searcher.Get())
+            using (ManagementObjectCollection collection = searcher.Get())
             {
-                var s = new Share();
-                FillShareByManagementObject(share, s);
-                shares.Add(s);
+                foreach (ManagementObject share in collection)
+                {
+                    using (share)
+                    {
+                        var s = new Share();
+                        FillShareByManagementObject(share, s);
+                        shares.Add(s);
+                    }
+                }
             }
             return shares;
         }
