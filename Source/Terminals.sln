@@ -16,6 +16,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TabControl", "TabControl\Ta
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{81B4C28B-5B10-4A53-B0AC-9E8F72733139}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests.UI", "Tests.UI\Tests.UI.csproj", "{A82BD0BD-C2DB-4E46-B8BE-4D6BE5081B47}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Setup", "Setup", "{BC0E69F2-1AE0-4E09-BDC7-C3753ACEB24A}"
 	ProjectSection(SolutionItems) = preProject
 		Setup\Terminals.iss = Setup\Terminals.iss
@@ -85,6 +87,10 @@ Global
 		{449DC14A-7C3F-4BE5-BA39-4AFD1C5404E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{449DC14A-7C3F-4BE5-BA39-4AFD1C5404E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{449DC14A-7C3F-4BE5-BA39-4AFD1C5404E6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A82BD0BD-C2DB-4E46-B8BE-4D6BE5081B47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A82BD0BD-C2DB-4E46-B8BE-4D6BE5081B47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A82BD0BD-C2DB-4E46-B8BE-4D6BE5081B47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A82BD0BD-C2DB-4E46-B8BE-4D6BE5081B47}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
