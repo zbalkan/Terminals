@@ -21,6 +21,8 @@ namespace Terminals
     {
         private readonly Settings settings = Settings.Instance;
         private FavoriteTreeListLoader treeLoader;
+        private bool loadOccurred;
+        private bool servicesInitialized;
         private static readonly string shutdownFailMessage = Program.Resources.GetString("UnableToRemoteShutdown");
         internal ConnectionsUiFactory ConnectionsUiFactory { private get; set; }
 
@@ -44,6 +46,9 @@ namespace Terminals
         public FavsList()
         {
             this.InitializeComponent();
+            if (System.ComponentModel.LicenseManager.UsageMode == System.ComponentModel.LicenseUsageMode.Designtime)
+                return;
+
             this.InitializeSearchAndFavsPanels();
             // Update the old treeview theme to the new theme from Win Vista and up
             Native.Methods.SetWindowTheme(this.favsTree.Handle, "Explorer", null);
@@ -59,6 +64,7 @@ namespace Terminals
             this.connectionManager = connectionManager;
             this.favoriteIcons = favoriteIcons;
             this.connectionCommands = connectionCommands;
+            InitializeServicesIfReady();
         }
 
         #region Private methods
@@ -83,6 +89,22 @@ namespace Terminals
 
         private void FavsList_Load(object sender, EventArgs e)
         {
+            if (System.ComponentModel.LicenseManager.UsageMode == System.ComponentModel.LicenseUsageMode.Designtime)
+                return;
+
+            loadOccurred = true;
+            InitializeServicesIfReady();
+        }
+
+        private void InitializeServicesIfReady()
+        {
+            // Adding a Designer-owned UserControl may raise Load before its
+            // parent constructor can assign the services used by this handler.
+            if (!loadOccurred || servicesInitialized || persistence == null ||
+                favoriteIcons == null || connectionManager == null || connectionCommands == null)
+                return;
+
+            servicesInitialized = true;
             this.favsTree.AssignServices(this.persistence, this.favoriteIcons, this.connectionManager);
             this.treeLoader = new FavoriteTreeListLoader(this.favsTree, this.persistence, this.favoriteIcons);
             this.treeLoader.LoadRootNodes();
@@ -94,7 +116,6 @@ namespace Terminals
             this.searchPanel1.LoadEvents(this.persistence, this.favoriteIcons);
             this.renameCommand = new FavoriteRenameCommand(this.persistence, new RenameService(this.persistence.Favorites));
         }
-
         private void HistoryTreeView_DoubleClick(object sender, EventArgs e)
         {
             this.StartConnectionByDoubleClick(this.historyTreeView, e);

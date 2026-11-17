@@ -1,5 +1,4 @@
 using System;
-using System.Drawing;
 using System.Windows.Forms;
 using Terminals.Data;
 
@@ -9,12 +8,8 @@ namespace Terminals.Forms
     /// Explicit, opt-in migration of favorites whose protocol is retired HTTP.
     /// Closing the dialog without confirming changes nothing.
     /// </summary>
-    internal sealed class LegacyHttpFavoritesDialog : Form
+    internal sealed partial class LegacyHttpFavoritesDialog : Form
     {
-        private readonly RadioButton remove;
-        private readonly RadioButton convert;
-        private readonly Button apply;
-
         internal LegacyHttpMigrationChoice SelectedChoice
         {
             get
@@ -27,68 +22,21 @@ namespace Terminals.Forms
             }
         }
 
-        internal LegacyHttpFavoritesDialog(int count)
+        // Required by the WinForms designer. Runtime callers supply the actual count.
+        public LegacyHttpFavoritesDialog()
         {
-            Text = "Legacy HTTP favorites";
-            StartPosition = FormStartPosition.CenterScreen;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MinimizeBox = false;
-            MaximizeBox = false;
-            ShowInTaskbar = false;
-            ClientSize = new Size(580, 270);
+            InitializeComponent();
+        }
 
-            var intro = new Label
-            {
-                Location = new Point(18, 16),
-                Size = new Size(540, 65),
-                Text = count + " legacy HTTP favorite(s) were found. HTTP connections are no longer supported. " +
-                       "Choose what to do with them. Nothing will change if you cancel."
-            };
-            remove = new RadioButton
-            {
-                Location = new Point(20, 90),
-                Size = new Size(530, 40),
-                Text = "Remove HTTP favorites and clean up the empty HTTP group"
-            };
-            convert = new RadioButton
-            {
-                Location = new Point(20, 135),
-                Size = new Size(530, 45),
-                Text = "Convert favorites to HTTPS and append them to the HTTPS group"
-            };
-            var notice = new Label
-            {
-                Location = new Point(38, 185),
-                Size = new Size(510, 35),
-                Text = "Conversion does not verify HTTPS availability. Default port 80 becomes 443; custom ports remain unchanged."
-            };
+        internal LegacyHttpFavoritesDialog(int count) : this()
+        {
+            intro.Text = count + " legacy HTTP favorite(s) were found. HTTP connections are no longer supported. " +
+                         "Choose what to do with them. Nothing will change if you cancel.";
+        }
 
-            apply = new Button
-            {
-                Location = new Point(386, 232),
-                Size = new Size(80, 27),
-                Text = "Apply",
-                DialogResult = DialogResult.OK,
-                Enabled = false
-            };
-            var cancel = new Button
-            {
-                Location = new Point(474, 232),
-                Size = new Size(80, 27),
-                Text = "Cancel",
-                DialogResult = DialogResult.Cancel
-            };
-            remove.CheckedChanged += (sender, e) => apply.Enabled = remove.Checked || convert.Checked;
-            convert.CheckedChanged += (sender, e) => apply.Enabled = remove.Checked || convert.Checked;
-
-            Controls.Add(intro);
-            Controls.Add(remove);
-            Controls.Add(convert);
-            Controls.Add(notice);
-            Controls.Add(apply);
-            Controls.Add(cancel);
-            AcceptButton = apply;
-            CancelButton = cancel;
+        private void MigrationChoiceChanged(object sender, EventArgs e)
+        {
+            apply.Enabled = remove.Checked || convert.Checked;
         }
     }
 }

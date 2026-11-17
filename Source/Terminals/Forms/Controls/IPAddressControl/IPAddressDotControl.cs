@@ -26,7 +26,7 @@ using System.Windows.Forms;
 
 namespace Terminals.Forms.Controls
 {
-    internal class IPAddressDotControl : System.Windows.Forms.Control
+    internal partial class IPAddressDotControl : System.Windows.Forms.Control
     {
         #region Fields
 
@@ -47,9 +47,10 @@ namespace Terminals.Forms.Controls
             _stringFormat = StringFormat.GenericTypographic;
             _stringFormat.FormatFlags = StringFormatFlags.MeasureTrailingSpaces;
 
+            InitializeComponent();
+
             BackColor = SystemColors.Window;
             Size = MinimumSize;
-            TabStop = false;
 
             SetStyle(ControlStyles.AllPaintingInWmPaint, true);
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);

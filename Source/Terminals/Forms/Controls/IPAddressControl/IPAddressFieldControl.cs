@@ -26,7 +26,7 @@ using System.Windows.Forms;
 
 namespace Terminals.Forms.Controls
 {
-    internal class IPAddressFieldControl : TextBox
+    internal partial class IPAddressFieldControl : TextBox
     {
         #region Fields
 
@@ -43,11 +43,8 @@ namespace Terminals.Forms.Controls
 
         public IPAddressFieldControl()
         {
-            BorderStyle = BorderStyle.None;
-            MaxLength = 3;
+            InitializeComponent();
             Size = MinimumSize;
-            TabStop = false;
-            TextAlign = HorizontalAlignment.Center;
         }
 
         #endregion

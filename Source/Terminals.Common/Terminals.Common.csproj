@@ -106,6 +106,9 @@
     <Compile Include="Connections\Connection.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Connections\Connection.Designer.cs">
+      <DependentUpon>Connection.cs</DependentUpon>
+    </Compile>
     <Compile Include="Connections\DesktopSizeCalculator.cs" />
     <Compile Include="Connections\IConnection.cs" />
     <Compile Include="Connections\IConnectionMainView.cs" />

@@ -12,7 +12,7 @@ using System.Windows.Forms.VisualStyles;
 namespace Terminals.Forms.Controls
 {
     [DebuggerNonUserCode()]
-    internal class SplitButton : Button
+    internal partial class SplitButton : Button
     {
         PushButtonState _state;
 
@@ -32,7 +32,7 @@ namespace Terminals.Forms.Controls
         [DebuggerStepThrough()]
         public SplitButton()
         {
-            AutoSize = true;
+            InitializeComponent();
         }
 
         #region Properties

@@ -56,7 +56,12 @@
     <Compile Include="ICAConnectionPlugin.cs" />
     <Compile Include="ICAOptions.cs" />
     <Compile Include="CitrixWorkspaceOptions.cs" />
-    <Compile Include="CitrixWorkspaceControl.cs" />
+    <Compile Include="CitrixWorkspaceControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="CitrixWorkspaceControl.Designer.cs">
+      <DependentUpon>CitrixWorkspaceControl.cs</DependentUpon>
+    </Compile>
     <Compile Include="CitrixWorkspaceConnection.cs" />
     <Compile Include="CitrixWorkspaceConnectionPlugin.cs" />
     <Compile Include="CitrixWorkspaceOptionsConverter.cs" />

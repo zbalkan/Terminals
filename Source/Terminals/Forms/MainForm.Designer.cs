@@ -45,6 +45,7 @@ namespace Terminals
             this.toolStripContainer = new Terminals.Forms.Controls.ToolStripContainer();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.pnlTagsFavorites = new System.Windows.Forms.Panel();
+            this.favsList1 = new Terminals.FavsList();
             this.pnlHideTagsFavorites = new System.Windows.Forms.Panel();
             this.pbHideTagsFavorites = new System.Windows.Forms.PictureBox();
             this.pnlShowTagsFavorites = new System.Windows.Forms.Panel();
@@ -259,11 +260,21 @@ namespace Terminals
             // 
             this.pnlTagsFavorites.Controls.Add(this.pnlHideTagsFavorites);
             this.pnlTagsFavorites.Controls.Add(this.pnlShowTagsFavorites);
+            this.pnlTagsFavorites.Controls.Add(this.favsList1);
             this.pnlTagsFavorites.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pnlTagsFavorites.Location = new System.Drawing.Point(0, 0);
             this.pnlTagsFavorites.Name = "pnlTagsFavorites";
             this.pnlTagsFavorites.Size = new System.Drawing.Size(200, 499);
             this.pnlTagsFavorites.TabIndex = 6;
+            // 
+            // favsList1
+            // 
+            this.favsList1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.favsList1.Location = new System.Drawing.Point(5, 0);
+            this.favsList1.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.favsList1.Name = "favsList1";
+            this.favsList1.Size = new System.Drawing.Size(200, 497);
+            this.favsList1.TabIndex = 2;
             // 
             // pnlHideTagsFavorites
             // 
@@ -1255,6 +1266,7 @@ namespace Terminals
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItemImport;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItemExport;
         private System.Windows.Forms.Panel pnlTagsFavorites;
+        private Terminals.FavsList favsList1;
         private System.Windows.Forms.Panel pnlHideTagsFavorites;
         private System.Windows.Forms.PictureBox pbHideTagsFavorites;
         private System.Windows.Forms.Panel pnlShowTagsFavorites;

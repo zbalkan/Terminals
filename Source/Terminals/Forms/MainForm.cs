@@ -32,7 +32,6 @@ namespace Terminals
 
         private const String FULLSCREEN_ERROR_MSG = "Screen properties not available for RDP";
 
-        private FavsList favsList1;
 
         private readonly FormSettings formSettings;
         private TabControlItem currentToolTipItem;
@@ -139,9 +138,7 @@ namespace Terminals
                 this.terminalsControler.AssingUiFactory(this.connectionsUiFactory);
                 this.toolbarExtenders = this.connectionManager.CreateToolbarExtensions(this.terminalsControler);
 
-                // Initialize FavsList outside of InitializeComponent
-                // Inside InitializeComponent it sometimes caused the design view in VS to return errors
-                this.InitializeFavsListControl();
+                this.favsList1.ConnectionsUiFactory = this.connectionsUiFactory;
 
                 // Set notifyicon icon from embedded png image
                 this.MainWindowNotifyIcon.Icon = Icon.FromHandle(Properties.Resources.terminalsicon.GetHicon());
@@ -172,19 +169,6 @@ namespace Terminals
                 Logging.Error("Error loading the Main Form", exc);
                 throw;
             }
-        }
-
-        private void InitializeFavsListControl()
-        {
-            this.favsList1 = new FavsList();
-            this.pnlTagsFavorites.Controls.Add(this.favsList1);
-            this.favsList1.Dock = DockStyle.Fill;
-            this.favsList1.Location = new Point(5, 0);
-            this.favsList1.Padding = new Padding(4, 4, 4, 4);
-            this.favsList1.Name = "favsList1";
-            this.favsList1.Size = new Size(200, 497);
-            this.favsList1.TabIndex = 2;
-            this.favsList1.ConnectionsUiFactory = this.connectionsUiFactory;
         }
 
         private void ApplyControlsEnableAndVisibleState()

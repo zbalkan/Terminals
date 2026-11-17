@@ -30,7 +30,7 @@ using System.Windows.Forms;
 namespace Terminals.Forms.Controls
 {
     [DesignerAttribute(typeof (IPAddressControlDesigner))]
-    internal class IPAddressControl : ContainerControl
+    internal partial class IPAddressControl : ContainerControl
     {
         #region Fields
 
@@ -55,19 +55,17 @@ namespace Terminals.Forms.Controls
         public IPAddressControl()
         {
             BackColor = SystemColors.Window;
-
             ResetBackColorChanged();
+            InitializeComponent();
+
+            // Runtime arrays preserve indexed focus, parsing and layout behavior.
+            ipAddressFieldControls = new[] { FieldControl0, FieldControl1, FieldControl2, FieldControl3 };
+            ipAddressDotControls = new[] { DotControl0, DotControl1, DotControl2 };
 
             for (int index = 0; index < ipAddressFieldControls.Length; ++index)
             {
-                ipAddressFieldControls[index] = new IPAddressFieldControl();
-
                 ipAddressFieldControls[index].CreateControl();
-
                 ipAddressFieldControls[index].FieldIndex = index;
-                ipAddressFieldControls[index].Name = "FieldControl" + index.ToString(CultureInfo.InvariantCulture);
-                ipAddressFieldControls[index].Parent = this;
-
                 ipAddressFieldControls[index].CedeFocusEvent += new EventHandler<CedeFocusEventArgs>(OnCedeFocus);
                 ipAddressFieldControls[index].Click += new EventHandler(OnSubControlClicked);
                 ipAddressFieldControls[index].DoubleClick += new EventHandler(OnSubControlDoubleClicked);
@@ -85,17 +83,9 @@ namespace Terminals.Forms.Controls
                 ipAddressFieldControls[index].PreviewKeyDown += new PreviewKeyDownEventHandler(OnFieldPreviewKeyDown);
                 ipAddressFieldControls[index].TextChangedEvent += new EventHandler<TextChangedEventArgs>(OnFieldTextChanged);
 
-                Controls.Add(ipAddressFieldControls[index]);
-
-                if (index < (FieldCount - 1))
+                if (index < ipAddressDotControls.Length)
                 {
-                    ipAddressDotControls[index] = new IPAddressDotControl();
-
                     ipAddressDotControls[index].CreateControl();
-
-                    ipAddressDotControls[index].Name = "DotControl" + index.ToString(CultureInfo.InvariantCulture);
-                    ipAddressDotControls[index].Parent = this;
-
                     ipAddressDotControls[index].Click += new EventHandler(OnSubControlClicked);
                     ipAddressDotControls[index].DoubleClick += new EventHandler(OnSubControlDoubleClicked);
                     ipAddressDotControls[index].MouseClick += new MouseEventHandler(OnSubControlMouseClicked);
@@ -104,8 +94,6 @@ namespace Terminals.Forms.Controls
                     ipAddressDotControls[index].MouseHover += new EventHandler(OnSubControlMouseHovered);
                     ipAddressDotControls[index].MouseLeave += new EventHandler(OnSubControlMouseLeft);
                     ipAddressDotControls[index].MouseMove += new MouseEventHandler(OnSubControlMouseMoved);
-
-                    Controls.Add(ipAddressDotControls[index]);
                 }
             }
 
@@ -125,11 +113,7 @@ namespace Terminals.Forms.Controls
             AutoScaleMode = AutoScaleMode.Dpi;
 
             Size = MinimumSize;
-
-            DragEnter += new DragEventHandler(IPAddressControl_DragEnter);
-            DragDrop += new DragEventHandler(IPAddressControl_DragDrop);
         }
-
         #endregion // Constructors
 
         #region Public Constants

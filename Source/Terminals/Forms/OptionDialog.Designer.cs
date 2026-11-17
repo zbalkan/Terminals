@@ -47,6 +47,7 @@ namespace Terminals.Forms
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(OptionDialog));
             this.btnOk = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
+            this.bottomLine = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.linkLabel1 = new System.Windows.Forms.LinkLabel();
             this.OptionsTreeView = new System.Windows.Forms.TreeView();
@@ -425,6 +426,16 @@ namespace Terminals.Forms
             this.panelPlugins.Size = new System.Drawing.Size(509, 332);
             this.panelPlugins.TabIndex = 0;
             // 
+            // bottomLine
+            // 
+            this.bottomLine.AutoSize = false;
+            this.bottomLine.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
+            this.bottomLine.Location = new System.Drawing.Point(0, 0);
+            this.bottomLine.Name = "bottomLine";
+            this.bottomLine.Size = new System.Drawing.Size(100, 2);
+            this.bottomLine.TabIndex = 12;
+            this.bottomLine.Visible = false;
+            // 
             // OptionDialog
             // 
             this.AcceptButton = this.btnOk;
@@ -432,6 +443,7 @@ namespace Terminals.Forms
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
             this.ClientSize = new System.Drawing.Size(850, 462);
+            this.Controls.Add(this.bottomLine);
             this.Controls.Add(this.OptionTitelLabel);
             this.Controls.Add(this.tabCtrlOptionPanels);
             this.Controls.Add(this.OptionsTreeView);
@@ -468,6 +480,7 @@ namespace Terminals.Forms
 
         private System.Windows.Forms.Button btnOk;
         private System.Windows.Forms.Button btnCancel;
+        private System.Windows.Forms.Label bottomLine;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.LinkLabel linkLabel1;
         private System.Windows.Forms.TreeView OptionsTreeView;

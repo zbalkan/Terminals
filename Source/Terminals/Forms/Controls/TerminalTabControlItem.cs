@@ -4,7 +4,7 @@ using Terminals.Data;
 
 namespace Terminals
 {
-    internal class TerminalTabControlItem : TabControlItem
+    internal partial class TerminalTabControlItem : TabControlItem
     {
         /// <summary>
         /// Gets or sets the associated favorite.
@@ -42,6 +42,7 @@ namespace Terminals
         public TerminalTabControlItem(string caption)
             : base(caption, null)
         {
+            InitializeComponent();
         }
     }
 }
