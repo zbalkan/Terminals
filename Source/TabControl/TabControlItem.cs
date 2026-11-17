@@ -11,7 +11,7 @@ namespace TabControl
     [ToolboxItem(false)]
     [DefaultProperty("Title")]
     [DefaultEvent("Changed")]
-    public class TabControlItem : Panel
+    public partial class TabControlItem : Panel
     {
         #region Fields
 
@@ -130,6 +130,7 @@ namespace TabControl
 
         public TabControlItem(string caption, Control displayControl) 
         {
+            InitializeComponent();
             this.selected = false;
             this.Visible = true;
             this.BorderStyle = BorderStyle.None;

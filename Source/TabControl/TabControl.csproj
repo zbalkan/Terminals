@@ -90,6 +90,9 @@
     <Compile Include="BaseStyledPanel.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="BaseStyledPanel.Designer.cs">
+      <DependentUpon>BaseStyledPanel.cs</DependentUpon>
+    </Compile>
     <Compile Include="CollectionWithEvents.cs" />
     <Compile Include="Delegates.cs" />
     <Compile Include="Enums.cs" />
@@ -103,10 +106,16 @@
     <Compile Include="TabControl.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="TabControl.Designer.cs">
+      <DependentUpon>TabControl.cs</DependentUpon>
+    </Compile>
     <Compile Include="TabControlCloseButton.cs" />
     <Compile Include="TabControlDesigner.cs" />
     <Compile Include="TabControlItem.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="TabControlItem.Designer.cs">
+      <DependentUpon>TabControlItem.cs</DependentUpon>
     </Compile>
     <Compile Include="TabControlItemCollection.cs" />
     <Compile Include="TabControlItemDesigner.cs" />

@@ -9,7 +9,7 @@ using System.Windows.Forms.VisualStyles;
 namespace TabControl
 {
     [ToolboxItem(false)]
-    public class BaseStyledPanel : Panel
+    public partial class BaseStyledPanel : Panel
     {
         #region Fields
 
@@ -32,6 +32,7 @@ namespace TabControl
 
         public BaseStyledPanel()
         {
+            InitializeComponent();
             // Set painting style for better performance.
             SetStyle(ControlStyles.AllPaintingInWmPaint, true);
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);

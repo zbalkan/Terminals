@@ -29,7 +29,6 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(CredentialsPanel));
             this.cmbUsers = new System.Windows.Forms.ComboBox();
             this.label1 = new System.Windows.Forms.Label();
             this.cmbDomains = new System.Windows.Forms.ComboBox();
@@ -103,10 +102,7 @@
             // 
             // revealPwdButtonImages
             // 
-            this.revealPwdButtonImages.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("revealPwdButtonImages.ImageStream")));
             this.revealPwdButtonImages.TransparentColor = System.Drawing.Color.Transparent;
-            this.revealPwdButtonImages.Images.SetKeyName(0, "eye_hide.png");
-            this.revealPwdButtonImages.Images.SetKeyName(1, "eye_reveal.png");
             // 
             // revealPwdButton
             // 

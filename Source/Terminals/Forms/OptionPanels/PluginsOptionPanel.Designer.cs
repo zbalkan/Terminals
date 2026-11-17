@@ -1,55 +1,275 @@
-﻿namespace Terminals.Forms.OptionPanels
+namespace Terminals.Forms.OptionPanels
 {
     partial class PluginsOptionPanel
     {
-        /// <summary> 
-        /// Required designer variable.
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
-
-        /// <summary> 
-        /// Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
-            {
+            if (disposing && components != null)
                 components.Dispose();
-            }
             base.Dispose(disposing);
         }
-
         #region Component Designer generated code
-
-        /// <summary> 
-        /// Required method for Designer support - do not modify 
+        /// <summary>
+        /// Required method for Designer support - do not modify
         /// the contents of this method with the code editor.
         /// </summary>
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
             this.errorProvider = new System.Windows.Forms.ErrorProvider(this.components);
+            this.pluginGroups = new System.Windows.Forms.FlowLayoutPanel();
+            this.sshGroup = new System.Windows.Forms.GroupBox();
+            this.sshLabel = new System.Windows.Forms.Label();
+            this.preferredSshClient = new System.Windows.Forms.ComboBox();
+            this.puttyGroup = new System.Windows.Forms.GroupBox();
+            this.enablePutty = new System.Windows.Forms.CheckBox();
+            this.puttyControls = new System.Windows.Forms.Panel();
+            this.puttyLabel = new System.Windows.Forms.Label();
+            this.puttyPath = new System.Windows.Forms.TextBox();
+            this.browsePutty = new System.Windows.Forms.Button();
+            this.pageantLabel = new System.Windows.Forms.Label();
+            this.pageantPath = new System.Windows.Forms.TextBox();
+            this.browsePageant = new System.Windows.Forms.Button();
+            this.citrixGroup = new System.Windows.Forms.GroupBox();
+            this.enableCitrix = new System.Windows.Forms.CheckBox();
+            this.citrixControls = new System.Windows.Forms.Panel();
+            this.selfServiceLabel = new System.Windows.Forms.Label();
+            this.selfServicePath = new System.Windows.Forms.TextBox();
+            this.browseSelfService = new System.Windows.Forms.Button();
+            this.storebrowseLabel = new System.Windows.Forms.Label();
+            this.storebrowsePath = new System.Windows.Forms.TextBox();
+            this.browseStorebrowse = new System.Windows.Forms.Button();
+            this.vncGroup = new System.Windows.Forms.GroupBox();
+            this.enableVnc = new System.Windows.Forms.CheckBox();
+            this.vncLabel = new System.Windows.Forms.Label();
+            this.preferredVncViewer = new System.Windows.Forms.ComboBox();
+            this.vncControls = new System.Windows.Forms.Panel();
+            this.vncPathLabel = new System.Windows.Forms.Label();
+            this.vncViewerPath = new System.Windows.Forms.TextBox();
+            this.browseVnc = new System.Windows.Forms.Button();
+            this.vncNotice = new System.Windows.Forms.Label();
+            this.otherGroup = new System.Windows.Forms.GroupBox();
+            this.otherPlugins = new System.Windows.Forms.CheckedListBox();
             ((System.ComponentModel.ISupportInitialize)(this.errorProvider)).BeginInit();
             this.SuspendLayout();
-            // 
-            // errorProvider
-            // 
+            this.pluginGroups.Name = "pluginGroups";
+            this.pluginGroups.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.pluginGroups.AutoScroll = true;
+            this.pluginGroups.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
+            this.pluginGroups.WrapContents = false;
+            this.pluginGroups.Padding = new System.Windows.Forms.Padding(8);
+            this.sshGroup.Name = "sshGroup";
+            this.sshGroup.Text = "SSH";
+            this.sshGroup.Size = new System.Drawing.Size(360, 78);
+            this.sshGroup.Margin = new System.Windows.Forms.Padding(3, 3, 3, 10);
+            this.sshLabel.Name = "sshLabel";
+            this.sshLabel.Text = "SSH client";
+            this.sshLabel.Location = new System.Drawing.Point(12, 29);
+            this.sshLabel.Size = new System.Drawing.Size(82, 20);
+            this.preferredSshClient.Name = "preferredSshClient";
+            this.preferredSshClient.Location = new System.Drawing.Point(100, 25);
+            this.preferredSshClient.Size = new System.Drawing.Size(240, 21);
+            this.preferredSshClient.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.preferredSshClient.Anchor = System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right | System.Windows.Forms.AnchorStyles.Top;
+            this.preferredSshClient.Items.Add("PuTTY");
+            this.sshGroup.Controls.Add(this.sshLabel);
+            this.sshGroup.Controls.Add(this.preferredSshClient);
+            this.pluginGroups.Controls.Add(this.sshGroup);
+            this.puttyGroup.Name = "puttyGroup";
+            this.puttyGroup.Text = "PuTTY";
+            this.puttyGroup.Size = new System.Drawing.Size(360, 113);
+            this.puttyGroup.Margin = new System.Windows.Forms.Padding(3, 3, 3, 10);
+            this.enablePutty.Name = "enablePutty";
+            this.enablePutty.Text = "Enable PuTTY";
+            this.enablePutty.Location = new System.Drawing.Point(12, 21);
+            this.enablePutty.AutoSize = true;
+            this.enablePutty.CheckedChanged += new System.EventHandler(this.EnablePutty_CheckedChanged);
+            this.puttyControls.Name = "puttyControls";
+            this.puttyControls.Location = new System.Drawing.Point(12, 45);
+            this.puttyControls.Size = new System.Drawing.Size(340, 60);
+            this.puttyLabel.Name = "puttyLabel";
+            this.puttyLabel.Text = "PuTTY";
+            this.puttyLabel.Location = new System.Drawing.Point(0, 4);
+            this.puttyLabel.Size = new System.Drawing.Size(63, 20);
+            this.puttyPath.Name = "puttyPath";
+            this.puttyPath.Location = new System.Drawing.Point(65, 0);
+            this.puttyPath.Size = new System.Drawing.Size(200, 20);
+            this.browsePutty.Name = "browsePutty";
+            this.browsePutty.Text = "Browse";
+            this.browsePutty.Location = new System.Drawing.Point(270, -1);
+            this.browsePutty.Size = new System.Drawing.Size(74, 23);
+            this.browsePutty.Click += new System.EventHandler(this.BrowsePutty_Click);
+            this.puttyControls.Controls.Add(this.puttyLabel);
+            this.puttyControls.Controls.Add(this.puttyPath);
+            this.puttyControls.Controls.Add(this.browsePutty);
+            this.pageantLabel.Name = "pageantLabel";
+            this.pageantLabel.Text = "Pageant";
+            this.pageantLabel.Location = new System.Drawing.Point(0, 34);
+            this.pageantLabel.Size = new System.Drawing.Size(63, 20);
+            this.pageantPath.Name = "pageantPath";
+            this.pageantPath.Location = new System.Drawing.Point(65, 30);
+            this.pageantPath.Size = new System.Drawing.Size(200, 20);
+            this.browsePageant.Name = "browsePageant";
+            this.browsePageant.Text = "Browse";
+            this.browsePageant.Location = new System.Drawing.Point(270, 29);
+            this.browsePageant.Size = new System.Drawing.Size(74, 23);
+            this.browsePageant.Click += new System.EventHandler(this.BrowsePageant_Click);
+            this.puttyControls.Controls.Add(this.pageantLabel);
+            this.puttyControls.Controls.Add(this.pageantPath);
+            this.puttyControls.Controls.Add(this.browsePageant);
+            this.puttyGroup.Controls.Add(this.enablePutty);
+            this.puttyGroup.Controls.Add(this.puttyControls);
+            this.pluginGroups.Controls.Add(this.puttyGroup);
+            this.citrixGroup.Name = "citrixGroup";
+            this.citrixGroup.Text = "Citrix Workspace";
+            this.citrixGroup.Size = new System.Drawing.Size(360, 113);
+            this.citrixGroup.Margin = new System.Windows.Forms.Padding(3, 3, 3, 10);
+            this.enableCitrix.Name = "enableCitrix";
+            this.enableCitrix.Text = "Enable Citrix Workspace";
+            this.enableCitrix.Location = new System.Drawing.Point(12, 21);
+            this.enableCitrix.AutoSize = true;
+            this.enableCitrix.CheckedChanged += new System.EventHandler(this.EnableCitrix_CheckedChanged);
+            this.citrixControls.Name = "citrixControls";
+            this.citrixControls.Location = new System.Drawing.Point(12, 45);
+            this.citrixControls.Size = new System.Drawing.Size(340, 60);
+            this.selfServiceLabel.Name = "selfServiceLabel";
+            this.selfServiceLabel.Text = "SelfSvc";
+            this.selfServiceLabel.Location = new System.Drawing.Point(0, 4);
+            this.selfServiceLabel.Size = new System.Drawing.Size(63, 20);
+            this.selfServicePath.Name = "selfServicePath";
+            this.selfServicePath.Location = new System.Drawing.Point(65, 0);
+            this.selfServicePath.Size = new System.Drawing.Size(200, 20);
+            this.browseSelfService.Name = "browseSelfService";
+            this.browseSelfService.Text = "Browse";
+            this.browseSelfService.Location = new System.Drawing.Point(270, -1);
+            this.browseSelfService.Size = new System.Drawing.Size(74, 23);
+            this.browseSelfService.Click += new System.EventHandler(this.BrowseSelfService_Click);
+            this.citrixControls.Controls.Add(this.selfServiceLabel);
+            this.citrixControls.Controls.Add(this.selfServicePath);
+            this.citrixControls.Controls.Add(this.browseSelfService);
+            this.storebrowseLabel.Name = "storebrowseLabel";
+            this.storebrowseLabel.Text = "Store";
+            this.storebrowseLabel.Location = new System.Drawing.Point(0, 34);
+            this.storebrowseLabel.Size = new System.Drawing.Size(63, 20);
+            this.storebrowsePath.Name = "storebrowsePath";
+            this.storebrowsePath.Location = new System.Drawing.Point(65, 30);
+            this.storebrowsePath.Size = new System.Drawing.Size(200, 20);
+            this.browseStorebrowse.Name = "browseStorebrowse";
+            this.browseStorebrowse.Text = "Browse";
+            this.browseStorebrowse.Location = new System.Drawing.Point(270, 29);
+            this.browseStorebrowse.Size = new System.Drawing.Size(74, 23);
+            this.browseStorebrowse.Click += new System.EventHandler(this.BrowseStorebrowse_Click);
+            this.citrixControls.Controls.Add(this.storebrowseLabel);
+            this.citrixControls.Controls.Add(this.storebrowsePath);
+            this.citrixControls.Controls.Add(this.browseStorebrowse);
+            this.citrixGroup.Controls.Add(this.enableCitrix);
+            this.citrixGroup.Controls.Add(this.citrixControls);
+            this.pluginGroups.Controls.Add(this.citrixGroup);
+            this.vncGroup.Name = "vncGroup";
+            this.vncGroup.Text = "VNC viewer";
+            this.vncGroup.Size = new System.Drawing.Size(360, 154);
+            this.vncGroup.Margin = new System.Windows.Forms.Padding(3, 3, 3, 10);
+            this.enableVnc.Name = "enableVnc";
+            this.enableVnc.Text = "Enable VNC";
+            this.enableVnc.Location = new System.Drawing.Point(12, 21);
+            this.enableVnc.AutoSize = true;
+            this.enableVnc.CheckedChanged += new System.EventHandler(this.EnableVnc_CheckedChanged);
+            this.vncLabel.Name = "vncLabel";
+            this.vncLabel.Text = "Selected viewer:";
+            this.vncLabel.Location = new System.Drawing.Point(12, 47);
+            this.vncLabel.Size = new System.Drawing.Size(100, 20);
+            this.preferredVncViewer.Name = "preferredVncViewer";
+            this.preferredVncViewer.Location = new System.Drawing.Point(110, 44);
+            this.preferredVncViewer.Size = new System.Drawing.Size(240, 21);
+            this.preferredVncViewer.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.preferredVncViewer.Items.AddRange(new object[] { "TightVNC", "UltraVNC", "TigerVNC", "RealVNC" });
+            this.preferredVncViewer.SelectedIndexChanged += new System.EventHandler(this.PreferredVncViewer_SelectedIndexChanged);
+            this.vncControls.Name = "vncControls";
+            this.vncControls.Location = new System.Drawing.Point(12, 76);
+            this.vncControls.Size = new System.Drawing.Size(340, 32);
+            this.vncPathLabel.Name = "vncPathLabel";
+            this.vncPathLabel.Text = "Path";
+            this.vncPathLabel.Location = new System.Drawing.Point(0, 4);
+            this.vncPathLabel.Size = new System.Drawing.Size(63, 20);
+            this.vncViewerPath.Name = "vncViewerPath";
+            this.vncViewerPath.Location = new System.Drawing.Point(65, 0);
+            this.vncViewerPath.Size = new System.Drawing.Size(200, 20);
+            this.vncViewerPath.TextChanged += new System.EventHandler(this.VncViewerPath_TextChanged);
+            this.browseVnc.Name = "browseVnc";
+            this.browseVnc.Text = "Browse";
+            this.browseVnc.Location = new System.Drawing.Point(270, -1);
+            this.browseVnc.Size = new System.Drawing.Size(74, 23);
+            this.browseVnc.Click += new System.EventHandler(this.BrowseVnc_Click);
+            this.vncControls.Controls.Add(this.vncPathLabel);
+            this.vncControls.Controls.Add(this.vncViewerPath);
+            this.vncControls.Controls.Add(this.browseVnc);
+            this.vncNotice.Name = "vncNotice";
+            this.vncNotice.Text = "Only the selected viewer is launched. Authentication stays in the viewer.";
+            this.vncNotice.Location = new System.Drawing.Point(12, 114);
+            this.vncNotice.Size = new System.Drawing.Size(530, 30);
+            this.vncGroup.Controls.Add(this.enableVnc);
+            this.vncGroup.Controls.Add(this.vncLabel);
+            this.vncGroup.Controls.Add(this.preferredVncViewer);
+            this.vncGroup.Controls.Add(this.vncControls);
+            this.vncGroup.Controls.Add(this.vncNotice);
+            this.pluginGroups.Controls.Add(this.vncGroup);
+            this.otherGroup.Name = "otherGroup";
+            this.otherGroup.Text = "Other protocol plugins";
+            this.otherGroup.Size = new System.Drawing.Size(360, 164);
+            this.otherGroup.Margin = new System.Windows.Forms.Padding(3);
+            this.otherPlugins.Name = "otherPlugins";
+            this.otherPlugins.Location = new System.Drawing.Point(12, 22);
+            this.otherPlugins.Size = new System.Drawing.Size(324, 130);
+            this.otherPlugins.CheckOnClick = true;
+            this.otherPlugins.IntegralHeight = false;
+            this.otherPlugins.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            this.otherGroup.Controls.Add(this.otherPlugins);
+            this.pluginGroups.Controls.Add(this.otherGroup);
             this.errorProvider.ContainerControl = this;
-            // 
-            // PluginsOptionPanel
-            // 
+            this.Controls.Add(this.pluginGroups);
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Name = "PluginsOptionPanel";
             this.Size = new System.Drawing.Size(402, 300);
+            this.pluginGroups.Resize += new System.EventHandler(this.PluginGroups_Resize);
             ((System.ComponentModel.ISupportInitialize)(this.errorProvider)).EndInit();
             this.ResumeLayout(false);
-            this.PerformLayout();
-
         }
-
         #endregion
         private System.Windows.Forms.ErrorProvider errorProvider;
+        private System.Windows.Forms.FlowLayoutPanel pluginGroups;
+        private System.Windows.Forms.GroupBox sshGroup;
+        private System.Windows.Forms.Label sshLabel;
+        private System.Windows.Forms.ComboBox preferredSshClient;
+        private System.Windows.Forms.GroupBox puttyGroup;
+        private System.Windows.Forms.CheckBox enablePutty;
+        private System.Windows.Forms.Panel puttyControls;
+        private System.Windows.Forms.Label puttyLabel;
+        private System.Windows.Forms.TextBox puttyPath;
+        private System.Windows.Forms.Button browsePutty;
+        private System.Windows.Forms.Label pageantLabel;
+        private System.Windows.Forms.TextBox pageantPath;
+        private System.Windows.Forms.Button browsePageant;
+        private System.Windows.Forms.GroupBox citrixGroup;
+        private System.Windows.Forms.CheckBox enableCitrix;
+        private System.Windows.Forms.Panel citrixControls;
+        private System.Windows.Forms.Label selfServiceLabel;
+        private System.Windows.Forms.TextBox selfServicePath;
+        private System.Windows.Forms.Button browseSelfService;
+        private System.Windows.Forms.Label storebrowseLabel;
+        private System.Windows.Forms.TextBox storebrowsePath;
+        private System.Windows.Forms.Button browseStorebrowse;
+        private System.Windows.Forms.GroupBox vncGroup;
+        private System.Windows.Forms.CheckBox enableVnc;
+        private System.Windows.Forms.Label vncLabel;
+        private System.Windows.Forms.ComboBox preferredVncViewer;
+        private System.Windows.Forms.Panel vncControls;
+        private System.Windows.Forms.Label vncPathLabel;
+        private System.Windows.Forms.TextBox vncViewerPath;
+        private System.Windows.Forms.Button browseVnc;
+        private System.Windows.Forms.Label vncNotice;
+        private System.Windows.Forms.GroupBox otherGroup;
+        private System.Windows.Forms.CheckedListBox otherPlugins;
     }
 }

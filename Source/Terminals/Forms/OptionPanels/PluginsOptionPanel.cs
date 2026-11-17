@@ -16,152 +16,60 @@ namespace Terminals.Forms.OptionPanels
     public partial class PluginsOptionPanel : UserControl, IOptionPanel
     {
         private readonly PluginsSelection pluginsSelection;
-        private readonly FlowLayoutPanel pluginGroups;
-        private readonly CheckedListBox otherPlugins;
-        private readonly CheckBox enablePutty;
-        private readonly ComboBox preferredSshClient;
-        private readonly TextBox puttyPath;
-        private readonly TextBox pageantPath;
-        private readonly Panel puttyControls;
         private SelectedPlugin puttyPlugin;
         private SelectedPlugin citrixPlugin;
         private SelectedPlugin vncPlugin;
-        private readonly CheckBox enableVnc;
-        private readonly Panel vncControls;
-        private readonly TextBox vncViewerPath;
         private readonly Dictionary<string, string> vncViewerPaths = new Dictionary<string, string>();
-        private readonly ComboBox preferredVncViewer;
         private string displayedVncViewer;
-        private readonly CheckBox enableCitrix;
-        private readonly Panel citrixControls;
-        private readonly TextBox selfServicePath;
-        private readonly TextBox storebrowsePath;
         private bool loading;
 
         public PluginsOptionPanel()
         {
             InitializeComponent();
+            if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
+                return;
             pluginsSelection = new PluginsSelection(Settings.Instance, new PluginsLoader(Settings.Instance));
-
-            // Keep scrolling within the Plugins page, not in the Options dialog.
-            pluginGroups = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                AutoScroll = true,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                Padding = new Padding(8)
-            };
-            Controls.Clear();
-            Controls.Add(pluginGroups);
-
-            var sshGroup = new GroupBox { Text = "SSH", Height = 78, Margin = new Padding(3, 3, 3, 10) };
-            sshGroup.Controls.Add(new Label { Text = "SSH client", Location = new Point(12, 29), Width = 82 });
-            preferredSshClient = new ComboBox
-            {
-                Location = new Point(100, 25), Width = 240,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top
-            };
-            preferredSshClient.Items.Add("PuTTY");
             if (SshClientPreference.FindWindowsOpenSsh() != null)
                 preferredSshClient.Items.Add("Windows OpenSSH");
-            sshGroup.Controls.Add(preferredSshClient);
-            pluginGroups.Controls.Add(sshGroup);
-
-            var puttyGroup = new GroupBox { Text = "PuTTY", Height = 113, Margin = new Padding(3, 3, 3, 10) };
-            enablePutty = new CheckBox
-            {
-                Text = "Enable PuTTY", AutoSize = true,
-                Location = new Point(12, 21)
-            };
-            puttyControls = new Panel { Location = new Point(12, 45), Height = 60 };
-            puttyPath = AddExecutableRow(puttyControls, "PuTTY", "putty.exe", 0);
-            pageantPath = AddExecutableRow(puttyControls, "Pageant", "pageant.exe", 30);
-            enablePutty.CheckedChanged += (sender, args) => puttyControls.Enabled = enablePutty.Checked;
-            puttyGroup.Controls.Add(enablePutty);
-            puttyGroup.Controls.Add(puttyControls);
-            pluginGroups.Controls.Add(puttyGroup);
-
-            var citrixGroup = new GroupBox { Text = "Citrix Workspace", Height = 113, Margin = new Padding(3, 3, 3, 10) };
-            enableCitrix = new CheckBox { Text = "Enable Citrix Workspace", AutoSize = true, Location = new Point(12, 21) };
-            citrixControls = new Panel { Location = new Point(12, 45), Height = 60 };
-            selfServicePath = AddExecutableRow(citrixControls, "SelfSvc", "SelfService.exe", 0);
-            storebrowsePath = AddExecutableRow(citrixControls, "Store", "storebrowse.exe", 30);
-            enableCitrix.CheckedChanged += (sender, args) => citrixControls.Enabled = enableCitrix.Checked;
-            citrixGroup.Controls.Add(enableCitrix);
-            citrixGroup.Controls.Add(citrixControls);
-            pluginGroups.Controls.Add(citrixGroup);
-
-            var vncGroup = new GroupBox { Text = "VNC viewer", Height = 154, Margin = new Padding(3, 3, 3, 10) };
-            enableVnc = new CheckBox { Text = "Enable VNC", AutoSize = true, Location = new Point(12, 21) };
-            preferredVncViewer = new ComboBox
-            {
-                Location = new Point(110, 44), Width = 240,
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            preferredVncViewer.Items.AddRange(new object[] {
-                ExternalVncViewers.TightVnc, ExternalVncViewers.UltraVnc,
-                ExternalVncViewers.TigerVnc, ExternalVncViewers.RealVnc
-            });
-            vncGroup.Controls.Add(new Label { Text = "Selected viewer:", Location = new Point(12, 47), Width = 100 });
-            vncGroup.Controls.Add(preferredVncViewer);
-            vncControls = new Panel { Location = new Point(12, 76), Height = 32 };
-            vncControls.Controls.Add(new Label { Text = "Path", Location = new Point(0, 4), Width = 63 });
-            vncViewerPath = new TextBox { Location = new Point(65, 0), Width = 200 };
-            vncViewerPath.TextChanged += (sender, args) =>
-            {
-                if (!loading && displayedVncViewer != null)
-                    vncViewerPaths[displayedVncViewer] = vncViewerPath.Text;
-            };
-            vncControls.Controls.Add(vncViewerPath);
-            var browseVnc = new Button { Text = "Browse", Location = new Point(270, -1), Size = new Size(74, 23) };
-            browseVnc.Click += (sender, args) =>
-            {
-                string vendor = preferredVncViewer.SelectedItem as string;
-                if (vendor == null) return;
-                string filename = ExternalVncViewers.ExecutableName(vendor);
-                using (var dialog = new OpenFileDialog
-                {
-                    Title = "Locate " + vendor + " viewer",
-                    Filter = "Executable files (*.exe)|*.exe",
-                    FileName = filename,
-                    CheckFileExists = true
-                })
-                {
-                    if (dialog.ShowDialog(vncControls) == DialogResult.OK)
-                        vncViewerPath.Text = dialog.FileName;
-                }
-            };
-            vncControls.Controls.Add(browseVnc);
-            enableVnc.CheckedChanged += (sender, args) =>
-            {
-                preferredVncViewer.Enabled = enableVnc.Checked;
-                UpdateVncPathControls();
-            };
-            preferredVncViewer.SelectedIndexChanged += (sender, args) => UpdateVncPathControls();
-            vncGroup.Controls.Add(enableVnc);
-            vncGroup.Controls.Add(vncControls);
-            vncGroup.Controls.Add(new Label
-            {
-                Text = "Only the selected viewer is launched. Authentication stays in the viewer.",
-                Location = new Point(12, 114), Size = new Size(530, 30)
-            });
-            pluginGroups.Controls.Add(vncGroup);
-
-            var otherGroup = new GroupBox { Text = "Other protocol plugins", Height = 164, Margin = new Padding(3) };
-            otherPlugins = new CheckedListBox
-            {
-                CheckOnClick = true,
-                Location = new Point(12, 22),
-                IntegralHeight = false,
-                Height = 130,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-            otherGroup.Controls.Add(otherPlugins);
-            pluginGroups.Controls.Add(otherGroup);
-            pluginGroups.Resize += (sender, args) => ResizeGroups();
             ResizeGroups();
+        }
+        private void EnablePutty_CheckedChanged(object sender, EventArgs e) { puttyControls.Enabled = enablePutty.Checked; }
+        private void EnableCitrix_CheckedChanged(object sender, EventArgs e) { citrixControls.Enabled = enableCitrix.Checked; }
+        private void EnableVnc_CheckedChanged(object sender, EventArgs e)
+        {
+            preferredVncViewer.Enabled = enableVnc.Checked;
+            UpdateVncPathControls();
+        }
+        private void PreferredVncViewer_SelectedIndexChanged(object sender, EventArgs e) { UpdateVncPathControls(); }
+        private void VncViewerPath_TextChanged(object sender, EventArgs e)
+        {
+            if (!loading && displayedVncViewer != null)
+                vncViewerPaths[displayedVncViewer] = vncViewerPath.Text;
+        }
+        private void PluginGroups_Resize(object sender, EventArgs e) { ResizeGroups(); }
+        private void BrowsePutty_Click(object sender, EventArgs e) { BrowseExecutable(puttyPath, puttyControls, "putty.exe"); }
+        private void BrowsePageant_Click(object sender, EventArgs e) { BrowseExecutable(pageantPath, puttyControls, "pageant.exe"); }
+        private void BrowseSelfService_Click(object sender, EventArgs e) { BrowseExecutable(selfServicePath, citrixControls, "SelfService.exe"); }
+        private void BrowseStorebrowse_Click(object sender, EventArgs e) { BrowseExecutable(storebrowsePath, citrixControls, "storebrowse.exe"); }
+        private void BrowseVnc_Click(object sender, EventArgs e)
+        {
+            string vendor = preferredVncViewer.SelectedItem as string;
+            if (vendor != null)
+                BrowseExecutable(vncViewerPath, vncControls, ExternalVncViewers.ExecutableName(vendor), "Locate " + vendor + " viewer");
+        }
+        private static void BrowseExecutable(TextBox path, Control owner, string filename, string title = null)
+        {
+            using (var dialog = new OpenFileDialog
+            {
+                Title = title ?? "Locate " + filename,
+                Filter = "Executable files (*.exe)|*.exe",
+                FileName = filename,
+                CheckFileExists = true
+            })
+            {
+                if (dialog.ShowDialog(owner) == DialogResult.OK)
+                    path.Text = dialog.FileName;
+            }
         }
 
         private void ResizeGroups()
@@ -210,31 +118,6 @@ namespace Terminals.Forms.OptionPanels
             string path;
             vncViewerPath.Text = selected != null && vncViewerPaths.TryGetValue(selected, out path)
                 ? path : string.Empty;
-        }
-
-        private static TextBox AddExecutableRow(Panel parent, string caption, string filename, int y)
-        {
-            var label = new Label { Text = caption, Location = new Point(0, y + 4), Width = 63 };
-            var path = new TextBox { Location = new Point(65, y), Width = 200 };
-            var browse = new Button { Text = "Browse", Location = new Point(270, y - 1), Size = new Size(74, 23) };
-            browse.Click += (sender, args) =>
-            {
-                using (var dialog = new OpenFileDialog
-                {
-                    Title = "Locate " + filename,
-                    Filter = "Executable files (*.exe)|*.exe",
-                    FileName = filename,
-                    CheckFileExists = true
-                })
-                {
-                    if (dialog.ShowDialog(parent) == DialogResult.OK)
-                        path.Text = dialog.FileName;
-                }
-            };
-            parent.Controls.Add(label);
-            parent.Controls.Add(path);
-            parent.Controls.Add(browse);
-            return path;
         }
 
         public void LoadSettings()
@@ -378,7 +261,7 @@ namespace Terminals.Forms.OptionPanels
         protected override void OnValidating(CancelEventArgs e)
         {
             base.OnValidating(e);
-            if (loading) return;
+            if (LicenseManager.UsageMode == LicenseUsageMode.Designtime || loading) return;
 
             e.Cancel = !GetPluginsFromUI().Any(p => p.Enabled) &&
                 !(puttyPlugin != null && (preferredSshClient.SelectedItem as string ?? "")

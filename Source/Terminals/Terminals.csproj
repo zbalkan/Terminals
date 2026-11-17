@@ -142,7 +142,12 @@
     <Compile Include="Configuration\FavoriteConfigurationSecurity.cs" />
     <Compile Include="Configuration\FileChangedEventArgs.cs" />
     <Compile Include="Data\LegacyHttpFavoritesMigration.cs" />
-    <Compile Include="Forms\LegacyHttpFavoritesDialog.cs" />
+    <Compile Include="Forms\LegacyHttpFavoritesDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\LegacyHttpFavoritesDialog.Designer.cs">
+      <DependentUpon>LegacyHttpFavoritesDialog.cs</DependentUpon>
+    </Compile>
     <Compile Include="Connections\EmptyOptionsConverter.cs" />
     <Compile Include="Connections\PluginsLoader.cs" />
     <Compile Include="Converters\TagsConverter.cs" />
@@ -605,12 +610,21 @@
     <Compile Include="Forms\Controls\IPAddressControl\IPAddressControl.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Forms\Controls\IPAddressControl\IPAddressControl.Designer.cs">
+      <DependentUpon>IPAddressControl.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\Controls\IPAddressControl\IPAddressControlDesigner.cs" />
     <Compile Include="Forms\Controls\IPAddressControl\IPAddressDotControl.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Forms\Controls\IPAddressControl\IPAddressDotControl.Designer.cs">
+      <DependentUpon>IPAddressDotControl.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\Controls\IPAddressControl\IPAddressFieldControl.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Forms\Controls\IPAddressControl\IPAddressFieldControl.Designer.cs">
+      <DependentUpon>IPAddressFieldControl.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\Controls\GroupMenuItem.cs">
       <SubType>Component</SubType>
@@ -641,8 +655,14 @@
     <Compile Include="Forms\Controls\SplitButton.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Forms\Controls\SplitButton.Designer.cs">
+      <DependentUpon>SplitButton.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\Controls\ToolStripContainer.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Forms\Controls\ToolStripContainer.Designer.cs">
+      <DependentUpon>ToolStripContainer.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\Controls\GroupTreeNode.cs" />
     <Compile Include="Data\History\ConnectionHistory.cs" />
@@ -781,6 +801,9 @@
     <Compile Include="Forms\Controls\TerminalTabControlItem.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Forms\Controls\TerminalTabControlItem.Designer.cs">
+      <DependentUpon>TerminalTabControlItem.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\Controls\TerminalTabsSelectionControler.cs" />
     <Compile Include="StartupUi.cs" />
     <Compile Include="Updates\FilesV2ContentUpgrade.cs" />
@@ -867,6 +890,12 @@
       <DependentUpon>Ping.cs</DependentUpon>
     </Compile>
     <Compile Include="Network\Servers\NetworkManagement.cs" />
+    <Compile Include="Network\Servers\ServerComboBox.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Network\Servers\ServerComboBox.Designer.cs">
+      <DependentUpon>ServerComboBox.cs</DependentUpon>
+    </Compile>
     <Compile Include="Network\Tools\NTP\NetworkTime.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -912,8 +941,14 @@
     <Compile Include="Network\Tools\WMI\LoginForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Network\Tools\WMI\LoginForm.Designer.cs">
+      <DependentUpon>LoginForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Network\Tools\WMI\WMIControl.cs">
       <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Network\Tools\WMI\WMIControl.Designer.cs">
+      <DependentUpon>WMIControl.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\NewGroupForm.cs">
       <SubType>Form</SubType>

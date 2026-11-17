@@ -7,8 +7,13 @@ using Terminals.Data;
 
 namespace Terminals.Connections
 {
-    public class Connection : Control, IConnection
+    public partial class Connection : Control, IConnection
     {
+        public Connection()
+        {
+            InitializeComponent();
+        }
+
         // cached images, bad performace, but simplifies check, if the image is known
         public static readonly Image Terminalsicon = Resources.terminalsicon;
 

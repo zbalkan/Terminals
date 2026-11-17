@@ -93,16 +93,12 @@ namespace Terminals.Forms
 
         private void DrawBottomLine()
         {
-            Label lbl = new Label();
-            lbl.AutoSize = false;
-            lbl.BorderStyle = BorderStyle.Fixed3D;
-            lbl.SetBounds(
+            this.bottomLine.SetBounds(
                 this.OptionTitelLabel.Left,
                 this.OptionsTreeView.Top + this.OptionsTreeView.Height - 1,
                 this.OptionTitelLabel.Width,
                 2);
-            this.Controls.Add(lbl);
-            lbl.Show();
+            this.bottomLine.Show();
         }
 
         private void OptionsTreeView_AfterSelect(object sender, TreeViewEventArgs e)

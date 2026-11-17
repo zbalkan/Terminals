@@ -42,7 +42,20 @@ namespace Terminals.Forms.Controls
         public CredentialsPanel()
         {
             InitializeComponent();
+            if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
+                InitializeRevealPasswordImages();
             this.revealPwdButton.Click += this.RevealOrHidePwd;
+        }
+
+        // ImageListStreamer is a binary .resx payload. Keep it out of the VS Designer
+        // construction path, where resource assembly probing may not be initialized.
+        private void InitializeRevealPasswordImages()
+        {
+            var resources = new System.ComponentModel.ComponentResourceManager(typeof(CredentialsPanel));
+            this.revealPwdButtonImages.ImageStream =
+                (System.Windows.Forms.ImageListStreamer)resources.GetObject("revealPwdButtonImages.ImageStream");
+            this.revealPwdButtonImages.Images.SetKeyName(0, "eye_hide.png");
+            this.revealPwdButtonImages.Images.SetKeyName(1, "eye_reveal.png");
         }
 
         public void SetUserNameError(ErrorProvider errorProvider, string errroMessage)

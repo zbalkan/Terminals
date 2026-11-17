@@ -1,9 +1,9 @@
 name: CI
 
 on:
-  # Feature branches are checked by pull_request; pushing them must not start a duplicate CI run.
+  # Include the Designer migration branch for Windows validation without a pull request.
   push:
-    branches: [ master ]
+    branches: [ master, refactor/winforms-designer-usage ]
     paths-ignore:
       - '**/*.md'
       - '**/*.markdown'
@@ -54,6 +54,9 @@ jobs:
       - name: Reject tracked build outputs and obsolete source-control bindings
         shell: pwsh
         run: ./Build/Test-TrackedArtifacts.ps1
+      - name: Validate WinForms Designer ownership
+        shell: pwsh
+        run: ./Build/Test-WinFormsDesignerOwnership.ps1
       - name: Setup-msbuild
         uses: microsoft/setup-msbuild@v3
       - name: Setup NuGet

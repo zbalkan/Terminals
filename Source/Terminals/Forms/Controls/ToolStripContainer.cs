@@ -8,8 +8,13 @@ namespace Terminals.Forms.Controls
     /// <summary>
     /// Extens Windows Forms ToolStripContainer to provide load and save its layout
     /// </summary>
-    internal class ToolStripContainer : System.Windows.Forms.ToolStripContainer
+    internal partial class ToolStripContainer : System.Windows.Forms.ToolStripContainer
     {
+        public ToolStripContainer()
+        {
+            InitializeComponent();
+        }
+
         #region Menu and toolbars
 
         internal ToolStrip ToolbarStd { get; set; }

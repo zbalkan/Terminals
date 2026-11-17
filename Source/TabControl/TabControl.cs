@@ -16,7 +16,7 @@ namespace TabControl
     [DefaultProperty("Items")]
     [ToolboxItem(true)]
     [ToolboxBitmap(typeof(TabControl))]
-    public class TabControl : BaseStyledPanel, ISupportInitialize
+    public partial class TabControl : BaseStyledPanel, ISupportInitialize
     {
         #region Static Fields
 
@@ -987,6 +987,7 @@ namespace TabControl
         public TabControl()
         {
             BeginInit();
+            InitializeComponent();
 
             this.SetStyle(ControlStyles.UserPaint, true);
             this.SetStyle(ControlStyles.ResizeRedraw, true);
