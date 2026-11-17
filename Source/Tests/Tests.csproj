@@ -123,6 +123,7 @@
     <Compile Include="Integrations\ImportRdpTest.cs" />
     <Compile Include="Integrations\ExportTerminalsTests.cs" />
     <Compile Include="Network\RemoteProtocolStatusCacheTests.cs" />
+    <Compile Include="Network\WmiServiceCommandTests.cs" />
     <Compile Include="Network\DnsLookupTests.cs" />
     <Compile Include="Network\HexBoxProviderTests.cs" />
     <Compile Include="Network\RasNativeTests.cs" />

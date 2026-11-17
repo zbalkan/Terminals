@@ -212,6 +212,17 @@ namespace Terminals.Network.WMI
             return null;
         }
 
+        internal static void EnsureServiceCommandAccepted(string method, string name, object status)
+        {
+            if (status == null)
+                throw new InvalidOperationException(method + " returned no status for service '" + name + "'.");
+
+            uint resultCode = Convert.ToUInt32(status);
+            if (resultCode != 0)
+                throw new InvalidOperationException(method + " was rejected for service '" + name +
+                    "' (WMI return code " + resultCode + ").");
+        }
+
         private async void RunServiceCommand(string method)
         {
             if (busy || IsDisposed || dataGridView1.SelectedCells.Count == 0) return;
@@ -235,7 +246,8 @@ namespace Terminals.Network.WMI
                 {
                     ManagementObject service = FindWMIObject(current, name);
                     if (service == null) return false;
-                    service.InvokeMethod(method, null);
+                    object status = service.InvokeMethod(method, null);
+                    EnsureServiceCommandAccepted(method, name, status);
                     return true;
                 });
                 if (IsDisposed) return;
