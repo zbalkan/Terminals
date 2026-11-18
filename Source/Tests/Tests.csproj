@@ -127,6 +127,7 @@
     <Compile Include="Network\PingSampleHistoryTests.cs" />
     <Compile Include="Network\TraceRouteTests.cs" />
     <Compile Include="Network\NtpQueryTests.cs" />
+    <Compile Include="Network\WhoisQueryTests.cs" />
     <Compile Include="Network\WmiServiceCommandTests.cs" />
     <Compile Include="Network\DnsLookupTests.cs" />
     <Compile Include="Network\HexBoxProviderTests.cs" />

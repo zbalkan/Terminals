@@ -1,40 +1,78 @@
 using System;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace Terminals.Network.WhoIs
 {
     internal partial class WhoIs : UserControl
     {
+        private CancellationTokenSource pending;
+        private int requestVersion;
+
         public WhoIs()
         {
             InitializeComponent();
         }
 
-        private void whoisButton_Click(object sender, EventArgs e)
+        protected override void OnHandleDestroyed(EventArgs e)
         {
-            String server = this.hostTextbox.Text.Trim();
-            if (server != String.Empty)
+            CancelPending();
+            base.OnHandleDestroyed(e);
+        }
+
+        private void CancelPending()
+        {
+            ++requestVersion;
+            if (pending != null)
             {
-                if (!server.StartsWith("=") && !server.ToLower().EndsWith(".ca")) 
-                    server = "=" + server;
+                pending.Cancel();
+                pending = null;
+            }
+        }
 
-                String result = WhoisResolver.Whois(server);
-                result = result.Replace("\n", Environment.NewLine);
-                Int32 pos = result.IndexOf("Whois Server:");
-                if (pos > 0)
+        private async void whoisButton_Click(object sender, EventArgs e)
+        {
+            if (IsDisposed || Disposing) return;
+            if (pending != null)
+            {
+                // A second click cancels the running operation.
+                CancelPending();
+                whoisButton.Text = "&Whois";
+                return;
+            }
+            string domain = hostTextbox.Text.Trim();
+            if (domain.Length == 0) return;
+
+            int version = ++requestVersion;
+            var cancellation = new CancellationTokenSource();
+            pending = cancellation;
+            whoisButton.Text = "&Cancel";
+            textBox2.Clear();
+
+            try
+            {
+                string result = await WhoisQuery.LookupAsync(domain, cancellation.Token);
+                if (version == requestVersion && !IsDisposed && !Disposing)
+                    textBox2.Text = result.Replace("\r\n", "\n").Replace("\n", Environment.NewLine);
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+            catch (Exception exception)
+            {
+                if (version == requestVersion && !IsDisposed && !Disposing)
                 {
-                    String newServer = result.Substring(pos + 13, result.IndexOf("\r\n", pos) - pos - 13);
-                    if (server.StartsWith("=")) 
-                        server = this.hostTextbox.Text.Trim();
-
-                    String newResults = WhoisResolver.Whois(server, newServer.Trim());
-                    if (!String.IsNullOrEmpty(newResults)) 
-                        newResults = newResults.Replace("\n", Environment.NewLine); ;
-
-                    result = String.Format("{0}\r\n----------------------Sub Query:{1}--------------------------\r\n{2}", result, newServer, newResults);
+                    Logging.Info("WHOIS query failed.", exception);
+                    textBox2.Text = "WHOIS query failed: " + exception.Message;
                 }
-
-                this.textBox2.Text = result;
+            }
+            finally
+            {
+                if (version == requestVersion)
+                {
+                    pending = null;
+                    if (!IsDisposed && !Disposing)
+                        whoisButton.Text = "&Whois";
+                }
+                cancellation.Dispose();
             }
         }
 
@@ -42,7 +80,9 @@ namespace Terminals.Network.WhoIs
         {
             if (e.KeyCode == Keys.Enter)
             {
-                whoisButton_Click(null, null);
+                e.Handled = true;
+                if (whoisButton.Enabled)
+                    whoisButton.PerformClick();
             }
         }
     }
