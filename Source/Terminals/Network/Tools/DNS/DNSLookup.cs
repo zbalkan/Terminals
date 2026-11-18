@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.NetworkInformation;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using DnsClient;
 
@@ -13,9 +16,28 @@ namespace Terminals.Network
             QueryType.A, QueryType.MX, QueryType.NS, QueryType.SOA
         };
 
+        private CancellationTokenSource pending;
+        private int sessionVersion;
+
         public DNSLookup()
         {
             InitializeComponent();
+        }
+
+        protected override void OnHandleDestroyed(EventArgs e)
+        {
+            CancelLookup();
+            base.OnHandleDestroyed(e);
+        }
+
+        private void CancelLookup()
+        {
+            ++sessionVersion;
+            if (pending != null)
+            {
+                pending.Cancel();
+                pending = null;
+            }
         }
 
         public void ForceDNS(string host)
@@ -58,30 +80,111 @@ namespace Terminals.Network
             return results;
         }
 
-        private void lookupButton_Click(object sender, EventArgs e)
+        internal static async Task<List<DnsLookupResult>> CollectRecordsAsync(
+            Func<QueryType, CancellationToken, Task<IDnsQueryResponse>> query, CancellationToken cancellation)
         {
-            string serverIP = this.serverComboBox.Text.Trim();
-            string domain = this.hostnameTextBox.Text.Trim();
-            if (string.IsNullOrEmpty(domain))
+            if (query == null) throw new ArgumentNullException(nameof(query));
+            var results = new List<DnsLookupResult>();
+            foreach (QueryType type in RecordTypes)
             {
-                MessageBox.Show("Enter a domain name to query.");
+                cancellation.ThrowIfCancellationRequested();
+                try
+                {
+                    IDnsQueryResponse response = await query(type, cancellation);
+                    cancellation.ThrowIfCancellationRequested();
+                    if (response.HasError)
+                        results.Add(new DnsLookupResult(type.ToString(), string.Empty, response.ErrorMessage));
+                    else if (response.Answers.Count == 0)
+                        results.Add(new DnsLookupResult(type.ToString(), string.Empty, "No records"));
+                    else
+                        foreach (var answer in response.Answers)
+                            results.Add(new DnsLookupResult(type.ToString(), answer.ToString(), "OK"));
+                }
+                catch (DnsResponseException ex)
+                {
+                    cancellation.ThrowIfCancellationRequested();
+                    results.Add(new DnsLookupResult(type.ToString(), string.Empty, ex.Message));
+                }
+            }
+            return results;
+        }
+
+        private static List<string> ReadDnsServers()
+        {
+            var servers = new List<string>();
+            foreach (NetworkInterface adapter in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (adapter.OperationalStatus != OperationalStatus.Up)
+                    continue;
+                IPInterfaceProperties properties = adapter.GetIPProperties();
+                foreach (IPAddress address in properties.DnsAddresses)
+                {
+                    string server = address.ToString();
+                    if (!servers.Contains(server))
+                        servers.Add(server);
+                }
+            }
+            return servers;
+        }
+
+        private async void lookupButton_Click(object sender, EventArgs e)
+        {
+            if (IsDisposed || Disposing) return;
+            if (pending != null)
+            {
+                CancelLookup();
+                lookupButton.Text = "Lookup";
                 return;
             }
 
+            string domain = hostnameTextBox.Text.Trim();
+            if (domain.Length == 0)
+            {
+                MessageBox.Show(this, "Enter a domain name to query.");
+                return;
+            }
+            string server = serverComboBox.Text.Trim();
+            IPAddress serverAddress;
+            if (server.Length != 0 && !IPAddress.TryParse(server, out serverAddress))
+            {
+                MessageBox.Show(this, "Enter a valid IPv4 or IPv6 nameserver address.");
+                return;
+            }
+
+            int version = ++sessionVersion;
+            var cancellation = new CancellationTokenSource();
+            pending = cancellation;
+            lookupButton.Text = "Cancel";
+            dataGridView1.DataSource = null;
             try
             {
-                // An empty server uses the operating system DNS configuration.
-                LookupClient client = string.IsNullOrEmpty(serverIP)
+                LookupClient client = server.Length == 0
                     ? new LookupClient()
-                    : new LookupClient(IPAddress.Parse(serverIP), 53);
-
-                this.dataGridView1.DataSource =
-                    CollectRecords(type => client.Query(domain, type));
+                    : new LookupClient(IPAddress.Parse(server), 53);
+                List<DnsLookupResult> results = await CollectRecordsAsync(
+                    (type, token) => client.QueryAsync(domain, type, cancellationToken: token),
+                    cancellation.Token);
+                if (version == sessionVersion && !IsDisposed && !Disposing)
+                    dataGridView1.DataSource = results;
             }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
             catch (Exception exception)
             {
-                Logging.Info("Could not resolve host.", exception);
-                MessageBox.Show("Could not resolve host.");
+                if (version == sessionVersion && !IsDisposed && !Disposing)
+                {
+                    Logging.Info("Could not resolve host.", exception);
+                    MessageBox.Show(this, "Could not resolve host: " + exception.Message);
+                }
+            }
+            finally
+            {
+                if (version == sessionVersion)
+                {
+                    pending = null;
+                    if (!IsDisposed && !Disposing)
+                        lookupButton.Text = "Lookup";
+                }
+                cancellation.Dispose();
             }
         }
 
@@ -89,9 +192,23 @@ namespace Terminals.Network
         {
         }
 
-        private void DNSLookup_Load(object sender, EventArgs e)
+        private async void DNSLookup_Load(object sender, EventArgs e)
         {
-            this.serverComboBox.DataSource = Terminals.Network.DNS.AdapterInfo.DNSServers;
+            int version = sessionVersion;
+            try
+            {
+                List<string> servers = await Task.Run(() => ReadDnsServers());
+                if (version == sessionVersion && !IsDisposed && !Disposing)
+                {
+                    string previous = serverComboBox.Text;
+                    serverComboBox.DataSource = servers;
+                    serverComboBox.Text = previous;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logging.Info("Could not enumerate DNS servers.", ex);
+            }
         }
 
         private void hostnameTextBox_KeyUp(object sender, KeyEventArgs e)
