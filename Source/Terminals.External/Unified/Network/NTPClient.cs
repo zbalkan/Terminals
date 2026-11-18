@@ -633,7 +633,7 @@ namespace Unified.Network.SNTP
 			return GetTime(DefaultTimeServer);
 		}
 
-		public static string DefaultTimeServer="time.nist.gov";
+		public static string DefaultTimeServer="pool.ntp.org";
 		public static Unified.Network.SNTP.NTPClient GetAndSetTime()
 		{
 			return GetAndSetTime(DefaultTimeServer);
