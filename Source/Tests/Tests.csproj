@@ -125,6 +125,7 @@
     <Compile Include="Network\RemoteProtocolStatusCacheTests.cs" />
     <Compile Include="Network\PingAddressSelectionTests.cs" />
     <Compile Include="Network\PingSampleHistoryTests.cs" />
+    <Compile Include="Network\TraceRouteTests.cs" />
     <Compile Include="Network\WmiServiceCommandTests.cs" />
     <Compile Include="Network\DnsLookupTests.cs" />
     <Compile Include="Network\HexBoxProviderTests.cs" />

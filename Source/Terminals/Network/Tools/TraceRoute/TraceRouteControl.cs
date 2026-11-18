@@ -1,6 +1,7 @@
 using System;
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
+using System.Threading;
 using System.Windows.Forms;
 using ZedGraph;
 
@@ -8,70 +9,103 @@ namespace Terminals.Network
 {
     internal partial class TraceRouteControl : UserControl
     {
-        #region Fields
-        
-        private Boolean traceRunning;
-        private TraceRoute tracert;
-        private List<TraceRouteHopData> hopList = new List<TraceRouteHopData>();
-        private readonly MethodInvoker doUpdateForm;
+        private readonly BindingList<TraceRouteHopData> hopList = new BindingList<TraceRouteHopData>();
+        private CancellationTokenSource traceCancellation;
+        private bool traceRunning;
+        private int sessionVersion;
         private GraphPane myPane;
-
-        #endregion
 
         public TraceRouteControl()
         {
             InitializeComponent();
-            this.doUpdateForm = new MethodInvoker(this.UpdateForm);
-
-            this.InitializeGraph();
+            dataGridView1.DataSource = hopList;
+            ButtonStop.Enabled = false;
+            InitializeGraph();
         }
 
-        #region Form Events
+        private void TraceRoute_Load(object sender, EventArgs e) { TextHost.Focus(); }
+        private void TraceRoute_Resize(object sender, EventArgs e) { SetSize(); }
 
-        private void TraceRoute_Load(object sender, EventArgs e)
+        protected override void OnHandleDestroyed(EventArgs e)
         {
-            this.TextHost.Focus();
+            StopTrace(false);
+            base.OnHandleDestroyed(e);
         }
 
-        private void TraceRoute_Resize(object sender, EventArgs e)
+        private async void ButtonStart_Click(object sender, EventArgs e)
         {
-            this.SetSize();
-        }
+            if (traceRunning || IsDisposed || Disposing) return;
+            string host = TextHost.Text.Trim();
+            if (host.Length == 0) { TextHost.Focus(); return; }
 
-        private void ButtonStart_Click(object sender, EventArgs e)
-        {
-            if (String.IsNullOrEmpty(this.TextHost.Text.Trim()))
+            TextHost.Text = host;
+            ButtonStart.Enabled = false;
+            ButtonStop.Enabled = true;
+            TextHost.Enabled = false;
+            traceRunning = true;
+            int version = ++sessionVersion;
+            var cancellation = new CancellationTokenSource();
+            traceCancellation = cancellation;
+            hopList.Clear();
+            UpdateGraph();
+
+            using (var trace = new TraceRoute { Destination = host, ResolveNames = ResolveCheckBox.Checked })
             {
-                this.TextHost.Focus();
-                return;
-            }
-            
-            this.TextHost.Text = this.TextHost.Text.Trim();
-            this.ButtonStart.Enabled = false;
-            this.TextHost.Enabled = false;
-
-            if (!this.traceRunning)
-            {
-                if (this.tracert == null)
+                try
                 {
-                    this.tracert = new TraceRoute();
-                    this.tracert.Completed += new EventHandler(this.Tracert_Completed);
-                    this.tracert.RouteHopFound += new EventHandler<RouteHopFoundEventArgs>(this.Tracert_RouteHopFound);
+                    await trace.RunAsync(cancellation.Token, hop =>
+                    {
+                        if (version != sessionVersion || IsDisposed || Disposing) return;
+                        hopList.Add(hop);
+                        if (dataGridView1.Rows.Count > 0)
+                            dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.Rows.Count - 1;
+                        UpdateGraph();
+                    });
                 }
-
-                tracert.Destination = this.TextHost.Text;
-                tracert.ResolveNames = this.ResolveCheckBox.Checked;
-                tracert.Start();
-                this.traceRunning = true;
+                catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+                catch (Exception exception)
+                {
+                    if (version == sessionVersion && !IsDisposed && !Disposing)
+                    {
+                        Logging.Info("Traceroute failed.", exception);
+                        MessageBox.Show(this, "Unable to trace " + host + ": " + exception.Message,
+                            "Traceroute Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                finally
+                {
+                    if (version == sessionVersion)
+                    {
+                        traceRunning = false;
+                        traceCancellation = null;
+                        if (!IsDisposed && !Disposing) ResetForm();
+                    }
+                    cancellation.Dispose();
+                }
             }
-
-            this.hopList = new List<TraceRouteHopData>();
         }
 
-        private void ButtonStop_Click(object sender, EventArgs e)
+        private void ButtonStop_Click(object sender, EventArgs e) { StopTrace(true); }
+
+        private void StopTrace(bool reset)
         {
-            this.tracert.Cancel();
-            this.ResetForm();
+            ++sessionVersion;
+            traceRunning = false;
+            if (traceCancellation != null)
+            {
+                traceCancellation.Cancel();
+                traceCancellation = null;
+            }
+            if (reset && !IsDisposed && !Disposing) ResetForm();
+        }
+
+        private void ResetForm()
+        {
+            ButtonStart.Enabled = true;
+            ButtonStop.Enabled = false;
+            TextHost.Enabled = true;
+            TextHost.Focus();
+            TextHost.SelectAll();
         }
 
         private void TextHost_KeyPress(object sender, KeyPressEventArgs e)
@@ -79,65 +113,15 @@ namespace Terminals.Network
             if (e.KeyChar == '\r')
             {
                 e.Handled = true;
-                if (!this.traceRunning)
-                    this.ButtonStart.PerformClick();
+                if (!traceRunning) ButtonStart.PerformClick();
             }
         }
 
-        #endregion
-
-        #region Developer made methods
-
-        private void Tracert_Completed(object sender, EventArgs e)
+        public void ForceTrace(string hostName)
         {
-            this.traceRunning = false;
-            this.ResetForm();
+            TextHost.Text = hostName;
+            ButtonStart.PerformClick();
         }
-
-        private void Tracert_RouteHopFound(object sender, RouteHopFoundEventArgs e)
-        {
-            hopList = this.tracert.Hops;
-            this.Invoke(this.doUpdateForm);
-        }
-
-        /// <summary>
-        /// Reset the form control to start properties.
-        /// </summary>
-        private void ResetForm()
-        {
-            this.ButtonStart.Enabled = true;
-            this.TextHost.Enabled = true;
-            this.TextHost.Focus();
-            this.TextHost.SelectAll();
-        }
-
-        public void ForceTrace(String hostName)
-        {
-            this.TextHost.Text = hostName;
-            this.ButtonStart.PerformClick();
-        }
-
-        /// <summary>
-        /// Update form control with new data.
-        /// </summary>
-        private void UpdateForm()
-        {
-            this.dataGridView1.SuspendLayout();
-
-            this.dataGridView1.DataSource = null;
-            this.dataGridView1.DataSource = this.hopList;
-
-            if (this.dataGridView1.Rows.Count > 1)
-                this.dataGridView1.FirstDisplayedScrollingRowIndex = this.dataGridView1.Rows.Count - 1;
-
-            this.dataGridView1.ResumeLayout(true);
-            this.UpdateGraph();
-            Application.DoEvents();
-        }
-
-        #endregion
-
-        #region Graph Control
 
         private void InitializeGraph()
         {
@@ -191,50 +175,29 @@ namespace Terminals.Network
 
         private void UpdateGraph()
         {
-            // Make up some data points based on the Sine function
-            PointPairList list = new PointPairList();
-            PointPairList avgList = new PointPairList();
-            Int32 x = 1;
-            Int64 yMax = 0;
-            Int64 sum = 0;
-
-            foreach (TraceRouteHopData p in hopList)
+            var points = new PointPairList();
+            var averages = new PointPairList();
+            long sum = 0;
+            long max = 8;
+            for (int i = 0; i < hopList.Count; i++)
             {
-                if (p.RoundTripTime > yMax)
-                    yMax = p.RoundTripTime;
-
-                list.Add(x, p.RoundTripTime, p.Address.ToString());
-
-                sum += p.RoundTripTime;
-                avgList.Add(x, (Int32)(sum / x));
-                x++;
+                TraceRouteHopData hop = hopList[i];
+                max = Math.Max(max, hop.RoundTripTime + 8);
+                points.Add(hop.Count, hop.RoundTripTime,
+                    hop.Address == null ? "*" : hop.Address.ToString());
+                sum += hop.RoundTripTime;
+                averages.Add(hop.Count, (double)sum / (i + 1));
             }
-
-            myPane.Title.Text = String.Format("Trace Route results for {0}", this.TextHost.Text);
-
-            // Manually set the axis range
+            myPane.Title.Text = "Trace Route results for " + TextHost.Text;
             myPane.YAxis.Scale.Min = 0;
-            myPane.YAxis.Scale.Max = yMax;
+            myPane.YAxis.Scale.Max = max;
             myPane.XAxis.Scale.Min = 0;
-            myPane.XAxis.Scale.Max = x;
-
+            myPane.XAxis.Scale.Max = Math.Max(1, hopList.Count + 1);
             myPane.CurveList.Clear();
-            LineItem myCurve = myPane.AddCurve(this.TextHost.Text, list, Color.Blue, SymbolType.Diamond);
-            LineItem avgCurve = myPane.AddCurve("Average", avgList, Color.Red, SymbolType.Diamond);
-
-            // Fill the symbols with white
-            myCurve.Symbol.Fill = new Fill(Color.White);
-
-            // Fill the symbols with white
-            myCurve.Symbol.Fill = new Fill(Color.White);
-            // Associate this curve with the Y2 axis
-            myCurve.IsY2Axis = true;
-
-            // Tell ZedGraph to calculate the axis ranges
-            // Note that you MUST call this after enabling IsAutoScrollRange, since AxisChange() sets
-            // up the proper scrolling parameters
+            LineItem curve = myPane.AddCurve(TextHost.Text, points, Color.Blue, SymbolType.Diamond);
+            myPane.AddCurve("Average", averages, Color.Red, SymbolType.Diamond);
+            curve.Symbol.Fill = new Fill(Color.White);
             ZGraph.AxisChange();
-            // Make sure the Graph gets redrawn
             ZGraph.Invalidate();
         }
 
@@ -261,7 +224,7 @@ namespace Terminals.Network
         {
             ZGraph.Location = new Point(10, 10);
             // Leave a small margin around the outside of the control
-            ZGraph.Size = new Size(this.ClientRectangle.Width - 20, this.ClientRectangle.Height - 20);
+            ZGraph.Size = new Size(Math.Max(0, ClientRectangle.Width - 20), Math.Max(0, ClientRectangle.Height - 20));
         }
 
         /// <summary>
@@ -277,7 +240,5 @@ namespace Terminals.Network
 
             //menuStrip.Items.Add(item);
         }
-
-        #endregion
     }
 }
