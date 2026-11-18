@@ -1,11 +1,10 @@
 using System;
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
-using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
-using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using ZedGraph;
 
@@ -13,318 +12,239 @@ namespace Terminals.Network
 {
     internal partial class Ping : UserControl
     {
-        #region Fields
-        
-        private Int32 currentDelay = 0;
-        private Int64 counter;
-        private Boolean pingRunning = false;
-        private Boolean pingReady = false;
-        private System.Threading.Timer timer;
-        private MethodInvoker DoUpdateForm;
-        private AutoResetEvent waiter = new AutoResetEvent(false);
-        private List<PingReplyData> pingList = new List<PingReplyData>();
-        private Object threadLocker = new Object();
+        private readonly byte[] buffer = Encoding.ASCII.GetBytes(new string('.', 32));
+        private readonly PingOptions packetOptions = new PingOptions(50, true);
+        private readonly PingSampleHistory history = new PingSampleHistory(600);
         private GraphPane myPane;
         private System.Net.NetworkInformation.Ping pingSender;
-        private Byte[] buffer;
-        private PingOptions packetOptions;
-        private String hostName = String.Empty;
-        private String destination = String.Empty;
-
-        #endregion
-
-        #region Constructors
+        private System.Windows.Forms.Timer sendTimer;
+        private System.Windows.Forms.Timer graphTimer;
+        private IPAddress destinationAddress;
+        private string destination = string.Empty;
+        private string hostName = string.Empty;
+        private long counter;
+        private int requestVersion;
+        private bool resolving;
+        private bool pingRunning;
+        private bool pingReady;
+        private bool graphDirty;
 
         internal Ping()
         {
             InitializeComponent();
-            this.DoUpdateForm = new MethodInvoker(this.UpdateForm);
-
-            // Create a buffer of 32 bytes of data to be transmitted.
-            this.buffer = Encoding.ASCII.GetBytes(new String('.', 32));
-            // Jump though 50 routing nodes tops, and don't fragment the packet
-            this.packetOptions = new PingOptions(50, true);
-
-            this.InitializeGraph();
+            dataGridView1.DataSource = history.Rows;
+            ButtonStop.Enabled = false;
+            InitializeGraph();
+            Disposed += (sender, args) => StopPing(false);
         }
 
-        #endregion
-
-        #region Form Events
+        internal static IPAddress SelectPingAddress(IPAddress[] addresses)
+        {
+            if (addresses == null || addresses.Length == 0)
+                throw new ArgumentException("DNS returned no addresses.", nameof(addresses));
+            return addresses[0];
+        }
 
         private void Ping_Load(object sender, EventArgs e)
         {
-            this.TextHost.Focus();
+            TextHost.Focus();
         }
 
         private void Ping_Resize(object sender, EventArgs e)
         {
-            this.SetSize();
+            SetSize();
         }
 
-        private void ButtonStart_Click(object sender, EventArgs e)
+        protected override void OnHandleDestroyed(EventArgs e)
         {
-            if (String.IsNullOrEmpty(this.TextHost.Text.Trim()))
+            StopPing(false);
+            base.OnHandleDestroyed(e);
+        }
+
+        internal void ForcePing(string host)
+        {
+            TextHost.Text = host;
+            ButtonStart.PerformClick();
+        }
+
+        private async void ButtonStart_Click(object sender, EventArgs e)
+        {
+            if (IsDisposed || pingRunning || resolving) return;
+
+            string host = TextHost.Text.Trim();
+            if (host.Length == 0)
             {
-                this.TextHost.Focus();
+                TextHost.Focus();
                 return;
             }
-            else
+
+            TextHost.Text = host;
+            ButtonStart.Enabled = false;
+            ButtonStop.Enabled = true;
+            TextHost.Enabled = false;
+            resolving = true;
+            int version = ++requestVersion;
+
+            try
             {
-                this.TextHost.Text = this.TextHost.Text.Trim();
+                // Name resolution must never block WinForms' UI message pump.
+                IPAddress[] addresses = await Dns.GetHostAddressesAsync(host);
+                if (IsDisposed || version != requestVersion) return;
+                destinationAddress = SelectPingAddress(addresses);
+                destination = destinationAddress.ToString();
+
+                IPAddress literal;
+                hostName = IPAddress.TryParse(host, out literal)
+                    ? destination : (await Dns.GetHostEntryAsync(host)).HostName;
+                if (IsDisposed || version != requestVersion) return;
+
+                history.Clear();
+                counter = 1;
+                graphDirty = true;
+                UpdateGraph();
+
+                pingSender = new System.Net.NetworkInformation.Ping();
+                pingRunning = true;
+                pingReady = true;
+                sendTimer = new System.Windows.Forms.Timer { Interval = (int)DelayNumericUpDown.Value };
+                sendTimer.Tick += SendTimer_Tick;
+                graphTimer = new System.Windows.Forms.Timer { Interval = 300 };
+                graphTimer.Tick += GraphTimer_Tick;
+                sendTimer.Start();
+                graphTimer.Start();
+                SendPingAsync(version);
             }
-
-            this.ButtonStart.Enabled = false;
-            this.TextHost.Enabled = false;
-            Application.DoEvents();
-
-            if (!this.pingRunning)
+            catch (Exception exception)
             {
-                IPAddress[] list = null;
-                String msg = String.Empty;
-                try
+                if (!IsDisposed && version == requestVersion)
                 {
-                    list = System.Net.Dns.GetHostAddresses(this.TextHost.Text);
-                    if (list != null)
-                    {
-                        this.destination = list[0].ToString();
-
-                        IPAddress ip;
-                        this.hostName = (IPAddress.TryParse(this.TextHost.Text, out ip)) ? this.destination : Dns.GetHostEntry(this.TextHost.Text).HostName;
-
-                        this.counter = 1;
-                        this.currentDelay = (Int32)this.DelayNumericUpDown.Value;
-                        this.pingList = new List<PingReplyData>();
-
-                        if (this.pingSender == null)
-                        {
-                            this.pingSender = new System.Net.NetworkInformation.Ping();
-                            this.pingSender.PingCompleted += new PingCompletedEventHandler(pingSender_PingCompleted);
-                        }
-
-                        this.pingRunning = true;
-                        this.pingReady = true;
-
-                        // Making sure previous timer is cleared before starting a new one
-                        if (this.timer != null)
-                        {
-                            this.timer.Dispose();
-                            this.timer = null;
-                        }
-
-                        // Start thread timer to start TrySend method for every ms in the specified delay updown box
-                        TimerCallback callback = new TimerCallback(this.TryPing);
-                        timer = new System.Threading.Timer(callback, null, this.currentDelay, this.currentDelay);
-                    }
+                    Logging.Info("Unable to initialize ping.", exception);
+                    MessageBox.Show(this, "Unable to ping " + host + ": " + exception.Message,
+                        "Ping Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
-                catch (System.Net.Sockets.SocketException)
+            }
+            finally
+            {
+                if (!IsDisposed && version == requestVersion)
                 {
-                    msg = String.Format("Could not resolve address: {0}", this.TextHost.Text);
-                    this.pingRunning = false;
+                    resolving = false;
+                    if (!pingRunning)
+                        ResetForm();
                 }
-                catch (ArgumentException)
+            }
+        }
+
+        private void SendTimer_Tick(object sender, EventArgs e)
+        {
+            if (!pingRunning || !pingReady) return;
+            int interval = (int)DelayNumericUpDown.Value;
+            if (sendTimer.Interval != interval)
+                sendTimer.Interval = interval;
+            SendPingAsync(requestVersion);
+        }
+
+        private void GraphTimer_Tick(object sender, EventArgs e)
+        {
+            if (graphDirty)
+                UpdateGraph();
+        }
+
+        private async void SendPingAsync(int version)
+        {
+            if (!pingRunning || !pingReady || IsDisposed || pingSender == null) return;
+            pingReady = false;
+            try
+            {
+                // Await resumes on the WinForms synchronization context.
+                PingReply reply = await pingSender.SendPingAsync(destinationAddress, 4000, buffer, packetOptions);
+                if (!pingRunning || version != requestVersion || IsDisposed) return;
+                PingReplyData sample;
+                if (reply.Status == IPStatus.Success)
                 {
-                    msg = String.Format("Hostname or IP-Address is invalid: {0}", this.TextHost.Text);
-                    this.pingRunning = false;
+                    sample = new PingReplyData(counter++, "Reply from: ", hostName, destination,
+                        reply.Buffer.Length, reply.Options == null ? 0 : reply.Options.Ttl,
+                        reply.RoundtripTime);
                 }
-                catch (Exception ex)
+                else
                 {
-                    msg = String.Format("An error occured trying to ping {0}", this.TextHost.Text);
-                    Logging.Info(msg, ex);
-                    this.pingRunning = false;
+                    string status = reply.Status == IPStatus.TimedOut ? "Request timed out."
+                        : reply.Status == IPStatus.DestinationHostUnreachable
+                            ? "Destination host unreachable." : reply.Status.ToString();
+                    sample = new PingReplyData(counter++, status, string.Empty, string.Empty, 0, 0, 0);
                 }
-                finally
-                {
-                    if (!this.pingRunning)
-                    {
-                        MessageBox.Show(msg, "Ping Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        this.ResetForm();
-                    }
-                }
+
+                history.Add(sample);
+                if (dataGridView1.Rows.Count > 0)
+                    dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.Rows.Count - 1;
+                graphDirty = true;
+            }
+            catch (Exception exception)
+            {
+                if (pingRunning && version == requestVersion && !IsDisposed)
+                    Logging.Info("Ping request failed.", exception);
+            }
+            finally
+            {
+                if (version == requestVersion && pingRunning)
+                    pingReady = true;
             }
         }
 
         private void ButtonStop_Click(object sender, EventArgs e)
         {
-            if (this.pingRunning)
-            {
-                this.pingRunning = false;
-                this.pingReady = false;
-
-                if (this.pingSender != null)
-                {
-                    this.pingSender.PingCompleted -= pingSender_PingCompleted;
-                    this.pingSender.SendAsyncCancel();
-                    this.pingSender.Dispose();
-                    this.pingSender = null;
-                }
-
-                this.timer.Dispose();
-                this.timer = null;
-            }
-
-            this.ResetForm();
+            StopPing(true);
         }
 
-        private void TextHost_KeyPress(object sender, System.Windows.Forms.KeyPressEventArgs e)
+        private void StopPing(bool resetControls)
+        {
+            ++requestVersion;
+            resolving = false;
+            pingRunning = false;
+            pingReady = false;
+            if (sendTimer != null)
+            {
+                sendTimer.Stop();
+                sendTimer.Dispose();
+                sendTimer = null;
+            }
+            if (graphTimer != null)
+            {
+                graphTimer.Stop();
+                graphTimer.Dispose();
+                graphTimer = null;
+            }
+            if (pingSender != null)
+            {
+                pingSender.Dispose();
+                pingSender = null;
+            }
+            if (resetControls && !IsDisposed && !Disposing)
+            {
+                if (graphDirty) UpdateGraph();
+                ResetForm();
+            }
+        }
+
+        private void TextHost_KeyPress(object sender, KeyPressEventArgs e)
         {
             if (e.KeyChar == '\r')
             {
                 e.Handled = true;
-                if (!this.pingRunning)
-                    this.ButtonStart.PerformClick();
+                if (!pingRunning && !resolving)
+                    ButtonStart.PerformClick();
             }
         }
 
-        #endregion
-
-        #region Developer made methods
-
-        internal void ForcePing(String hostName)
-        {
-            this.TextHost.Text = hostName;
-            this.ButtonStart.PerformClick();
-        }
-
-        private void TryPing(Object state)
-        {
-            if (this.pingRunning && this.pingReady)
-            {
-                this.SendPing();
-            }
-        }
-
-        private void SendPing()
-        {
-            try
-            {
-                this.pingSender.SendAsync(this.destination, 4000, this.buffer, this.packetOptions, this.waiter);
-                this.waiter.WaitOne(0);
-
-                lock (this.timer)
-                {
-                    if (this.DelayNumericUpDown.Value != this.currentDelay)
-                    {
-                        this.currentDelay = (Int32)this.DelayNumericUpDown.Value;
-                        this.timer.Change(this.currentDelay, this.currentDelay);
-                    }
-                }
-            }
-            catch (InvalidOperationException)
-            {
-                // Error: An asynchronous call is already in progress
-                // Overflow of SendAsync calls. Just let it go, or does someone know how to handle this better?
-            }
-            catch (Exception ex)
-            {
-                Logging.Info(String.Empty, ex);
-            }
-        }
-
-        private void pingSender_PingCompleted(object sender, PingCompletedEventArgs e)
-        {
-            try
-            {
-                if (Thread.CurrentThread.Name == null)
-                    Thread.CurrentThread.Name = "Ping Completed";
-
-                ((AutoResetEvent)e.UserState).Set();
-
-                if (e.Reply.Status == IPStatus.Success)
-                {
-                    lock (this.threadLocker)
-                    {
-                        PingReplyData pd = new PingReplyData(
-                            this.counter++,
-                            "Reply from: ",
-                            this.hostName,
-                            this.destination,
-                            e.Reply.Buffer.Length,
-                            e.Reply.Options.Ttl,
-                            e.Reply.RoundtripTime);
-
-                        lock (this.pingList)
-                        {
-                            this.pingList.Add(pd);
-                        }
-
-                        this.Invoke(this.DoUpdateForm);
-                        this.pingReady = true;
-                    }
-                }
-                else if (!e.Cancelled)
-                {
-                    String status = String.Empty;
-                    switch (e.Reply.Status)
-                    {
-                        case IPStatus.TimedOut:
-                            status = "Request timed out.";
-                            break;
-
-                        case IPStatus.DestinationHostUnreachable:
-                            status = "Destination host unreachable.";
-                            break;
-                    }
-
-                    lock (this.threadLocker)
-                    {
-                        this.pingSender.SendAsyncCancel();
-                        PingReplyData pd = new PingReplyData(
-                            this.counter++, status, String.Empty, String.Empty, 0, 0, 0);
-
-                        lock (this.pingList)
-                        {
-                            this.pingList.Add(pd);
-                        }
-
-                        this.Invoke(this.DoUpdateForm);
-                        this.pingReady = true;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logging.Info("Error on Ping.PingCompleted", ex);
-            }
-            finally
-            {
-                ((AutoResetEvent)e.UserState).Set();
-            }
-        }
-
-        /// <summary>
-        /// Update form control with new data.
-        /// </summary>
-        private void UpdateForm()
-        {
-            this.dataGridView1.SuspendLayout();
-
-            this.dataGridView1.DataSource = null;
-            this.dataGridView1.DataSource = this.pingList;
-
-            if (this.dataGridView1.Rows.Count > 1)
-                this.dataGridView1.FirstDisplayedScrollingRowIndex = this.dataGridView1.Rows.Count - 1;
-
-            this.dataGridView1.ResumeLayout(true);
-            this.UpdateGraph();
-            Application.DoEvents();
-        }
-
-        /// <summary>
-        /// Reset the form control to start properties.
-        /// </summary>
         private void ResetForm()
         {
-            this.ButtonStart.Enabled = true;
-            this.TextHost.Enabled = true;
-            this.TextHost.Focus();
-            this.TextHost.SelectAll();
+            ButtonStart.Enabled = true;
+            ButtonStop.Enabled = false;
+            TextHost.Enabled = true;
+            TextHost.Focus();
+            TextHost.SelectAll();
         }
 
-        #endregion
-
-        #region Graph Control
-
+        // Graph rendering is limited to the recent, bounded history and coalesced at 300 ms.
         private void InitializeGraph()
         {
             myPane = this.ZGraph.GraphPane;
@@ -375,57 +295,41 @@ namespace Terminals.Network
 
         private void UpdateGraph()
         {
-            // Make up some data points based on the Sine function
+            graphDirty = false;
             var roundTripList = new PointPairList();
             var avgList = new PointPairList();
-            const Int32 topPad = 8;
-            Int32 x = 0;
-            Int64 yMax = topPad;
-            Int64 sum = 0;
-            
+            long total = 0;
+            long maximum = 8;
 
-            foreach (PingReplyData p in pingList)
+            for (int i = 0; i < history.Rows.Count; i++)
             {
-                if (p.RoundTripTime > yMax)
-                    yMax = p.RoundTripTime + topPad;
-
-                roundTripList.Add(x, p.RoundTripTime);
-
-                sum += p.RoundTripTime;
-                avgList.Add(x, (Int32)(sum / (x + 1)));
-                x++;
+                PingReplyData sample = history.Rows[i];
+                total += sample.RoundTripTime;
+                roundTripList.Add(sample.Count, sample.RoundTripTime);
+                avgList.Add(sample.Count, (double)total / (i + 1));
+                maximum = Math.Max(maximum, sample.RoundTripTime + 8);
             }
 
-            myPane.Title.Text = String.Format("Ping results for {0}", this.TextHost.Text);
-
-            // Manually set the axis range
+            myPane.Title.Text = "Ping results for " + TextHost.Text;
             myPane.YAxis.Scale.Min = 0;
-            myPane.YAxis.Scale.Max = yMax;
-            myPane.XAxis.Scale.Min = 0;
-            myPane.XAxis.Scale.Max = x;
+            myPane.YAxis.Scale.Max = maximum;
+            myPane.XAxis.Scale.Min = history.Rows.Count == 0 ? 0 : history.Rows[0].Count;
+            myPane.XAxis.Scale.Max = history.Rows.Count == 0 ? 1 :
+                history.Rows[history.Rows.Count - 1].Count + 1;
 
             myPane.CurveList.Clear();
-            LineItem myCurve = myPane.AddCurve(this.TextHost.Text, roundTripList, Color.Blue, SymbolType.Circle);
+            LineItem line = myPane.AddCurve(TextHost.Text, roundTripList, Color.Blue, SymbolType.Circle);
             myPane.AddCurve("Average", avgList, Color.Red, SymbolType.Square);
-
-            // Fill the symbols with white
-            myCurve.Symbol.Fill = new Fill(Color.White);
-            // Associate this curve with the Y2 axis
-            //myCurve.IsY2Axis = true;
-
-            // Tell ZedGraph to calculate the axis ranges
-            // Note that you MUST call this after enabling IsAutoScrollRange, since AxisChange() sets
-            // up the proper scrolling parameters
+            line.Symbol.Fill = new Fill(Color.White);
             ZGraph.AxisChange();
-            // Make sure the Graph gets redrawn
             ZGraph.Invalidate();
         }
-       
+
         private void SetSize()
         {
             ZGraph.Location = new Point(10, 10);
             // Leave a small margin around the outside of the control
-            ZGraph.Size = new Size(this.ClientRectangle.Width - 20, this.ClientRectangle.Height - 20);
+            ZGraph.Size = new Size(Math.Max(0, ClientRectangle.Width - 20), Math.Max(0, ClientRectangle.Height - 20));
         }
 
         /// <summary>
@@ -448,6 +352,33 @@ namespace Terminals.Network
             return String.Empty;
         }
 
-        #endregion
     }
- }
+
+    // Keeps the bound grid and chart bounded without rebinding the grid per reply.
+    internal sealed class PingSampleHistory
+    {
+        private readonly int capacity;
+        internal BindingList<PingReplyData> Rows { get; } = new BindingList<PingReplyData>();
+
+        internal PingSampleHistory(int capacity)
+        {
+            if (capacity < 1)
+                throw new ArgumentOutOfRangeException(nameof(capacity));
+            this.capacity = capacity;
+        }
+
+        internal void Add(PingReplyData sample)
+        {
+            if (sample == null)
+                throw new ArgumentNullException(nameof(sample));
+            if (Rows.Count == capacity)
+                Rows.RemoveAt(0);
+            Rows.Add(sample);
+        }
+
+        internal void Clear()
+        {
+            Rows.Clear();
+        }
+    }
+}
