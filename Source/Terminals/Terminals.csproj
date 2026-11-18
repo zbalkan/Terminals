@@ -896,6 +896,7 @@
     <Compile Include="Network\Servers\ServerComboBox.Designer.cs">
       <DependentUpon>ServerComboBox.cs</DependentUpon>
     </Compile>
+    <Compile Include="Network\Tools\NTP\NtpQuery.cs" />
     <Compile Include="Network\Tools\NTP\NetworkTime.cs">
       <SubType>UserControl</SubType>
     </Compile>
