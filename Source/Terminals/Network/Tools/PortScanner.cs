@@ -12,11 +12,17 @@ namespace Terminals.Network
         private CancellationTokenSource scanCancellation;
         private readonly List<ScanResult> results = new List<ScanResult>();
         private int pending;
+        private bool closing;
 
         public PortScanner()
         {
             InitializeComponent();
             StopButton.Enabled = false;
+            Disposed += (sender, args) =>
+            {
+                closing = true;
+                if (scanCancellation != null) scanCancellation.Cancel();
+            };
         }
 
         private static bool TryOctet(string text, out int value)
@@ -55,6 +61,7 @@ namespace Terminals.Network
 
         private async void StartButton_Click(object sender, EventArgs e)
         {
+            if (closing || scanCancellation != null) return;
             List<IPAddress> addresses;
             int firstPort, lastPort;
             if (!TryGetParameters(out addresses, out firstPort, out lastPort))
@@ -63,20 +70,26 @@ namespace Terminals.Network
                 return;
             }
 
-            scanCancellation = new CancellationTokenSource();
-            CancellationToken token = scanCancellation.Token;
+            var cancellation = new CancellationTokenSource();
+            scanCancellation = cancellation;
+            CancellationToken token = cancellation.Token;
             StartButton.Enabled = false;
             StopButton.Enabled = true;
             results.Clear();
             pending = addresses.Count * (lastPort - firstPort + 1);
-            UpdateConnections();
+            InitializeResults();
+            UpdatePending();
 
             var progress = new Progress<ScanResult>(result =>
             {
-                if (IsDisposed) return;
-                if (result != null) results.Add(result);
-                pending--;
-                UpdateConnections();
+                if (closing || IsDisposed || !ReferenceEquals(scanCancellation, cancellation)) return;
+                if (result != null)
+                {
+                    results.Add(result);
+                    resultsGridView.Rows.Add(result.RemoteEndPoint, result.State);
+                }
+                if (pending > 0) pending--;
+                UpdatePending();
             });
             var tasks = new List<Task>();
             using (var throttle = new SemaphoreSlim(32))
@@ -97,24 +110,21 @@ namespace Terminals.Network
                 catch (OperationCanceledException)
                 {
                 }
-                try
+                finally
                 {
-                    await Task.WhenAll(tasks);
-                }
-                catch (OperationCanceledException)
-                {
+                    try { await Task.WhenAll(tasks); }
+                    catch (Exception exception) { Logging.Info("TCP scan cleanup failed.", exception); }
                 }
             }
-            if (!IsDisposed)
+            if (!closing && !IsDisposed)
             {
                 StartButton.Enabled = true;
                 StopButton.Enabled = false;
-                if (token.IsCancellationRequested)
-                    pending = 0;
-                UpdateConnections();
+                pending = 0;
+                UpdatePending();
             }
-            scanCancellation.Dispose();
-            scanCancellation = null;
+            if (ReferenceEquals(scanCancellation, cancellation)) scanCancellation = null;
+            cancellation.Dispose();
         }
 
         private static async Task ScanOneAsync(IPAddress address, int port, SemaphoreSlim throttle,
@@ -161,7 +171,7 @@ namespace Terminals.Network
             }
         }
 
-        private void UpdateConnections()
+        private void InitializeResults()
         {
             resultsGridView.Rows.Clear();
             if (resultsGridView.Columns.Count == 0)
@@ -169,14 +179,16 @@ namespace Terminals.Network
                 resultsGridView.Columns.Add("EndPoint", "End Point");
                 resultsGridView.Columns.Add("State", "State");
             }
-            foreach (ScanResult result in results)
-                resultsGridView.Rows.Add(result.RemoteEndPoint, result.State);
+        }
+
+        private void UpdatePending()
+        {
             ScanResultsLabel.Text = string.Format("Outstanding requests: {0}", pending);
         }
 
         private void StopButton_Click(object sender, EventArgs e)
         {
-            if (scanCancellation != null)
+            if (scanCancellation != null && !scanCancellation.IsCancellationRequested)
                 scanCancellation.Cancel();
             StopButton.Enabled = false;
         }

@@ -15,13 +15,27 @@ namespace Terminals
         private LibPcapLiveDeviceList devices;
         private LibPcapLiveDevice device;
         private CaptureFileWriterDevice writer;
-        private MethodInvoker updater;
-
-        private const string DumpFile = @"c:\Terminals.dump";
+        private readonly System.Windows.Forms.Timer updateTimer = new System.Windows.Forms.Timer { Interval = 200 };
+        private const int MaxPackets = 2000;
+        private string dumpFile;
+        private volatile bool stopRequested;
+        private volatile bool captureStarting;
+        private volatile bool captureActive;
+        private volatile bool closing;
+        private int stopQueued;
 
         public PacketCapture()
         {
             InitializeComponent();
+            updateTimer.Tick += (sender, args) => UpdateUI();
+            Disposed += (sender, args) =>
+            {
+                closing = true;
+                stopRequested = true;
+                updateTimer.Stop();
+                updateTimer.Dispose();
+                if (captureActive) QueueStop(device, false);
+            };
         }
 
         private void PacketCapture_Load(object sender, EventArgs e)
@@ -34,7 +48,6 @@ namespace Terminals
                 AmberPicture.Visible = true;
                 GreenPicture.Visible = false;
                 RedPicture.Visible = false;
-                updater = UpdateUI;
                 devices = LibPcapLiveDeviceList.Instance;
                 comboBox1.Items.Clear();
                 foreach (LibPcapLiveDevice captureDevice in devices)
@@ -64,6 +77,7 @@ namespace Terminals
 
         private void CaptureButton_Click(object sender, EventArgs e)
         {
+            if (captureStarting || captureActive || closing) return;
             if (device == null)
             {
                 MessageBox.Show("Select a packet capture device.");
@@ -74,13 +88,27 @@ namespace Terminals
             bool promiscuous = promiscuousCheckbox.Checked;
             bool saveToFile = DumpToFileCheckbox.Checked;
             string filter = FilterTextBox.Text;
+            string selectedDumpFile = null;
+            if (saveToFile)
+            {
+                using (var dialog = new SaveFileDialog { Filter = "Packet captures (*.pcap)|*.pcap|All files (*.*)|*.*", DefaultExt = "pcap", AddExtension = true, OverwritePrompt = true })
+                {
+                    if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                    selectedDumpFile = dialog.FileName;
+                }
+            }
+            dumpFile = selectedDumpFile;
+            stopRequested = false;
+            System.Threading.Interlocked.Exchange(ref stopQueued, 0);
+            captureStarting = true;
+            updateTimer.Start();
 
             DumpToFileCheckbox.Enabled = false;
             promiscuousCheckbox.Enabled = false;
             comboBox1.Enabled = false;
             CaptureButton.Enabled = false;
-            // Enable stop only after the worker has successfully opened the device.
-            StopCaptureButton.Enabled = false;
+            // Permit cancellation while opening the capture device.
+            StopCaptureButton.Enabled = true;
             AmberPicture.Visible = false;
             GreenPicture.Visible = true;
             RedPicture.Visible = false;
@@ -101,18 +129,26 @@ namespace Terminals
                         selectedDevice.Filter = filter;
                     if (saveToFile)
                     {
-                        writer = new CaptureFileWriterDevice(DumpFile);
+                        writer = new CaptureFileWriterDevice(selectedDumpFile);
                         writer.Open(new DeviceConfiguration());
                     }
                     selectedDevice.OnPacketArrival += OnPacketArrival;
                     selectedDevice.StartCapture();
-                    if (!IsDisposed && IsHandleCreated)
-                        BeginInvoke(new MethodInvoker(() => StopCaptureButton.Enabled = true));
+                    captureActive = true;
+                    captureStarting = false;
+                    if (stopRequested || closing)
+                        QueueStop(selectedDevice, saveToFile && !closing);
                 }
                 catch (Exception exception)
                 {
                     Logging.Info("Failed to start packet capture.", exception);
-                    try { selectedDevice.Close(); } catch (Exception) { }
+                    captureStarting = false;
+                    captureActive = false;
+                    try { selectedDevice.OnPacketArrival -= OnPacketArrival; selectedDevice.Close(); } catch (Exception) { }
+                    lock (packets)
+                    {
+                        if (writer != null) { try { writer.Close(); } catch (Exception) { } writer = null; }
+                    }
                     if (!IsDisposed && IsHandleCreated)
                         BeginInvoke(new MethodInvoker(() =>
                         {
@@ -129,34 +165,59 @@ namespace Terminals
             var entry = new CapturedPacket(raw);
             lock (packets)
             {
+                if (closing || stopRequested) return;
                 packets.Add(entry);
                 pendingPackets.Add(entry);
                 if (writer != null)
-                    writer.Write(raw);
+                {
+                    try { writer.Write(raw); }
+                    catch (Exception exception) { Logging.Info("Unable to write captured packet.", exception); }
+                }
             }
-            if (!IsDisposed && IsHandleCreated)
-                BeginInvoke(updater);
         }
 
         private void UpdateUI()
         {
             lock (packets)
             {
+                if (closing || IsDisposed) return;
+                listBox1.BeginUpdate();
+                try
+                {
                 foreach (CapturedPacket packet in pendingPackets)
                     listBox1.Items.Add(packet);
                 pendingPackets.Clear();
+                int excess = packets.Count - MaxPackets;
+                if (excess > 0)
+                {
+                    packets.RemoveRange(0, excess);
+                    for (int i = 0; i < excess && listBox1.Items.Count > 0; i++)
+                        listBox1.Items.RemoveAt(0);
+                }
+                }
+                finally { listBox1.EndUpdate(); }
             }
         }
 
         private void StopCaptureButton_Click(object sender, EventArgs e)
         {
+            stopRequested = true;
+            if (captureStarting)
+            {
+                StopCaptureButton.Enabled = false;
+                return;
+            }
             CaptureButton.Enabled = false;
             StopCaptureButton.Enabled = false;
             RedPicture.Visible = true;
             GreenPicture.Visible = false;
             AmberPicture.Visible = false;
-            var selectedDevice = device;
-            bool saved = DumpToFileCheckbox.Checked;
+            QueueStop(device, DumpToFileCheckbox.Checked);
+        }
+
+        private void QueueStop(LibPcapLiveDevice selectedDevice, bool saved)
+        {
+            if (selectedDevice == null || System.Threading.Interlocked.Exchange(ref stopQueued, 1) != 0) return;
             System.Threading.ThreadPool.QueueUserWorkItem(state =>
             {
                 try
@@ -179,12 +240,25 @@ namespace Terminals
                 }
                 finally
                 {
-                    if (!IsDisposed && IsHandleCreated)
+                    try { selectedDevice.OnPacketArrival -= OnPacketArrival; selectedDevice.Close(); }
+                    catch (Exception exception) { Logging.Info("Unable to close packet capture device.", exception); }
+                    lock (packets)
+                    {
+                        if (writer != null)
+                        {
+                            try { writer.Close(); }
+                            catch (Exception exception) { Logging.Info("Unable to close packet capture file.", exception); }
+                            writer = null;
+                        }
+                    }
+                    captureActive = false;
+                    captureStarting = false;
+                    if (!closing && !IsDisposed && IsHandleCreated)
                         BeginInvoke(new MethodInvoker(() =>
                         {
                             CaptureStopped();
-                            if (saved)
-                                ExternalLinks.OpenFileInNotepad(DumpFile);
+                            if (saved && dumpFile != null)
+                                ExternalLinks.OpenFileInNotepad(dumpFile);
                         }));
                 }
             });
@@ -192,6 +266,10 @@ namespace Terminals
 
         private void CaptureStopped()
         {
+            captureStarting = false;
+            captureActive = false;
+            updateTimer.Stop();
+            UpdateUI();
             CaptureButton.Enabled = true;
             StopCaptureButton.Enabled = false;
             RedPicture.Visible = false;
