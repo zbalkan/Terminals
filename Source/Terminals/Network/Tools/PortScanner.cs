@@ -72,90 +72,48 @@ namespace Terminals.Network
             string scope = string.Format("{0}–{1}, TCP ports {2}–{3} ({4} probes)", addresses[0], addresses[addresses.Count - 1], firstPort, lastPort, addresses.Count * (lastPort - firstPort + 1));
             if (MessageBox.Show(this, "Start TCP connect scan of " + scope + "?", "Confirm scan scope", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
-            // The session guard is set before any asynchronous work begins.
             var cancellation = new CancellationTokenSource();
             scanCancellation = cancellation;
-            CancellationToken token = cancellation.Token;
-            StartButton.Enabled = false;
-            StopButton.Enabled = true;
-            pending = addresses.Count * (lastPort - firstPort + 1);
-            InitializeResults();
-            UpdatePending();
-
-            var progress = new Progress<ScanResult>(result =>
-            {
-                if (closing || IsDisposed || Disposing || !ReferenceEquals(scanCancellation, cancellation)) return;
-                if (result != null)
-                {
-                    resultsGridView.Rows.Add(result.RemoteEndPoint, result.State);
-                }
-                if (pending > 0) pending--;
-                UpdatePending();
-            });
-            var tasks = new List<Task>();
-
-            using (var throttle = new SemaphoreSlim(32))
-            {
-                try
-                {
-                    foreach (IPAddress address in addresses)
-                    {
-                        for (int port = firstPort; port <= lastPort; port++)
-                        {
-                            await throttle.WaitAsync(token);
-                            int targetPort = port;
-                            IPAddress targetAddress = address;
-                            tasks.Add(ScanOneAsync(targetAddress, targetPort, throttle, token, progress));
-
-                        }
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                }
-                catch (Exception exception)
-                {
-                    Logging.Info("Failed scheduling TCP scan.", exception);
-                }
-                finally
-                {
-                    try { await Task.WhenAll(tasks); }
-                    catch (Exception exception) { Logging.Info("TCP scan cleanup failed.", exception); }
-                }
-            }
-            if (!closing && !IsDisposed && !Disposing)
-            {
-                StartButton.Enabled = true;
-                StopButton.Enabled = false;
-                pending = 0;
-                UpdatePending();
-            }
-            if (ReferenceEquals(scanCancellation, cancellation)) scanCancellation = null;
-            cancellation.Dispose();
-        }
-
-        private static async Task ScanOneAsync(IPAddress address, int port, SemaphoreSlim throttle,
-            CancellationToken token, IProgress<ScanResult> progress)
-        {
             try
             {
-                bool open = await TcpConnectScanner.IsOpenAsync(
-                    address, port, TimeSpan.FromMilliseconds(1000), token);
-                progress.Report(open
-                    ? new ScanResult { RemoteEndPoint = new IPEndPoint(address, port), State = "Open" }
-                    : null);
+                StartButton.Enabled = false;
+                StopButton.Enabled = true;
+                pending = addresses.Count * (lastPort - firstPort + 1);
+                InitializeResults();
+                UpdatePending();
+
+                await PortScanSession.RunAsync(addresses, firstPort, lastPort,
+                    (address, port, token) => TcpConnectScanner.IsOpenAsync(
+                        address, port, TimeSpan.FromMilliseconds(1000), token),
+                    result =>
+                    {
+                        if (closing || IsDisposed || Disposing ||
+                            !ReferenceEquals(scanCancellation, cancellation)) return;
+                        if (result != null)
+                            resultsGridView.Rows.Add(result.RemoteEndPoint, result.State);
+                        if (pending > 0) pending--;
+                        UpdatePending();
+                    }, cancellation.Token);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
             {
             }
             catch (Exception exception)
             {
-                Logging.Info("TCP connect scan failed.", exception);
-                progress.Report(null);
+                Logging.Info("TCP scan failed.", exception);
             }
             finally
             {
-                throttle.Release();
+                if (ReferenceEquals(scanCancellation, cancellation))
+                    scanCancellation = null;
+                cancellation.Dispose();
+                if (!closing && !IsDisposed && !Disposing)
+                {
+                    pending = 0;
+                    UpdatePending();
+                    StopButton.Enabled = false;
+                    StartButton.Enabled = true;
+                }
             }
         }
 
@@ -247,4 +205,82 @@ namespace Terminals.Network
         public IPEndPoint RemoteEndPoint { get; set; }
         public string State { get; set; }
     }
+
+    // Called from the UI context; result delivery completes before the session task.
+    internal static class PortScanSession
+    {
+        internal static async Task RunAsync(IReadOnlyList<IPAddress> addresses,
+            int firstPort, int lastPort,
+            Func<IPAddress, int, CancellationToken, Task<bool>> probe,
+            Action<ScanResult> report, CancellationToken token)
+        {
+            if (addresses == null) throw new ArgumentNullException(nameof(addresses));
+            if (probe == null) throw new ArgumentNullException(nameof(probe));
+            if (report == null) throw new ArgumentNullException(nameof(report));
+            if (firstPort < 1 || lastPort > 65535 || firstPort > lastPort)
+                throw new ArgumentOutOfRangeException(nameof(firstPort));
+            if ((long)addresses.Count * (lastPort - firstPort + 1) > 4096)
+                throw new ArgumentOutOfRangeException(nameof(addresses));
+
+            var tasks = new List<Task>();
+            using (var throttle = new SemaphoreSlim(32))
+            {
+                try
+                {
+                    foreach (IPAddress address in addresses)
+                    {
+                        for (int port = firstPort; port <= lastPort; port++)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            await throttle.WaitAsync(token);
+                            tasks.Add(ProbeAsync(address, port, probe, report, throttle, token));
+                        }
+                    }
+                }
+                finally
+                {
+                    await Task.WhenAll(tasks);
+                }
+            }
+            token.ThrowIfCancellationRequested();
+        }
+
+        private static async Task ProbeAsync(IPAddress address, int port,
+            Func<IPAddress, int, CancellationToken, Task<bool>> probe,
+            Action<ScanResult> report, SemaphoreSlim throttle, CancellationToken token)
+        {
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                bool open;
+                try
+                {
+                    open = await probe(address, port, token);
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception exception)
+                {
+                    Logging.Info("TCP connect scan failed.", exception);
+                    open = false;
+                }
+                token.ThrowIfCancellationRequested();
+                report(open ? new ScanResult
+                {
+                    RemoteEndPoint = new IPEndPoint(address, port),
+                    State = "Open"
+                } : null);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+            }
+            finally
+            {
+                throttle.Release();
+            }
+        }
+    }
+
 }

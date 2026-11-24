@@ -135,6 +135,7 @@
     <Compile Include="Network\HexBoxProviderTests.cs" />
     <Compile Include="Network\RasNativeTests.cs" />
     <Compile Include="Network\TcpConnectScannerTests.cs" />
+    <Compile Include="Network\PortScanSessionTests.cs" />
     <Compile Include="Network\ServiceDetectorTests.cs" />
     <Compile Include="Passwords\PasswordUpgradesTests.cs" />
     <Compile Include="FilePersisted\SearchEngineTest.cs" />
