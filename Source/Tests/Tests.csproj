@@ -131,6 +131,7 @@
     <Compile Include="Network\WmiServiceCommandTests.cs" />
     <Compile Include="Network\DnsLookupTests.cs" />
     <Compile Include="Network\PacketPreviewBufferTests.cs" />
+    <Compile Include="Network\CaptureSessionLifecycleTests.cs" />
     <Compile Include="Network\LocalNetworkSnapshotTests.cs" />
     <Compile Include="Network\HexBoxProviderTests.cs" />
     <Compile Include="Network\RasNativeTests.cs" />

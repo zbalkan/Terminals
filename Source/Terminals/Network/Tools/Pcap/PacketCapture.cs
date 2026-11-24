@@ -6,7 +6,6 @@ using System.Threading;
 using System.Windows.Forms;
 using SharpPcap;
 using SharpPcap.LibPcap;
-using Terminals.Services;
 
 namespace Terminals
 {
@@ -21,18 +20,24 @@ namespace Terminals
         private LibPcapLiveDevice device;
         private LibPcapLiveDevice activeDevice;
         private CaptureFileWriterDevice writer;
-        private volatile bool stopRequested;
-        private volatile bool captureStarted;
-        private int stopScheduled;
+        private CaptureSessionLifecycle lifecycle;
+        private Exception startFailure;
+        private volatile bool cleanupComplete;
         private int writerErrorReported;
         private bool sessionActive;
         private bool writeFailed;
+        private bool cleanupFailed;
+        private bool nativeStartAttempted;
 
         public PacketCapture()
         {
             InitializeComponent();
             previewTimer = new System.Windows.Forms.Timer { Interval = 200 };
-            previewTimer.Tick += (sender, args) => DrainPreviews();
+            previewTimer.Tick += (sender, args) =>
+            {
+                DrainPreviews();
+                if (cleanupComplete && sessionActive) CaptureStopped();
+            };
             Disposed += (sender, args) =>
             {
                 previewTimer.Stop();
@@ -87,7 +92,7 @@ namespace Terminals
 
         private void CaptureButton_Click(object sender, EventArgs e)
         {
-            if (sessionActive || IsDisposed || Disposing) return;
+            if (sessionActive || cleanupFailed || IsDisposed || Disposing) return;
             if (device == null)
             {
                 MessageBox.Show("Select a packet capture device.");
@@ -117,10 +122,12 @@ namespace Terminals
             bool promiscuous = promiscuousCheckbox.Checked;
             string filter = FilterTextBox.Text;
             sessionActive = true;
-            stopRequested = false;
-            captureStarted = false;
+            cleanupComplete = false;
+            startFailure = null;
             writeFailed = false;
-            Interlocked.Exchange(ref stopScheduled, 0);
+            cleanupFailed = false;
+            nativeStartAttempted = false;
+            lifecycle = new CaptureSessionLifecycle(QueueStop);
             Interlocked.Exchange(ref writerErrorReported, 0);
             activeDevice = selectedDevice;
             previews.Clear();
@@ -142,16 +149,14 @@ namespace Terminals
             try
             {
                 selectedDevice.Open(promiscuous ? DeviceModes.Promiscuous : DeviceModes.None, 1000);
-                if (stopRequested)
+                if (lifecycle.StopRequested)
                 {
-                    QueueStop();
                     return;
                 }
                 if (!string.IsNullOrWhiteSpace(filter))
                     selectedDevice.Filter = filter;
-                if (stopRequested)
+                if (lifecycle.StopRequested)
                 {
-                    QueueStop();
                     return;
                 }
                 if (dumpPath != null)
@@ -161,31 +166,30 @@ namespace Terminals
                         writer = fileWriter;
                     fileWriter.Open(new DeviceConfiguration());
                 }
-                if (stopRequested)
+                if (lifecycle.StopRequested)
                 {
-                    QueueStop();
                     return;
                 }
                 selectedDevice.OnPacketArrival += OnPacketArrival;
+                nativeStartAttempted = true;
                 selectedDevice.StartCapture();
-                captureStarted = true;
-                if (stopRequested)
-                    QueueStop();
+
             }
             catch (Exception exception)
             {
                 Logging.Info("Failed to start packet capture.", exception);
-                PostToUi(() => MessageBox.Show(this,
-                    "Unable to start capture: " + exception.Message,
-                    "Packet Capture", MessageBoxButtons.OK, MessageBoxIcon.Error));
-                stopRequested = true;
-                QueueStop();
+                startFailure = exception;
+                lifecycle.RequestStop();
+            }
+            finally
+            {
+                lifecycle.StartupFinished();
             }
         }
 
         private void OnPacketArrival(object sender, SharpPcap.PacketCapture capture)
         {
-            if (stopRequested) return;
+            if (lifecycle.StopRequested) return;
             try
             {
                 RawCapture raw = capture.GetPacket();
@@ -245,15 +249,11 @@ namespace Terminals
         private void RequestStop()
         {
             if (!sessionActive) return;
-            stopRequested = true;
-            // Startup owns the device until StartCapture returns; it will arrange cleanup.
-            if (captureStarted)
-                QueueStop();
+            lifecycle.RequestStop();
         }
 
         private void QueueStop()
         {
-            if (Interlocked.Exchange(ref stopScheduled, 1) != 0) return;
             ThreadPool.QueueUserWorkItem(state => StopCaptureWorker());
         }
 
@@ -264,17 +264,16 @@ namespace Terminals
             {
                 if (selectedDevice != null)
                 {
-                    if (captureStarted)
-                    {
-                        try { selectedDevice.StopCapture(); }
-                        catch (Exception exception) { Logging.Info("Failed stopping packet capture.", exception); }
-                    }
-                    selectedDevice.OnPacketArrival -= OnPacketArrival;
-                    selectedDevice.Close();
+                    // Attempt stop even when native StartCapture failed after partial initialization.
+                    try { if (nativeStartAttempted) selectedDevice.StopCapture(); }
+                    catch (Exception exception) { cleanupFailed = true; Logging.Info("Failed stopping packet capture.", exception); }
+                    try { selectedDevice.OnPacketArrival -= OnPacketArrival; }
+                    finally { selectedDevice.Close(); }
                 }
             }
             catch (Exception exception)
             {
+                cleanupFailed = true;
                 Logging.Info("Failed closing packet capture device.", exception);
             }
             finally
@@ -284,34 +283,28 @@ namespace Terminals
                     if (writer != null)
                     {
                         try { writer.Close(); }
-                        catch (Exception exception) { Logging.Info("Failed closing capture file.", exception); }
+                        catch (Exception exception) { writeFailed = true; Logging.Info("Failed closing capture file.", exception); }
                         writer = null;
                     }
                 }
-                PostToUi(CaptureStopped);
+                cleanupComplete = true;
             }
         }
-
-        private void PostToUi(MethodInvoker update)
-        {
-            if (IsDisposed || Disposing || !IsHandleCreated) return;
-            try
-            {
-                BeginInvoke(new MethodInvoker(() =>
-                {
-                    if (!IsDisposed && !Disposing) update();
-                }));
-            }
-            catch (InvalidOperationException) { }        }
 
         private void CaptureStopped()
         {
             previewTimer.Stop();
             DrainPreviews();
             sessionActive = false;
-            captureStarted = false;
             activeDevice = null;
             SetCaptureControls(true);
+            if (cleanupFailed) CaptureButton.Enabled = false;
+            if (startFailure != null)
+                MessageBox.Show(this, "Unable to start capture: " + startFailure.Message,
+                    "Packet Capture", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (cleanupFailed)
+                MessageBox.Show(this, "Capture cleanup failed. Reopen the tool before starting another capture.",
+                    "Packet Capture", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             if (writeFailed)
                 MessageBox.Show(this, "Some packets could not be written to the capture file.",
                     "Packet Capture", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -413,4 +406,54 @@ namespace Terminals
                 queue.Clear();
         }
     }
+
+    // Native startup retains ownership until it returns. Stop is scheduled exactly once.
+    internal sealed class CaptureSessionLifecycle
+    {
+        private readonly object sync = new object();
+        private readonly Action scheduleCleanup;
+        private bool stopRequested;
+        private bool startupFinished;
+        private bool cleanupScheduled;
+
+        internal CaptureSessionLifecycle(Action scheduleCleanup)
+        {
+            this.scheduleCleanup = scheduleCleanup ?? throw new ArgumentNullException(nameof(scheduleCleanup));
+        }
+
+        internal bool StopRequested
+        {
+            get { lock (sync) return stopRequested; }
+        }
+
+        internal void RequestStop()
+        {
+            bool schedule;
+            lock (sync)
+            {
+                stopRequested = true;
+                schedule = TryScheduleCleanup();
+            }
+            if (schedule) scheduleCleanup();
+        }
+
+        internal void StartupFinished()
+        {
+            bool schedule;
+            lock (sync)
+            {
+                startupFinished = true;
+                schedule = TryScheduleCleanup();
+            }
+            if (schedule) scheduleCleanup();
+        }
+
+        private bool TryScheduleCleanup()
+        {
+            if (!stopRequested || !startupFinished || cleanupScheduled) return false;
+            cleanupScheduled = true;
+            return true;
+        }
+    }
+
 }
