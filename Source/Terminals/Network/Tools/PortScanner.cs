@@ -10,13 +10,18 @@ namespace Terminals.Network
     internal partial class PortScanner : UserControl
     {
         private CancellationTokenSource scanCancellation;
-        private readonly List<ScanResult> results = new List<ScanResult>();
         private int pending;
+        private bool closing;
 
         public PortScanner()
         {
             InitializeComponent();
             StopButton.Enabled = false;
+            Disposed += (sender, args) =>
+            {
+                closing = true;
+                if (scanCancellation != null) scanCancellation.Cancel();
+            };
         }
 
         private static bool TryOctet(string text, out int value)
@@ -55,6 +60,7 @@ namespace Terminals.Network
 
         private async void StartButton_Click(object sender, EventArgs e)
         {
+            if (closing || scanCancellation != null) return;
             List<IPAddress> addresses;
             int firstPort, lastPort;
             if (!TryGetParameters(out addresses, out firstPort, out lastPort))
@@ -63,22 +69,31 @@ namespace Terminals.Network
                 return;
             }
 
-            scanCancellation = new CancellationTokenSource();
-            CancellationToken token = scanCancellation.Token;
+            string scope = string.Format("{0}–{1}, TCP ports {2}–{3} ({4} probes)", addresses[0], addresses[addresses.Count - 1], firstPort, lastPort, addresses.Count * (lastPort - firstPort + 1));
+            if (MessageBox.Show(this, "Start TCP connect scan of " + scope + "?", "Confirm scan scope", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+
+            // The session guard is set before any asynchronous work begins.
+            var cancellation = new CancellationTokenSource();
+            scanCancellation = cancellation;
+            CancellationToken token = cancellation.Token;
             StartButton.Enabled = false;
             StopButton.Enabled = true;
-            results.Clear();
             pending = addresses.Count * (lastPort - firstPort + 1);
-            UpdateConnections();
+            InitializeResults();
+            UpdatePending();
 
             var progress = new Progress<ScanResult>(result =>
             {
-                if (IsDisposed) return;
-                if (result != null) results.Add(result);
-                pending--;
-                UpdateConnections();
+                if (closing || IsDisposed || Disposing || !ReferenceEquals(scanCancellation, cancellation)) return;
+                if (result != null)
+                {
+                    resultsGridView.Rows.Add(result.RemoteEndPoint, result.State);
+                }
+                if (pending > 0) pending--;
+                UpdatePending();
             });
             var tasks = new List<Task>();
+
             using (var throttle = new SemaphoreSlim(32))
             {
                 try
@@ -91,30 +106,32 @@ namespace Terminals.Network
                             int targetPort = port;
                             IPAddress targetAddress = address;
                             tasks.Add(ScanOneAsync(targetAddress, targetPort, throttle, token, progress));
+
                         }
                     }
                 }
                 catch (OperationCanceledException)
                 {
                 }
-                try
+                catch (Exception exception)
                 {
-                    await Task.WhenAll(tasks);
+                    Logging.Info("Failed scheduling TCP scan.", exception);
                 }
-                catch (OperationCanceledException)
+                finally
                 {
+                    try { await Task.WhenAll(tasks); }
+                    catch (Exception exception) { Logging.Info("TCP scan cleanup failed.", exception); }
                 }
             }
-            if (!IsDisposed)
+            if (!closing && !IsDisposed && !Disposing)
             {
                 StartButton.Enabled = true;
                 StopButton.Enabled = false;
-                if (token.IsCancellationRequested)
-                    pending = 0;
-                UpdateConnections();
+                pending = 0;
+                UpdatePending();
             }
-            scanCancellation.Dispose();
-            scanCancellation = null;
+            if (ReferenceEquals(scanCancellation, cancellation)) scanCancellation = null;
+            cancellation.Dispose();
         }
 
         private static async Task ScanOneAsync(IPAddress address, int port, SemaphoreSlim throttle,
@@ -161,7 +178,7 @@ namespace Terminals.Network
             }
         }
 
-        private void UpdateConnections()
+        private void InitializeResults()
         {
             resultsGridView.Rows.Clear();
             if (resultsGridView.Columns.Count == 0)
@@ -169,8 +186,10 @@ namespace Terminals.Network
                 resultsGridView.Columns.Add("EndPoint", "End Point");
                 resultsGridView.Columns.Add("State", "State");
             }
-            foreach (ScanResult result in results)
-                resultsGridView.Rows.Add(result.RemoteEndPoint, result.State);
+        }
+
+        private void UpdatePending()
+        {
             ScanResultsLabel.Text = string.Format("Outstanding requests: {0}", pending);
         }
 
@@ -207,7 +226,8 @@ namespace Terminals.Network
         }
         private void Pb_KeyUp(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Enter) StartButton_Click(null, null);
+            if (e.KeyCode == Keys.Enter && StartButton.Enabled && scanCancellation == null)
+                StartButton_Click(sender, e);
         }
 
         private void CopyRemoteAddressToolStripMenuItem_Click(object sender, EventArgs e)
