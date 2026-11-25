@@ -16,6 +16,12 @@ namespace Terminals.Connections
 
         public override bool Connect()
         {
+            if (ras != null)
+            {
+                LastError = "The previous RAS connection must be cleaned up before dialing again.";
+                return false;
+            }
+
             try
             {
                 ras = new RasConnectionClient { EntryName = Favorite.ServerName };
@@ -35,16 +41,14 @@ namespace Terminals.Connections
                 }
                 else
                 {
-                    Log("Terminals has no credentials; showing Windows RAS dial dialog...");
-                    error = ras.DialDialog(FindForm() == null ? IntPtr.Zero : FindForm().Handle);
+                    throw new NotSupportedException("Managed RAS requires explicit credentials; use Windows to manage dialog-based connections.");
                 }
 
                 if (error != 0)
                 {
                     LastError = "Windows RAS dial failed with error " + error;
                     Log(LastError);
-                    ras.Dispose();
-                    ras = null;
+                    TryReleaseClient();
                     return false;
                 }
 
@@ -54,13 +58,12 @@ namespace Terminals.Connections
             }
             catch (Exception exc)
             {
-                if (ras != null)
-                {
-                    ras.Dispose();
-                    ras = null;
-                }
                 LastError = exc.Message;
                 Logging.Fatal("Connecting to RAS", exc);
+                // Retain a client whose failed dial already attempted cleanup.
+                // Disconnect/Dispose can retry without issuing a second accepted hang-up.
+                if (ras != null && !ras.HasOutstandingHandle)
+                    TryReleaseClient();
                 return false;
             }
         }
@@ -68,11 +71,22 @@ namespace Terminals.Connections
         // Called by the existing RAS properties UI timer, on the WinForms thread.
         internal void NotifyIfDisconnected()
         {
-            if (wasConnected && !Connected)
+            try
             {
-                wasConnected = false;
-                Log("RAS connection disconnected");
-                FireDisconnected();
+                if (wasConnected && !Connected && (ras == null || !ras.HasOutstandingHandle))
+                {
+                    // Retire the client before notifying subscribers, which may reconnect.
+                    if (!TryReleaseClient())
+                        return;
+                    wasConnected = false;
+                    Log("RAS connection disconnected");
+                    FireDisconnected();
+                }
+            }
+            catch (System.ComponentModel.Win32Exception exc)
+            {
+                LastError = exc.Message;
+                Log("RAS status query failed: " + exc.NativeErrorCode);
             }
         }
 
@@ -80,19 +94,36 @@ namespace Terminals.Connections
         {
             if (ras == null)
                 return;
-            Log("RAS hang-up result: " + ras.HangUp());
-            NotifyIfDisconnected();
-            ras.Dispose();
-            ras = null;
+            if (TryReleaseClient() && wasConnected)
+            {
+                wasConnected = false;
+                Log("RAS connection disconnected");
+                FireDisconnected();
+            }
+        }
+
+        private bool TryReleaseClient()
+        {
+            if (ras == null)
+                return true;
+            try
+            {
+                ras.Dispose();
+                ras = null;
+                return true;
+            }
+            catch (System.ComponentModel.Win32Exception exc)
+            {
+                LastError = exc.Message;
+                Log(LastError);
+                return false;
+            }
         }
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing && ras != null)
-            {
-                ras.Dispose();
-                ras = null;
-            }
+            if (disposing && !TryReleaseClient())
+                throw new InvalidOperationException(LastError);
             base.Dispose(disposing);
         }
     }

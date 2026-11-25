@@ -68,8 +68,9 @@ namespace Terminals.Connections
 
         public void Disconnect()
         {
-            timer.Stop();
             RASConnection.Disconnect();
+            if (rASConnection.ras == null)
+                timer.Stop();
         }
 
         public bool Connected
@@ -85,9 +86,21 @@ namespace Terminals.Connections
                 return;
 
             rASConnection.NotifyIfDisconnected();
+            if (IsDisposed || Disposing)
+                return;
             lbDetails1.Items.Clear();
             BringToFront();
-            if (Connected)
+            bool connected;
+            try
+            {
+                connected = Connected;
+            }
+            catch (System.ComponentModel.Win32Exception exc)
+            {
+                AddDetailsText("Connection Status", "Unknown (" + exc.NativeErrorCode + ")");
+                return;
+            }
+            if (connected)
             {
                 if (connectedTime == DateTime.MinValue)
                 {
@@ -111,14 +124,22 @@ namespace Terminals.Connections
 
                 AddDetailsText("Connection Status", "Connected");
                 AddDetailsText("Host", phoneNumber);
-                AddDetailsText("IP Address", rASConnection.ras.IPAddress());
+                try
+                {
+                    AddDetailsText("IP Address", rASConnection.ras.IPAddress());
+                }
+                catch (System.ComponentModel.Win32Exception)
+                {
+                    AddDetailsText("IP Address", "Unavailable");
+                }
                 TimeSpan ts = DateTime.Now - connectedTime;
                 AddDetailsText("Connection Duration:", string.Format("{0} Days, {1} Hours, {2} Minutes, {3} Seconds",
                     ts.Days, ts.Hours, ts.Minutes, ts.Seconds));
             }
             else
             {
-                AddDetailsText("Connection Status", "Not Connected");
+                AddDetailsText("Connection Status", rASConnection.ras != null && rASConnection.ras.HasOutstandingHandle
+                    ? "Cleanup or connection state unresolved" : "Not Connected");
             }
         }
 

@@ -98,41 +98,270 @@ namespace Tests.Network
                 Assert.AreNotEqual(IntPtr.Zero, connection.Handle);
         }
 
-        [TestMethod]
-        public void DialogConnectionSelectionExcludesExistingAndUnrelatedHandles()
+        private sealed class FakeRas
         {
-            var before = new HashSet<IntPtr> { new IntPtr(1) };
-            var connections = new[]
+            internal uint DialError;
+            internal IntPtr Candidate = new IntPtr(42);
+            internal uint HangUpError;
+            internal int Dials;
+            internal int HangUps;
+            internal int StatusCalls;
+            internal int Waits;
+            internal int WaitLimit;
+            internal readonly Queue<uint> StatusResults = new Queue<uint>();
+
+            internal RasConnectionClient CreateClient()
             {
-                new RasNativeMethods.RasConn { Handle = new IntPtr(1), EntryName = "VPN" },
-                new RasNativeMethods.RasConn { Handle = new IntPtr(2), EntryName = "Other" },
-                new RasNativeMethods.RasConn { Handle = IntPtr.Zero, EntryName = "VPN" },
-                new RasNativeMethods.RasConn { Handle = new IntPtr(3), EntryName = "vpn" }
-            };
-            Assert.AreEqual(new IntPtr(3), RasConnectionClient.FindNewDialogConnection(connections, before, "VPN"));
+                return new RasConnectionClient(Dial, HangUp, Status, elapsed => Waits++ < WaitLimit);
+            }
+
+            private uint Dial(ref RasNativeMethods.RasDialParams parameters, ref IntPtr connection)
+            {
+                Dials++;
+                Assert.AreEqual(IntPtr.Zero, connection);
+                connection = Candidate;
+                return DialError;
+            }
+
+            private uint HangUp(IntPtr connection)
+            {
+                Assert.AreEqual(Candidate, connection);
+                HangUps++;
+                return HangUpError;
+            }
+
+            private uint Status(IntPtr connection, ref RasNativeMethods.RasConnStatus status)
+            {
+                Assert.AreEqual(Candidate, connection);
+                StatusCalls++;
+                status.State = 0x2000;
+                return StatusResults.Count == 0 ? 0 : StatusResults.Dequeue();
+            }
         }
 
         [TestMethod]
-        public void DialogConnectionSelectionRejectsAmbiguousNewHandles()
+        public void DialogCannotAcquireAnUnprovenReference()
         {
-            var connections = new[]
+            var native = new FakeRas();
+            using (var ras = native.CreateClient())
             {
-                new RasNativeMethods.RasConn { Handle = new IntPtr(1), EntryName = "VPN" },
-                new RasNativeMethods.RasConn { Handle = new IntPtr(2), EntryName = "VPN" }
-            };
-            Assert.ThrowsExactly<InvalidOperationException>(() =>
-                RasConnectionClient.FindNewDialogConnection(connections, new HashSet<IntPtr>(), "VPN"));
+                Assert.ThrowsExactly<NotSupportedException>(() => ras.DialDialog(IntPtr.Zero));
+                Assert.IsFalse(ras.HasOutstandingHandle);
+                Assert.AreEqual(0, native.Dials);
+                Assert.AreEqual(0, native.HangUps);
+            }
         }
 
         [TestMethod]
-        public void DialogConnectionSelectionDoesNotAdoptExistingHandle()
+        public void HangUpWaitsForInvalidHandleAndAllowsRedial()
         {
-            var connections = new[]
+            var native = new FakeRas { WaitLimit = 1 };
+            native.StatusResults.Enqueue(0);
+            native.StatusResults.Enqueue(6);
+            using (var ras = native.CreateClient())
             {
-                new RasNativeMethods.RasConn { Handle = new IntPtr(1), EntryName = "VPN" }
-            };
-            Assert.AreEqual(IntPtr.Zero, RasConnectionClient.FindNewDialogConnection(connections,
-                new HashSet<IntPtr> { new IntPtr(1) }, "VPN"));
+                Assert.AreEqual(0U, ras.Dial("u", "p", "d"));
+                Assert.AreEqual(0U, ras.HangUp());
+                Assert.AreEqual(2, native.StatusCalls);
+                Assert.IsFalse(ras.HasOutstandingHandle);
+                Assert.AreEqual(0U, ras.HangUp());
+                Assert.AreEqual(1, native.HangUps);
+                Assert.AreEqual(0U, ras.Dial("u", "p", "d"));
+                native.StatusResults.Enqueue(6);
+            }
+            Assert.AreEqual(2, native.HangUps);
+        }
+
+        [TestMethod]
+        public void HangUpFailureRetainsHandleAndAllowsCleanupRetry()
+        {
+            var native = new FakeRas { HangUpError = 5 };
+            using (var ras = native.CreateClient())
+            {
+                Assert.AreEqual(0U, ras.Dial("u", "p", "d"));
+                Assert.AreEqual(5U, ras.HangUp());
+                Assert.IsTrue(ras.HasOutstandingHandle);
+                Assert.ThrowsExactly<InvalidOperationException>(() => ras.Dial("u", "p", "d"));
+                Assert.AreEqual(0, native.StatusCalls);
+                native.HangUpError = 0;
+                native.StatusResults.Enqueue(6);
+                Assert.AreEqual(0U, ras.HangUp());
+            }
+            Assert.AreEqual(2, native.HangUps);
+        }
+
+        [TestMethod]
+        public void AcceptedHangUpTimeoutDoesNotReleaseSharedReferenceTwice()
+        {
+            var native = new FakeRas();
+            using (var ras = native.CreateClient())
+            {
+                ras.Dial("u", "p", "d");
+                Assert.AreEqual(RasConnectionClient.ErrorTimeout, ras.HangUp());
+                Assert.IsTrue(ras.HasOutstandingHandle);
+                Assert.IsFalse(ras.Connected);
+                Assert.ThrowsExactly<InvalidOperationException>(() => ras.Dial("u", "p", "d"));
+                Assert.AreEqual(RasConnectionClient.ErrorTimeout, ras.HangUp());
+                native.StatusResults.Enqueue(6);
+                Assert.AreEqual(0U, ras.HangUp());
+            }
+            Assert.AreEqual(1, native.HangUps);
+        }
+
+        [TestMethod]
+        public void StatusErrorAfterAcceptedHangUpRetainsPendingToken()
+        {
+            var native = new FakeRas();
+            native.StatusResults.Enqueue(5);
+            using (var ras = native.CreateClient())
+            {
+                ras.Dial("u", "p", "d");
+                Assert.AreEqual(5U, ras.HangUp());
+                Assert.IsTrue(ras.HasOutstandingHandle);
+                native.StatusResults.Enqueue(6);
+                Assert.AreEqual(0U, ras.HangUp());
+            }
+            Assert.AreEqual(1, native.HangUps);
+        }
+
+        [TestMethod]
+        public void FailedDialWithHandlePerformsVerifiedCleanup()
+        {
+            var native = new FakeRas { DialError = 691 };
+            native.StatusResults.Enqueue(6);
+            using (var ras = native.CreateClient())
+            {
+                Assert.AreEqual(691U, ras.Dial("u", "p", "d"));
+                Assert.IsFalse(ras.HasOutstandingHandle);
+                Assert.AreEqual(1, native.HangUps);
+            }
+        }
+
+        [TestMethod]
+        public void FailedDialWithIncompleteCleanupRetainsReference()
+        {
+            var native = new FakeRas { DialError = 691, HangUpError = 5 };
+            using (var ras = native.CreateClient())
+            {
+                var error = Assert.ThrowsExactly<System.ComponentModel.Win32Exception>(() => ras.Dial("u", "p", "d"));
+                Assert.AreEqual(5, error.NativeErrorCode);
+                StringAssert.Contains(error.Message, "691");
+                Assert.IsTrue(ras.HasOutstandingHandle);
+                Assert.ThrowsExactly<InvalidOperationException>(() => ras.Dial("u", "p", "d"));
+                native.HangUpError = 0;
+                native.StatusResults.Enqueue(6);
+            }
+            Assert.AreEqual(2, native.HangUps);
+        }
+
+        [TestMethod]
+        public void FailedDialWithoutHandleDoesNotHangUp()
+        {
+            var native = new FakeRas { Candidate = IntPtr.Zero, DialError = 691 };
+            using (var ras = native.CreateClient())
+            {
+                Assert.AreEqual(691U, ras.Dial("u", "p", "d"));
+                Assert.IsFalse(ras.HasOutstandingHandle);
+            }
+            Assert.AreEqual(0, native.HangUps);
+        }
+
+        [TestMethod]
+        public void SuccessfulDialWithoutHandleIsRejected()
+        {
+            var native = new FakeRas { Candidate = IntPtr.Zero };
+            using (var ras = native.CreateClient())
+                Assert.ThrowsExactly<InvalidOperationException>(() => ras.Dial("u", "p", "d"));
+            Assert.AreEqual(0, native.HangUps);
+        }
+
+        [TestMethod]
+        public void DisposalFailureIsRetryableButDialRemainsBlocked()
+        {
+            var native = new FakeRas();
+            var ras = native.CreateClient();
+            ras.Dial("u", "p", "d");
+            Assert.ThrowsExactly<System.ComponentModel.Win32Exception>(() => ras.Dispose());
+            Assert.IsTrue(ras.HasOutstandingHandle);
+            Assert.ThrowsExactly<ObjectDisposedException>(() => ras.Dial("u", "p", "d"));
+            native.StatusResults.Enqueue(6);
+            ras.Dispose();
+            ras.Dispose();
+            Assert.IsFalse(ras.HasOutstandingHandle);
+            Assert.AreEqual(1, native.HangUps);
+        }
+
+        [TestMethod]
+        public void AlreadyInvalidHandleIsReleasedWithoutPolling()
+        {
+            var native = new FakeRas { HangUpError = 6 };
+            using (var ras = native.CreateClient())
+            {
+                ras.Dial("u", "p", "d");
+                Assert.AreEqual(0U, ras.HangUp());
+                Assert.IsFalse(ras.HasOutstandingHandle);
+            }
+            Assert.AreEqual(0, native.StatusCalls);
+            Assert.AreEqual(1, native.HangUps);
+        }
+
+        [TestMethod]
+        public void StatusQueryFailureDoesNotDiscardConnection()
+        {
+            var native = new FakeRas();
+            native.StatusResults.Enqueue(5);
+            using (var ras = native.CreateClient())
+            {
+                ras.Dial("u", "p", "d");
+                Assert.ThrowsExactly<System.ComponentModel.Win32Exception>(() => { var connected = ras.Connected; });
+                Assert.IsTrue(ras.HasOutstandingHandle);
+                native.StatusResults.Enqueue(6);
+            }
+        }
+
+        [TestMethod]
+        public void ActiveReferenceRejectsRepeatedDialAndDialog()
+        {
+            var native = new FakeRas();
+            using (var ras = native.CreateClient())
+            {
+                ras.Dial("u", "p", "d");
+                Assert.ThrowsExactly<InvalidOperationException>(() => ras.Dial("u", "p", "d"));
+                Assert.ThrowsExactly<InvalidOperationException>(() => ras.DialDialog(IntPtr.Zero));
+                Assert.AreEqual(1, native.Dials);
+                native.StatusResults.Enqueue(6);
+            }
+        }
+
+        [TestMethod]
+        public void ExternallyInvalidatedHandleAllowsRedial()
+        {
+            var native = new FakeRas();
+            using (var ras = native.CreateClient())
+            {
+                ras.Dial("u", "p", "d");
+                native.StatusResults.Enqueue(6);
+                Assert.IsFalse(ras.Connected);
+                Assert.IsFalse(ras.HasOutstandingHandle);
+                Assert.AreEqual(0U, ras.Dial("u", "p", "d"));
+                native.StatusResults.Enqueue(6);
+            }
+            Assert.AreEqual(2, native.Dials);
+            Assert.AreEqual(1, native.HangUps);
+        }
+
+        [TestMethod]
+        public void ConcurrentHangUpAndDisposeReleaseReferenceOnlyOnce()
+        {
+            var native = new FakeRas();
+            var ras = native.CreateClient();
+            ras.Dial("u", "p", "d");
+            native.StatusResults.Enqueue(6);
+            System.Threading.Tasks.Parallel.Invoke(
+                () => Assert.AreEqual(0U, ras.HangUp()),
+                () => ras.Dispose());
+            Assert.AreEqual(1, native.HangUps);
+            Assert.IsFalse(ras.HasOutstandingHandle);
         }
 
         [TestMethod]
