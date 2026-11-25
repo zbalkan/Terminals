@@ -25,6 +25,24 @@ namespace Tests.Network
         }
 
         [TestMethod]
+        public void NativePhonebookEnumerationAcceptsInitializedBuffer()
+        {
+            var entries = RasNativeMethods.EnumerateEntries();
+            Assert.IsNotNull(entries);
+            foreach (var entry in entries)
+                Assert.IsFalse(string.IsNullOrEmpty(entry.EntryName));
+        }
+
+        [TestMethod]
+        public void NativeConnectionEnumerationAcceptsInitializedBuffer()
+        {
+            var connections = RasNativeMethods.EnumerateConnections();
+            Assert.IsNotNull(connections);
+            foreach (var connection in connections)
+                Assert.AreNotEqual(IntPtr.Zero, connection.Handle);
+        }
+
+        [TestMethod]
         public void DisconnectWithoutOwnedHandleIsIdempotent()
         {
             using (var ras = new RasConnectionClient())
