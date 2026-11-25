@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Terminals.Connections.RasNative;
@@ -95,6 +96,53 @@ namespace Tests.Network
             Assert.IsNotNull(connections);
             foreach (var connection in connections)
                 Assert.AreNotEqual(IntPtr.Zero, connection.Handle);
+        }
+
+        [TestMethod]
+        public void DialogConnectionSelectionExcludesExistingAndUnrelatedHandles()
+        {
+            var before = new HashSet<IntPtr> { new IntPtr(1) };
+            var connections = new[]
+            {
+                new RasNativeMethods.RasConn { Handle = new IntPtr(1), EntryName = "VPN" },
+                new RasNativeMethods.RasConn { Handle = new IntPtr(2), EntryName = "Other" },
+                new RasNativeMethods.RasConn { Handle = IntPtr.Zero, EntryName = "VPN" },
+                new RasNativeMethods.RasConn { Handle = new IntPtr(3), EntryName = "vpn" }
+            };
+            Assert.AreEqual(new IntPtr(3), RasConnectionClient.FindNewDialogConnection(connections, before, "VPN"));
+        }
+
+        [TestMethod]
+        public void DialogConnectionSelectionRejectsAmbiguousNewHandles()
+        {
+            var connections = new[]
+            {
+                new RasNativeMethods.RasConn { Handle = new IntPtr(1), EntryName = "VPN" },
+                new RasNativeMethods.RasConn { Handle = new IntPtr(2), EntryName = "VPN" }
+            };
+            Assert.ThrowsExactly<InvalidOperationException>(() =>
+                RasConnectionClient.FindNewDialogConnection(connections, new HashSet<IntPtr>(), "VPN"));
+        }
+
+        [TestMethod]
+        public void DialogConnectionSelectionDoesNotAdoptExistingHandle()
+        {
+            var connections = new[]
+            {
+                new RasNativeMethods.RasConn { Handle = new IntPtr(1), EntryName = "VPN" }
+            };
+            Assert.AreEqual(IntPtr.Zero, RasConnectionClient.FindNewDialogConnection(connections,
+                new HashSet<IntPtr> { new IntPtr(1) }, "VPN"));
+        }
+
+        [TestMethod]
+        public void DisposedClientRejectsDialAndDialogBeforeCallingNativeApi()
+        {
+            var ras = new RasConnectionClient();
+            ras.Dispose();
+            ras.Dispose();
+            Assert.ThrowsExactly<ObjectDisposedException>(() => ras.Dial("user", "password", "domain"));
+            Assert.ThrowsExactly<ObjectDisposedException>(() => ras.DialDialog(IntPtr.Zero));
         }
 
         [TestMethod]

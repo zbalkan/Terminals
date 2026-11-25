@@ -57,6 +57,20 @@ namespace Terminals.Connections.RasNative
             return 0;
         }
 
+        internal static IntPtr FindNewDialogConnection(IEnumerable<RasNativeMethods.RasConn> connections, HashSet<IntPtr> before, string entryName)
+        {
+            IntPtr candidate = IntPtr.Zero;
+            foreach (var conn in connections)
+            {
+                if (conn.Handle == IntPtr.Zero || before.Contains(conn.Handle) || !string.Equals(conn.EntryName, entryName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (candidate != IntPtr.Zero && candidate != conn.Handle)
+                    throw new InvalidOperationException("Multiple new RAS connections match the dialog entry; ownership is ambiguous.");
+                candidate = conn.Handle;
+            }
+            return candidate;
+        }
+
         internal uint DialDialog(IntPtr owner)
         {
             ThrowIfDisposed();
@@ -78,13 +92,11 @@ namespace Terminals.Connections.RasNative
             if (!success)
                 return dialog.Error != 0 ? dialog.Error : 1223; // user cancelled
 
-            foreach (var conn in RasNativeMethods.EnumerateConnections())
+            IntPtr candidate = FindNewDialogConnection(RasNativeMethods.EnumerateConnections(), before, EntryName);
+            if (candidate != IntPtr.Zero)
             {
-                if (!before.Contains(conn.Handle) && string.Equals(conn.EntryName, EntryName, StringComparison.OrdinalIgnoreCase))
-                {
-                    handle = conn.Handle;
-                    return 0;
-                }
+                handle = candidate;
+                return 0;
             }
             // Never claim ownership of an unrelated or pre-existing connection.
             throw new InvalidOperationException("The RAS dialog succeeded, but the new connection handle could not be identified.");
