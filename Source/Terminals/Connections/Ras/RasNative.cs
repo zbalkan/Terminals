@@ -157,7 +157,7 @@ namespace Terminals.Connections.RasNative
     {
         private const int ErrorBufferTooSmall = 603;
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Unicode)]
         internal struct RasDialParams
         {
             internal int Size;
@@ -173,7 +173,7 @@ namespace Terminals.Connections.RasNative
             internal IntPtr EncryptedPassword;
         }
 
-        [StructLayout(LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Sequential, Pack = 4)]
         internal struct RasDialDialog
         {
             internal int Size;
@@ -187,7 +187,7 @@ namespace Terminals.Connections.RasNative
             internal IntPtr Reserved2;
         }
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Unicode)]
         internal struct RasConnStatus
         {
             internal int Size;
@@ -202,7 +202,7 @@ namespace Terminals.Connections.RasNative
         }
 
         // RASTUNNELENDPOINT is an enum followed by a 16-byte IPv4/IPv6 union.
-        [StructLayout(LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Sequential, Pack = 4)]
         internal struct RasTunnelEndpoint
         {
             internal int Type;
@@ -212,7 +212,7 @@ namespace Terminals.Connections.RasNative
             internal uint Address3;
         }
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Unicode)]
         internal struct RasPppIp
         {
             internal int Size;
@@ -223,7 +223,7 @@ namespace Terminals.Connections.RasNative
             internal uint ServerOptions;
         }
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Unicode)]
         internal struct RasEntryName
         {
             internal int Size;
@@ -232,7 +232,7 @@ namespace Terminals.Connections.RasNative
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 261)] internal string PhonebookPath;
         }
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        [StructLayout(LayoutKind.Sequential, Pack = 4, CharSet = CharSet.Unicode)]
         internal struct RasConn
         {
             internal int Size;
@@ -248,7 +248,7 @@ namespace Terminals.Connections.RasNative
             internal Guid CorrelationId;
         }
 
-        [StructLayout(LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Sequential, Pack = 4)]
         internal struct Luid
         {
             internal uint LowPart;

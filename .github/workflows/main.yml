@@ -135,6 +135,22 @@ jobs:
           if (-not $adapter) { throw "MSTest .NET Framework adapter not found under $adapterRoot" }
           vstest.console.exe "Source\Tests\bin\Release\Tests.dll" "/TestAdapterPath:$($adapter.DirectoryName)" "/TestCaseFilter:$env:TEST_FILTER" '/logger:trx;LogFileName=test_results.trx'
           exit $LASTEXITCODE
+      - name: Validate RAS ABI on x86 and x64
+        if: matrix.suite == 'file-and-general'
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content -LiteralPath 'Source/Tests/Tests.csproj' -Raw
+          $reference = $project.SelectSingleNode("//*[local-name()='PackageReference' and @Include='MSTest.TestAdapter']")
+          $packageRoot = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget/packages' }
+          $adapterRoot = Join-Path $packageRoot "mstest.testadapter/$($reference.Version)"
+          $adapter = Get-ChildItem -LiteralPath $adapterRoot -Filter MSTest.TestAdapter.dll -Recurse -File |
+            Where-Object { $_.FullName -match '[\\/]net462[\\/]' } | Select-Object -First 1
+          if (-not $adapter) { throw "MSTest .NET Framework adapter not found under $adapterRoot" }
+          foreach ($platform in @('x86', 'x64')) {
+            $env:TERMINALS_RAS_ABI_PLATFORM = $platform
+            vstest.console.exe "Source\Tests\bin\Release\Tests.dll" "/TestAdapterPath:$($adapter.DirectoryName)" "/Platform:$platform" '/TestCaseFilter:TestCategory=RasAbi' "/logger:trx;LogFileName=ras_abi_$platform.trx" -- RunConfiguration.TreatNoTestsAsError=true
+            if ($LASTEXITCODE -ne 0) { throw "RAS ABI validation failed on $platform" }
+          }
       - name: Test Report
         uses: dorny/test-reporter@v3
         if: success() || failure()
