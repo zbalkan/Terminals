@@ -110,31 +110,7 @@ jobs:
         if: matrix.suite == 'file-and-general'
         timeout-minutes: 10
         shell: pwsh
-        run: |
-          $packageRoot = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget/packages' }
-          $adapter = Get-ChildItem -LiteralPath (Join-Path $packageRoot "mstest.testadapter/$env:MSTEST_VERSION") -Filter MSTest.TestAdapter.dll -Recurse -File |
-            Where-Object { $_.FullName -match '[\\/]net462[\\/]' } | Select-Object -First 1
-          if (-not $adapter) { throw 'MSTest adapter not found' }
-          function Get-DiscoveredTests([string]$name, [string]$filter) {
-            $file = Join-Path $env:RUNNER_TEMP "discovery-$name.txt"
-            $arguments = @('Source\Tests\bin\Release\Tests.dll', "/TestAdapterPath:$($adapter.DirectoryName)", '/ListFullyQualifiedTests', "/ListTestsTargetPath:$file")
-            if ($filter) { $arguments += "/TestCaseFilter:$filter" }
-            & vstest.console.exe @arguments | Out-Host
-            if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $file)) { throw "Discovery failed: $name" }
-            $tests = @(Get-Content -LiteralPath $file | Where-Object { $_.Trim() } | ForEach-Object { $_.Trim() })
-            if ($tests.Count -eq 0) { throw "Empty discovery: $name" }
-            return $tests
-          }
-          $all = @(Get-DiscoveredTests 'all' '')
-          $general = @(Get-DiscoveredTests 'general' 'FullyQualifiedName!~Tests.SqlPersisted&TestCategory!=Database&TestCategory!=RasAbi')
-          $database = @(Get-DiscoveredTests 'database' 'FullyQualifiedName~Tests.SqlPersisted|TestCategory=Database')
-          $abi = @(Get-DiscoveredTests 'abi' 'TestCategory=RasAbi')
-          $combined = @($general + $database + $abi)
-          $duplicates = @($combined | Group-Object -CaseSensitive | Where-Object Count -gt 1)
-          if ($duplicates.Count -gt 0) { throw "Duplicate discovered test names: $($duplicates.Name -join ', ')" }
-          $difference = @(Compare-Object -ReferenceObject $all -DifferenceObject $combined -CaseSensitive)
-          if ($difference.Count -gt 0) { throw "Test partition mismatch: $($difference | Out-String)" }
-          Write-Host "Discovery partition: $($all.Count) total; $($general.Count) general; $($database.Count) database; $($abi.Count) ABI"
+        run: ./Build/Test-DiscoveryPartition.ps1
       - name: Install SQL Server LocalDB (database suite only)
         timeout-minutes: 15
         if: matrix.suite == 'database'
@@ -153,41 +129,12 @@ jobs:
         env:
           TEST_FILTER: ${{ matrix.filter }}
           TERMINALS_TEST_SQL_CONNECTION_STRING: ${{ matrix.suite == 'database' && 'Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TERMINALS;Integrated Security=True;' || '' }}
-        run: |
-          [xml]$project = Get-Content -LiteralPath 'Source/Tests/Tests.csproj' -Raw
-          $reference = $project.SelectSingleNode("//*[local-name()='PackageReference' and @Include='MSTest.TestAdapter']")
-          if (-not $reference -or -not $reference.Version) { throw 'MSTest.TestAdapter version is missing from Tests.csproj' }
-          $packageRoot = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget/packages' }
-          $adapterRoot = Join-Path $packageRoot "mstest.testadapter/$($reference.Version)"
-          if (-not (Test-Path -LiteralPath $adapterRoot -PathType Container)) {
-            throw "MSTest.TestAdapter $($reference.Version) was not restored to $adapterRoot"
-          }
-          $adapter = Get-ChildItem -LiteralPath $adapterRoot -Filter MSTest.TestAdapter.dll -Recurse -File |
-            Where-Object { $_.FullName -match '[\\/]net462[\\/]' } | Select-Object -First 1
-          if (-not $adapter) { throw "MSTest .NET Framework adapter not found under $adapterRoot" }
-          vstest.console.exe "Source\Tests\bin\Release\Tests.dll" "/TestAdapterPath:$($adapter.DirectoryName)" "/TestCaseFilter:$env:TEST_FILTER" '/logger:trx;LogFileName=test_results.trx' -- RunConfiguration.TreatNoTestsAsError=true
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if (-not (Test-Path -LiteralPath 'TestResults/test_results.trx' -PathType Leaf)) { throw 'Missing expected test_results.trx' }
+        run: ./Build/Invoke-StandardTests.ps1
       - name: Validate RAS ABI on x86 and x64
         timeout-minutes: 10
         if: ${{ !cancelled() && matrix.suite == 'file-and-general' && steps.standard-tests.outcome != 'skipped' && steps.standard-tests.outcome != '' }}
         shell: pwsh
-        run: |
-          [xml]$project = Get-Content -LiteralPath 'Source/Tests/Tests.csproj' -Raw
-          $reference = $project.SelectSingleNode("//*[local-name()='PackageReference' and @Include='MSTest.TestAdapter']")
-          $packageRoot = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget/packages' }
-          $adapterRoot = Join-Path $packageRoot "mstest.testadapter/$($reference.Version)"
-          $adapter = Get-ChildItem -LiteralPath $adapterRoot -Filter MSTest.TestAdapter.dll -Recurse -File |
-            Where-Object { $_.FullName -match '[\\/]net462[\\/]' } | Select-Object -First 1
-          if (-not $adapter) { throw "MSTest .NET Framework adapter not found under $adapterRoot" }
-          $failures = @()
-          foreach ($platform in @('x86', 'x64')) {
-            $env:TERMINALS_RAS_ABI_PLATFORM = $platform
-            vstest.console.exe "Source\Tests\bin\Release\Tests.dll" "/TestAdapterPath:$($adapter.DirectoryName)" "/Platform:$platform" '/TestCaseFilter:TestCategory=RasAbi' "/logger:trx;LogFileName=ras_abi_$platform.trx" -- RunConfiguration.TreatNoTestsAsError=true
-            if ($LASTEXITCODE -ne 0) { $failures += "RAS ABI validation failed on $platform (exit $LASTEXITCODE)" }
-            if (-not (Test-Path -LiteralPath "TestResults/ras_abi_$platform.trx" -PathType Leaf)) { $failures += "Missing expected RAS ABI TRX for $platform" }
-          }
-          if ($failures.Count -gt 0) { throw ($failures -join "; ") }
+        run: ./Build/Test-RasAbi.ps1
       - name: Upload test diagnostic results
         if: ${{ !cancelled() && hashFiles('TestResults/*.trx') != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
