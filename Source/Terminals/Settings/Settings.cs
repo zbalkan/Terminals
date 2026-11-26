@@ -1037,6 +1037,15 @@ namespace Terminals.Configuration
                 SaveImmediatelyIfRequested();
             }
         }
+        public string PuttygenExecutablePath
+        {
+            get { return GetSection().PuttygenExecutablePath; }
+            set
+            {
+                GetSection().PuttygenExecutablePath = value ?? string.Empty;
+                SaveImmediatelyIfRequested();
+            }
+        }
 
         public string CitrixSelfServiceExecutablePath
         {

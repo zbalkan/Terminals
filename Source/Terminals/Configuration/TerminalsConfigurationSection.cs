@@ -902,6 +902,12 @@ namespace Terminals
             get { return (string)this["pageantExecutablePath"]; }
             set { this["pageantExecutablePath"] = value; }
         }
+        [ConfigurationProperty("puttygenExecutablePath", DefaultValue = "")]
+        public string PuttygenExecutablePath
+        {
+            get { return (string)this["puttygenExecutablePath"]; }
+            set { this["puttygenExecutablePath"] = value; }
+        }
 
         [ConfigurationProperty("citrixSelfServiceExecutablePath", DefaultValue = "")]
         public string CitrixSelfServiceExecutablePath

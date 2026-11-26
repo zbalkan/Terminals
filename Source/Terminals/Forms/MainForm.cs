@@ -13,6 +13,8 @@ using Terminals.Forms.Controls;
 using Terminals.Forms.Rendering;
 using Terminals.CommandLine;
 using Terminals.Configuration;
+using Terminals.Common.Configuration;
+using ExternalProcessLauncher = Terminals.Common.Forms.ExternalProcessLauncher;
 using Terminals.Connections;
 using Terminals.Credentials;
 using Terminals.Native;
@@ -1285,21 +1287,44 @@ namespace Terminals
             this.LoadWindowState();
         }
 
-        // todo Move openig putty tools to putty plugin as menu extender
         private void OpenSshAgentToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            this.OpenPuttyTool("pageant.exe");
+            OpenPuttyTool("pageant.exe", ExternalExecutablePaths.Pageant);
         }
 
         private void OpenSshKeygenToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            this.OpenPuttyTool("puttygen.exe");
+            OpenPuttyTool("puttygen.exe", ExternalExecutablePaths.Puttygen);
         }
 
-        private void OpenPuttyTool(string name)
+        private async void OpenPuttyTool(string name, string configuredPath)
         {
-            string path = Path.Combine(PluginsLoader.FindBasePluginDirectory(), "Putty", "Resources", name);
-            ExternalLinks.OpenPath(path);
+            if (Array.Exists(settings.DisabledPlugins, path =>
+                string.Equals(Path.GetFileName(path), "Terminals.Plugins.Putty.dll", StringComparison.OrdinalIgnoreCase)))
+            {
+                MessageBox.Show(this, "Enable PuTTY under Options > Plugins to use this tool.", name);
+                return;
+            }
+            try
+            {
+                await ExternalProcessLauncher.RunAsync(() =>
+                {
+                    string path = ExternalExecutablePaths.Require(name, configuredPath);
+                    using (var process = new System.Diagnostics.Process())
+                    {
+                        process.StartInfo = new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = false };
+                        if (!process.Start())
+                            throw new InvalidOperationException("The external process did not start.");
+                    }
+                });
+            }
+            catch (Exception ex) when (ex is IOException || ex is System.ComponentModel.Win32Exception ||
+                ex is InvalidOperationException || ex is ArgumentException || ex is NotSupportedException ||
+                ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+            {
+                if (!IsDisposed && !Disposing)
+                    MessageBox.Show(this, ex.Message, name, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         private void OpenLogFolderToolStripMenuItem_Click(object sender, EventArgs e)

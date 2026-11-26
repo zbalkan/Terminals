@@ -674,16 +674,16 @@ namespace Terminals
             // 
             this.openSshAgentToolStripMenuItem.Name = "openSshAgentToolStripMenuItem";
             this.openSshAgentToolStripMenuItem.Size = new System.Drawing.Size(276, 22);
-            this.openSshAgentToolStripMenuItem.Text = "Open SSH Agent";
-            this.openSshAgentToolStripMenuItem.ToolTipText = "Open SSH Agent";
+            this.openSshAgentToolStripMenuItem.Text = "Open Pageant";
+            this.openSshAgentToolStripMenuItem.ToolTipText = "Open Pageant";
             this.openSshAgentToolStripMenuItem.Click += new System.EventHandler(this.OpenSshAgentToolStripMenuItem_Click);
             // 
             // openSshKeygenToolStripMenuItem
             // 
             this.openSshKeygenToolStripMenuItem.Name = "openSshKeygenToolStripMenuItem";
             this.openSshKeygenToolStripMenuItem.Size = new System.Drawing.Size(276, 22);
-            this.openSshKeygenToolStripMenuItem.Text = "Open SSH Keygen";
-            this.openSshKeygenToolStripMenuItem.ToolTipText = "Open SSH Keygen";
+            this.openSshKeygenToolStripMenuItem.Text = "Open PuTTYgen";
+            this.openSshKeygenToolStripMenuItem.ToolTipText = "Open PuTTYgen";
             this.openSshKeygenToolStripMenuItem.Click += new System.EventHandler(this.OpenSshKeygenToolStripMenuItem_Click);
             // 
             // toolStripSeparator9

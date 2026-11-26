@@ -49,6 +49,7 @@ namespace Terminals.Forms.OptionPanels
         private void PluginGroups_Resize(object sender, EventArgs e) { ResizeGroups(); }
         private void BrowsePutty_Click(object sender, EventArgs e) { BrowseExecutable(puttyPath, puttyControls, "putty.exe"); }
         private void BrowsePageant_Click(object sender, EventArgs e) { BrowseExecutable(pageantPath, puttyControls, "pageant.exe"); }
+        private void BrowsePuttygen_Click(object sender, EventArgs e) { BrowseExecutable(puttygenPath, puttyControls, "puttygen.exe"); }
         private void BrowseSelfService_Click(object sender, EventArgs e) { BrowseExecutable(selfServicePath, citrixControls, "SelfService.exe"); }
         private void BrowseStorebrowse_Click(object sender, EventArgs e) { BrowseExecutable(storebrowsePath, citrixControls, "storebrowse.exe"); }
         private void BrowseVnc_Click(object sender, EventArgs e)
@@ -162,6 +163,7 @@ namespace Terminals.Forms.OptionPanels
                 enablePutty.Checked = puttyPlugin != null && puttyPlugin.Enabled;
                 puttyPath.Text = DisplayPath("putty.exe", Settings.Instance.PuttyExecutablePath);
                 pageantPath.Text = DisplayPath("pageant.exe", Settings.Instance.PageantExecutablePath);
+                puttygenPath.Text = DisplayPath("puttygen.exe", Settings.Instance.PuttygenExecutablePath);
                 puttyControls.Enabled = enablePutty.Checked;
                 enableCitrix.Enabled = citrixPlugin != null;
                 enableCitrix.Checked = citrixPlugin != null && citrixPlugin.Enabled;
@@ -218,8 +220,10 @@ namespace Terminals.Forms.OptionPanels
             pluginsSelection.SaveSelected(GetPluginsFromUI());
             SaveExecutablePath(puttyPath, "putty.exe", value => Settings.Instance.PuttyExecutablePath = value);
             SaveExecutablePath(pageantPath, "pageant.exe", value => Settings.Instance.PageantExecutablePath = value);
+            SaveExecutablePath(puttygenPath, "puttygen.exe", value => Settings.Instance.PuttygenExecutablePath = value);
             ExternalExecutablePaths.Putty = Settings.Instance.PuttyExecutablePath;
             ExternalExecutablePaths.Pageant = Settings.Instance.PageantExecutablePath;
+            ExternalExecutablePaths.Puttygen = Settings.Instance.PuttygenExecutablePath;
             SaveExecutablePath(selfServicePath, "SelfService.exe", value => Settings.Instance.CitrixSelfServiceExecutablePath = value);
             SaveExecutablePath(storebrowsePath, "storebrowse.exe", value => Settings.Instance.CitrixStorebrowseExecutablePath = value);
             ExternalExecutablePaths.CitrixSelfService = Settings.Instance.CitrixSelfServiceExecutablePath;
@@ -272,6 +276,7 @@ namespace Terminals.Forms.OptionPanels
             foreach (var row in new[] {
                 new { Name = "putty.exe", Field = puttyPath },
                 new { Name = "pageant.exe", Field = pageantPath },
+                new { Name = "puttygen.exe", Field = puttygenPath },
                 new { Name = "SelfService.exe", Field = selfServicePath },
                 new { Name = "storebrowse.exe", Field = storebrowsePath },
                 new { Name = "vnc-selected", Field = vncViewerPath }

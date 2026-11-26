@@ -26,6 +26,7 @@ namespace Tests.Putty
         {
             ExternalExecutablePaths.Putty = null;
             ExternalExecutablePaths.Pageant = null;
+            ExternalExecutablePaths.Puttygen = null;
             if (Directory.Exists(root))
                 Directory.Delete(root, true);
         }
@@ -112,6 +113,29 @@ namespace Tests.Putty
             string expected = CreateExecutable("configured", "pageant.exe");
             ExternalExecutablePaths.Pageant = expected;
             Assert.AreEqual(expected, Executables.GetPageantBinaryPath());
+        }
+
+        [TestMethod]
+        public void Puttygen_UsesConfiguredExecutable()
+        {
+            string expected = CreateExecutable("configured", "puttygen.exe");
+            ExternalExecutablePaths.Puttygen = expected;
+            Assert.AreEqual(expected, ExternalExecutablePaths.Require("puttygen.exe", ExternalExecutablePaths.Puttygen));
+        }
+
+        [TestMethod]
+        public void Puttygen_IsDiscoveredFromPath()
+        {
+            string expected = CreateExecutable("user", "puttygen.exe");
+            Assert.AreEqual(expected, ExternalExecutablePaths.Find("puttygen.exe", null, Path.GetDirectoryName(expected), ""));
+        }
+
+        [TestMethod]
+        public void Puttygen_InvalidOverrideDoesNotFallBack()
+        {
+            string expected = CreateExecutable("user", "puttygen.exe");
+            Assert.ThrowsExactly<FileNotFoundException>(() => ExternalExecutablePaths.Find("puttygen.exe",
+                Path.Combine(root, "missing.exe"), Path.GetDirectoryName(expected), ""));
         }
 
         [TestMethod]
