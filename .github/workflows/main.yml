@@ -57,7 +57,9 @@ jobs:
             filter: 'FullyQualifiedName~Tests.SqlPersisted|TestCategory=Database'
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
       - name: Reject tracked build outputs and obsolete source-control bindings
         shell: pwsh
         run: ./Build/Test-TrackedArtifacts.ps1
@@ -65,9 +67,9 @@ jobs:
         shell: pwsh
         run: ./Build/Test-WinFormsDesignerOwnership.ps1
       - name: Setup-msbuild
-        uses: microsoft/setup-msbuild@v3
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
       - name: Setup NuGet
-        uses: NuGet/setup-nuget@v3
+        uses: NuGet/setup-nuget@12c57947e9458a5b976961b08ea0706a17dd71ae # v3
       - name: Restore packages.config and PackageReference dependencies
         run: msbuild ${{ env.SLN_FILE_PATH }} -t:Restore -property:RestorePackagesConfig=true -property:Configuration=Release
       - name: Ensure .NET Framework 4.8.1 targeting assemblies
@@ -116,7 +118,7 @@ jobs:
       - name: Install SQL Server LocalDB (database suite only)
         timeout-minutes: 15
         if: matrix.suite == 'database'
-        uses: potatoqualitee/mssqlsuite@v1.7
+        uses: potatoqualitee/mssqlsuite@9a0136e208df60b8ecb62909f076bc34854fa55a # v1.7
         with:
           install: localdb
           show-log: true
@@ -165,14 +167,14 @@ jobs:
           }
       - name: Upload test diagnostic results
         if: ${{ !cancelled() && hashFiles('TestResults/*.trx') != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: terminals-${{ matrix.suite }}-trx
           path: TestResults/*.trx
           if-no-files-found: error
       - name: Test Report
         id: test-report
-        uses: dorny/test-reporter@v3
+        uses: dorny/test-reporter@d1b5dff021aa968b288b02285a8bf47471c5928a # v3
         if: ${{ !cancelled() && hashFiles('TestResults/test_results.trx') != '' && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
         continue-on-error: true
         with:
@@ -190,14 +192,16 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
       - name: Reject tracked build outputs and obsolete source-control bindings
         shell: pwsh
         run: ./Build/Test-TrackedArtifacts.ps1
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v3
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
       - name: Setup NuGet
-        uses: NuGet/setup-nuget@v3
+        uses: NuGet/setup-nuget@12c57947e9458a5b976961b08ea0706a17dd71ae # v3
       - name: Restore solution dependencies
         run: msbuild Source/Terminals.sln -t:Restore -property:RestorePackagesConfig=true -property:Configuration=Release
       - name: Ensure .NET Framework 4.8.1 targeting assemblies
@@ -254,14 +258,14 @@ jobs:
         run: ./Build/Test-InnoSafety.ps1
       - name: Upload installer diagnostic logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: terminals-inno-logs
           path: Build/Output/InstallerLogs/*.log
           if-no-files-found: warn
       - name: Upload ZIP and Inno EXE
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: terminals-distribution
           path: |
