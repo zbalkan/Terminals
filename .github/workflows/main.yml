@@ -69,25 +69,8 @@ jobs:
       - name: Validate WinForms Designer ownership
         shell: pwsh
         run: ./Build/Test-WinFormsDesignerOwnership.ps1
-      - name: Setup-msbuild
-        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
-      - name: Setup NuGet
-        uses: NuGet/setup-nuget@12c57947e9458a5b976961b08ea0706a17dd71ae # v3
-      - name: Restore packages.config and PackageReference dependencies
-        run: msbuild ${{ env.SLN_FILE_PATH }} -t:Restore -property:RestorePackagesConfig=true -property:Configuration=Release
-      - name: Ensure .NET Framework 4.8.1 targeting assemblies
-        shell: pwsh
-        run: |
-          $destination = Join-Path ${env:ProgramFiles(x86)} 'Reference Assemblies/Microsoft/Framework/.NETFramework/v4.8.1'
-          if (-not (Test-Path (Join-Path $destination 'mscorlib.dll'))) {
-            $packageDir = Join-Path $env:RUNNER_TEMP 'net481-reference'
-            nuget install Microsoft.NETFramework.ReferenceAssemblies.net481 -Version $env:NET481_REFERENCE_VERSION -Source https://api.nuget.org/v3/index.json -OutputDirectory $packageDir -ExcludeVersion -NonInteractive
-            if ($LASTEXITCODE -ne 0) { throw 'Failed to download .NET Framework 4.8.1 targeting assemblies' }
-            $source = Join-Path $packageDir 'Microsoft.NETFramework.ReferenceAssemblies.net481/build/.NETFramework/v4.8.1'
-            if (-not (Test-Path (Join-Path $source 'mscorlib.dll'))) { throw 'Missing 4.8.1 reference assemblies in package' }
-            New-Item -ItemType Directory -Path $destination -Force | Out-Null
-            Copy-Item (Join-Path $source '*') $destination -Recurse -Force
-          }
+      - name: Prepare build environment
+        uses: ./.github/actions/prepare-build
       - name: Build solution
         run: msbuild ${{ env.SLN_FILE_PATH }} -t:rebuild -property:Configuration=Release
       - name: Audit shared ZIP and Inno payload
@@ -239,25 +222,8 @@ jobs:
       - name: Reject tracked build outputs and obsolete source-control bindings
         shell: pwsh
         run: ./Build/Test-TrackedArtifacts.ps1
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
-      - name: Setup NuGet
-        uses: NuGet/setup-nuget@12c57947e9458a5b976961b08ea0706a17dd71ae # v3
-      - name: Restore solution dependencies
-        run: msbuild Source/Terminals.sln -t:Restore -property:RestorePackagesConfig=true -property:Configuration=Release
-      - name: Ensure .NET Framework 4.8.1 targeting assemblies
-        shell: pwsh
-        run: |
-          $destination = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Reference Assemblies/Microsoft/Framework/.NETFramework/v4.8.1'
-          if (-not (Test-Path (Join-Path $destination 'mscorlib.dll'))) {
-            $packageDir = Join-Path $env:RUNNER_TEMP 'net481-reference'
-            nuget install Microsoft.NETFramework.ReferenceAssemblies.net481 -Version $env:NET481_REFERENCE_VERSION -Source https://api.nuget.org/v3/index.json -OutputDirectory $packageDir -ExcludeVersion -NonInteractive
-            if ($LASTEXITCODE -ne 0) { throw 'Failed to download net481 reference assemblies' }
-            $source = Join-Path $packageDir 'Microsoft.NETFramework.ReferenceAssemblies.net481/build/.NETFramework/v4.8.1'
-            if (-not (Test-Path (Join-Path $source 'mscorlib.dll'))) { throw 'Missing net481 reference assemblies' }
-            New-Item -ItemType Directory -Path $destination -Force | Out-Null
-            Copy-Item (Join-Path $source '*') $destination -Recurse -Force
-          }
+      - name: Prepare build environment
+        uses: ./.github/actions/prepare-build
       - name: Build application Release
         shell: pwsh
         run: |

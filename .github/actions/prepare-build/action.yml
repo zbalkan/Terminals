@@ -1,0 +1,13 @@
+name: Prepare Terminals build environment
+description: Provision MSBuild, NuGet and net481 reference assemblies, then restore dependencies.
+runs:
+  using: composite
+  steps:
+    - uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
+    - uses: NuGet/setup-nuget@12c57947e9458a5b976961b08ea0706a17dd71ae # v3
+    - name: Ensure .NET Framework 4.8.1 targeting assemblies
+      shell: pwsh
+      run: ./Build/Ensure-Net481ReferenceAssemblies.ps1
+    - name: Restore solution dependencies
+      shell: pwsh
+      run: msbuild $env:SLN_FILE_PATH -t:Restore -property:RestorePackagesConfig=true -property:Configuration=Release
