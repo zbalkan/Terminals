@@ -29,8 +29,11 @@ on:
 
 concurrency:
   # Superseded PR commits cancel obsolete runs; master and manual runs remain independent.
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('run-{0}-{1}', github.run_id, github.run_attempt) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
 
 env:
   SLN_FILE_PATH: Source/Terminals.sln
@@ -40,6 +43,10 @@ jobs:
     name: ${{ matrix.suite }} tests
     # Separate the file/general test runner from SQL LocalDB setup and deployments.
     runs-on: windows-2022
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      checks: write
     strategy:
       fail-fast: false
       matrix:
@@ -107,6 +114,7 @@ jobs:
           Write-Host "Using pinned VSTest from: $vstest"
           # The pinned executable prints its version when tests run. /version is not supported.
       - name: Install SQL Server LocalDB (database suite only)
+        timeout-minutes: 15
         if: matrix.suite == 'database'
         uses: potatoqualitee/mssqlsuite@v1.7
         with:
@@ -117,6 +125,7 @@ jobs:
         shell: pwsh
         run: ./Source/Tests/SqlPersisted/Initialize-LocalDb.ps1
       - name: Execute ${{ matrix.suite }} tests
+        timeout-minutes: 20
         shell: pwsh
         env:
           TEST_FILTER: ${{ matrix.filter }}
@@ -133,9 +142,11 @@ jobs:
           $adapter = Get-ChildItem -LiteralPath $adapterRoot -Filter MSTest.TestAdapter.dll -Recurse -File |
             Where-Object { $_.FullName -match '[\\/]net462[\\/]' } | Select-Object -First 1
           if (-not $adapter) { throw "MSTest .NET Framework adapter not found under $adapterRoot" }
-          vstest.console.exe "Source\Tests\bin\Release\Tests.dll" "/TestAdapterPath:$($adapter.DirectoryName)" "/TestCaseFilter:$env:TEST_FILTER" '/logger:trx;LogFileName=test_results.trx'
-          exit $LASTEXITCODE
+          vstest.console.exe "Source\Tests\bin\Release\Tests.dll" "/TestAdapterPath:$($adapter.DirectoryName)" "/TestCaseFilter:$env:TEST_FILTER" '/logger:trx;LogFileName=test_results.trx' -- RunConfiguration.TreatNoTestsAsError=true
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Test-Path -LiteralPath 'TestResults/test_results.trx' -PathType Leaf)) { throw 'Missing expected test_results.trx' }
       - name: Validate RAS ABI on x86 and x64
+        timeout-minutes: 10
         if: matrix.suite == 'file-and-general'
         shell: pwsh
         run: |
@@ -150,18 +161,34 @@ jobs:
             $env:TERMINALS_RAS_ABI_PLATFORM = $platform
             vstest.console.exe "Source\Tests\bin\Release\Tests.dll" "/TestAdapterPath:$($adapter.DirectoryName)" "/Platform:$platform" '/TestCaseFilter:TestCategory=RasAbi' "/logger:trx;LogFileName=ras_abi_$platform.trx" -- RunConfiguration.TreatNoTestsAsError=true
             if ($LASTEXITCODE -ne 0) { throw "RAS ABI validation failed on $platform" }
+            if (-not (Test-Path -LiteralPath "TestResults/ras_abi_$platform.trx" -PathType Leaf)) { throw "Missing expected RAS ABI TRX for $platform" }
           }
+      - name: Upload test diagnostic results
+        if: ${{ !cancelled() && hashFiles('TestResults/*.trx') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminals-${{ matrix.suite }}-trx
+          path: TestResults/*.trx
+          if-no-files-found: error
       - name: Test Report
+        id: test-report
         uses: dorny/test-reporter@v3
-        if: success() || failure()
+        if: ${{ !cancelled() && hashFiles('TestResults/test_results.trx') != '' && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        continue-on-error: true
         with:
           name: ${{ matrix.suite }} MSTests
           path: TestResults/test_results.trx
           reporter: dotnet-trx
+          fail-on-error: 'false'
+      - name: Warn on test report publication failure
+        if: ${{ !cancelled() && steps.test-report.outcome == 'failure' }}
+        shell: pwsh
+        run: Write-Output '::warning::Test report publication failed; consult the TRX artifacts and test execution outcome.'
 
   package:
     name: Build and test Inno Setup and portable ZIP
     runs-on: windows-2022
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
       - name: Reject tracked build outputs and obsolete source-control bindings
@@ -197,6 +224,7 @@ jobs:
           ./Build/PackOutput.ps1
           ./Build/PackOutput.ps1
       - name: Install verified Inno Setup 7.1.1 compiler
+        timeout-minutes: 15
         shell: pwsh
         run: |
           $uri = 'https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe'
@@ -218,6 +246,7 @@ jobs:
         shell: pwsh
         run: ./Build/Assert-InnoDistribution.ps1
       - name: Silent install and uninstall smoke test
+        timeout-minutes: 15
         shell: pwsh
         run: ./Build/Test-InnoInstall.ps1
       - name: Reject legacy MSI and portable-data collisions
@@ -231,11 +260,11 @@ jobs:
           path: Build/Output/InstallerLogs/*.log
           if-no-files-found: warn
       - name: Upload ZIP and Inno EXE
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: terminals-distribution
           path: |
             Build/Output/Terminals_v*.zip
             Build/Output/TerminalsSetup_*.exe
-          if-no-files-found: warn
+          if-no-files-found: error
