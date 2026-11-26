@@ -66,7 +66,8 @@ namespace Terminals
         private void CloseTimer_Tick(object sender, EventArgs e)
         {
             IConnection connection = this.filter.SelectedConnection;
-            if (connection != null && !connection.Connected)
+            var managed = connection as RASConnection;
+            if (connection != null && !connection.Connected && (managed == null || !managed.ConnectionPending))
             {
                 this.closeTimer.Stop();
                 this.Close();
@@ -84,10 +85,18 @@ namespace Terminals
             this.Close();
         }
 
-        private void PopupTerminal_FormClosing(object sender, FormClosingEventArgs e)
+        private async void PopupTerminal_FormClosing(object sender, FormClosingEventArgs e)
         {
-            this.mainTabsControler.UnRegisterPopUp(this);
             TerminalTabControlItem activeTab = this.tabControl1.SelectedItem as TerminalTabControlItem;
+            var ras = activeTab == null ? null : activeTab.Connection as RASConnection;
+            if (ras != null && (ras.Connected || ras.ConnectionPending))
+            {
+                e.Cancel = true;
+                if (await ras.CloseAsync() && !IsDisposed)
+                    Close();
+                return;
+            }
+            this.mainTabsControler.UnRegisterPopUp(this);
             if (activeTab != null)
             {
                 // doesnt metter yet. Nobody closes connections

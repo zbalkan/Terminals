@@ -1,6 +1,6 @@
 using System;
 using System.Windows.Forms;
-using Terminals.Connections.RasNative;
+using System.Threading.Tasks;
 using Terminals.Data;
 
 namespace Terminals.Connections
@@ -10,18 +10,20 @@ namespace Terminals.Connections
         public string LastError { get; set; }
         private RASConnection rASConnection;
         private Timer timer;
-        private MethodInvoker logMiv;
         private DateTime connectedTime = DateTime.MinValue;
-        private string Entry = string.Empty;
-        private string phoneNumber;
+        private string renderedStatus;
+        private bool updating;
 
         public RASConnection RASConnection
         {
             get { return rASConnection; }
             set
             {
+                if (rASConnection != null)
+                    rASConnection.OnLog -= rASConnection_OnLog;
                 rASConnection = value;
-                rASConnection.OnLog += new Connection.LogHandler(rASConnection_OnLog);
+                if (rASConnection != null)
+                    rASConnection.OnLog += rASConnection_OnLog;
             }
         }
 
@@ -41,18 +43,23 @@ namespace Terminals.Connections
             InitializeComponent();
             timer = new Timer { Interval = 500 };
             timer.Tick += timer_Tick;
-            timer.Start();
-            logMiv = new MethodInvoker(UpdateLog);
+            if (IsHandleCreated)
+                timer.Start();
+
         }
 
-        private void UpdateLog()
+        private async void timer_Tick(object sender, EventArgs e)
         {
-            LogListBox.TopIndex = LogListBox.Items.Add(Entry);
-        }
-
-        private void timer_Tick(object sender, EventArgs e)
-        {
-            UpdateStats();
+            if (updating || rASConnection == null || IsDisposed || Disposing)
+                return;
+            updating = true;
+            try
+            {
+                await rASConnection.RefreshStatusAsync();
+                if (!IsDisposed && !Disposing)
+                    UpdateStats();
+            }
+            finally { updating = false; }
         }
 
         public IFavorite Favorite
@@ -69,8 +76,7 @@ namespace Terminals.Connections
         public void Disconnect()
         {
             RASConnection.Disconnect();
-            if (rASConnection.ras == null)
-                timer.Stop();
+
         }
 
         public bool Connected
@@ -84,86 +90,58 @@ namespace Terminals.Connections
         {
             if (rASConnection == null)
                 return;
-
-            rASConnection.NotifyIfDisconnected();
-            if (IsDisposed || Disposing)
+            if (Connected && connectedTime == DateTime.MinValue)
+                connectedTime = DateTime.Now;
+            if (!Connected)
+                connectedTime = DateTime.MinValue;
+            string details = "Connection Status: " + rASConnection.StatusText;
+            if (Connected)
+                details += "\nHost: " + rASConnection.EntryName + "\nIP Address: " + rASConnection.Address +
+                    "\nConnection Duration: " + (DateTime.Now - connectedTime).ToString(@"d\.hh\:mm\:ss");
+            if (details == renderedStatus)
                 return;
-            lbDetails1.Items.Clear();
-            BringToFront();
-            bool connected;
+            renderedStatus = details;
+            lbDetails1.BeginUpdate();
             try
             {
-                connected = Connected;
+                lbDetails1.Items.Clear();
+                lbDetails1.Items.AddRange(details.Split('\n'));
             }
-            catch (System.ComponentModel.Win32Exception exc)
-            {
-                AddDetailsText("Connection Status", "Unknown (" + exc.NativeErrorCode + ")");
-                return;
-            }
-            if (connected)
-            {
-                if (connectedTime == DateTime.MinValue)
-                {
-                    connectedTime = DateTime.Now;
-                    try
-                    {
-                        foreach (var item in RasConnectionClient.GetEntries())
-                        {
-                            if (string.Equals(item.Name, rASConnection.ras.EntryName, StringComparison.OrdinalIgnoreCase))
-                            {
-                                phoneNumber = item.PhoneNumber;
-                                break;
-                            }
-                        }
-                    }
-                    catch (System.ComponentModel.Win32Exception)
-                    {
-                        phoneNumber = string.Empty;
-                    }
-                }
-
-                AddDetailsText("Connection Status", "Connected");
-                AddDetailsText("Host", phoneNumber);
-                try
-                {
-                    AddDetailsText("IP Address", rASConnection.ras.IPAddress());
-                }
-                catch (System.ComponentModel.Win32Exception)
-                {
-                    AddDetailsText("IP Address", "Unavailable");
-                }
-                TimeSpan ts = DateTime.Now - connectedTime;
-                AddDetailsText("Connection Duration:", string.Format("{0} Days, {1} Hours, {2} Minutes, {3} Seconds",
-                    ts.Days, ts.Hours, ts.Minutes, ts.Seconds));
-            }
-            else
-            {
-                AddDetailsText("Connection Status", rASConnection.ras != null && rASConnection.ras.HasOutstandingHandle
-                    ? "Cleanup or connection state unresolved" : "Not Connected");
-            }
-        }
-
-        private void AddDetailsText(string caption, object item)
-        {
-            if (item != null)
-                lbDetails1.TopIndex = lbDetails1.Items.Add(caption + ":  " + item);
+            finally { lbDetails1.EndUpdate(); }
         }
 
         private void rASConnection_OnLog(string entry)
         {
-            Entry = entry;
-            if (!IsHandleCreated || IsDisposed)
+            if (IsDisposed || Disposing)
                 return;
-            if (InvokeRequired)
-                BeginInvoke(logMiv);
-            else
-                logMiv();
+            LogListBox.TopIndex = LogListBox.Items.Add(entry);
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            if (timer != null)
+                timer.Start();
         }
 
         protected override void OnHandleDestroyed(EventArgs e)
         {
-            timer.Stop();
+            if (timer != null)
+                timer.Stop();
             base.OnHandleDestroyed(e);
+        }
+
+        private void ReleaseSubscriptions()
+        {
+            if (rASConnection != null)
+                rASConnection.OnLog -= rASConnection_OnLog;
+            if (timer != null)
+            {
+                timer.Stop();
+                timer.Tick -= timer_Tick;
+                timer.Dispose();
+                timer = null;
+            }
         }
     }
 }

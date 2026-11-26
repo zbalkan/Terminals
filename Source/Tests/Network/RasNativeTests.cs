@@ -375,6 +375,89 @@ namespace Tests.Network
         }
 
         [TestMethod]
+        public async System.Threading.Tasks.Task RasQueueCloseWaitsForDialAndRejectsNewWork()
+        {
+            var queue = new Terminals.Connections.RasOperationQueue();
+            using (var started = new System.Threading.ManualResetEventSlim())
+            using (var release = new System.Threading.ManualResetEventSlim())
+            {
+                var dial = queue.Enqueue(() =>
+                {
+                    started.Set();
+                    if (!release.Wait(TimeSpan.FromSeconds(10)))
+                        throw new TimeoutException();
+                    return 42;
+                });
+                try
+                {
+                    Assert.IsTrue(started.Wait(TimeSpan.FromSeconds(10)));
+                    var close = queue.Close(() => dial.GetAwaiter().GetResult());
+                    Assert.IsFalse(close.IsCompleted);
+                    Assert.ThrowsExactly<InvalidOperationException>(() => queue.Enqueue(() => 0));
+                    release.Set();
+                    Assert.AreEqual(42, await close);
+                }
+                finally { release.Set(); await dial; }
+            }
+        }
+
+        [TestMethod]
+        public async System.Threading.Tasks.Task RasQueueCleanupRunsAfterFailedOperation()
+        {
+            var queue = new Terminals.Connections.RasOperationQueue();
+            var failed = queue.Enqueue<int>(() => { throw new InvalidOperationException("dial"); });
+            var cleanup = queue.Close(() => 7);
+            Assert.AreEqual(7, await cleanup);
+            Assert.IsTrue(failed.IsFaulted);
+        }
+
+        [TestMethod]
+        public async System.Threading.Tasks.Task RasQueueAllowsCleanupRetry()
+        {
+            var queue = new Terminals.Connections.RasOperationQueue();
+            var first = queue.Close<int>(() => { throw new InvalidOperationException("cleanup"); });
+            Assert.AreEqual(0, await queue.Close(() => 0));
+            Assert.IsTrue(first.IsFaulted);
+        }
+
+        [TestMethod]
+        public async System.Threading.Tasks.Task BackgroundSessionClosesReferenceAcquiredDuringDial()
+        {
+            var native = new FakeRas();
+            native.StatusResults.Enqueue(6);
+            var session = new Terminals.Connections.RasBackgroundSession(native.CreateClient());
+            var dial = session.Dial("u", "p", "d");
+            var close = session.Close();
+            Assert.AreEqual(0U, await dial);
+            Assert.IsTrue(await close);
+            Assert.AreEqual(1, native.HangUps);
+        }
+
+        [TestMethod]
+        public async System.Threading.Tasks.Task BackgroundSessionRetriesFailedClose()
+        {
+            var native = new FakeRas { HangUpError = 5 };
+            var session = new Terminals.Connections.RasBackgroundSession(native.CreateClient());
+            await session.Dial("u", "p", "d");
+            try
+            {
+                await session.Close();
+                Assert.Fail("Expected native cleanup failure.");
+            }
+            catch (System.ComponentModel.Win32Exception exc)
+            {
+                Assert.AreEqual(5, exc.NativeErrorCode);
+            }
+            finally
+            {
+                native.HangUpError = 0;
+                native.StatusResults.Enqueue(6);
+                await session.Close();
+            }
+            Assert.AreEqual(2, native.HangUps);
+        }
+
+        [TestMethod]
         public void DisconnectWithoutOwnedHandleIsIdempotent()
         {
             using (var ras = new RasConnectionClient())

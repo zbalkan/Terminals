@@ -51,10 +51,21 @@ namespace Terminals
             this.CloseTabControlItem(e.Item);
         }
 
-        private void TcTerminals_TabControlItemClosing(TabControlItemClosingEventArgs e)
+        private async void TcTerminals_TabControlItemClosing(TabControlItemClosingEventArgs e)
         {
             // we have to check the connection state in case tab is closing because of lost connection
             IConnection currentConnection = this.selectionControler.CurrentConnection;
+            var ras = currentConnection as RASConnection;
+            if (ras != null)
+            {
+                e.Cancel = true;
+                if (!AskToClose())
+                    return;
+                var tab = this.tcTerminals.SelectedItem;
+                if (await ras.CloseAsync() && !mainForm.IsDisposed && this.tcTerminals.Items.Contains(tab))
+                    this.tcTerminals.ForceCloseTab(tab);
+                return;
+            }
             if (currentConnection != null && currentConnection.Connected)
             {
                 if (!this.AskToClose())

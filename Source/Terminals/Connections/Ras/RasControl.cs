@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Terminals.Common.Connections;
 using Terminals.Connections.RasNative;
@@ -12,6 +13,10 @@ namespace Terminals.Forms.EditFavorite
         private readonly Dictionary<string, RasPhoneBookEntry> dialupList =
             new Dictionary<string, RasPhoneBookEntry>(StringComparer.OrdinalIgnoreCase);
 
+        private bool loading;
+        private bool loaded;
+        private string requestedName;
+
         internal List<string> ConnectionNames { get; private set; }
 
         internal RasControl()
@@ -23,12 +28,16 @@ namespace Terminals.Forms.EditFavorite
         internal void OnServerNameChanged(string protocolName, string serverName)
         {
             if (protocolName == KnownConnectionConstants.RAS)
+            {
+                requestedName = serverName;
                 FillRasControls(serverName);
+                if (!loaded)
+                    LoadDialupConnections();
+            }
         }
 
         private void FillRasControls(string serverName)
         {
-            LoadDialupConnections();
             RASDetailsListBox.Items.Clear();
             RasPhoneBookEntry entry;
             if (serverName != null && dialupList.TryGetValue(serverName, out entry))
@@ -44,17 +53,37 @@ namespace Terminals.Forms.EditFavorite
             RASDetailsListBox.Items.Clear();
         }
 
-        private void LoadDialupConnections()
+        private async void LoadDialupConnections()
         {
-            dialupList.Clear();
-            ConnectionNames.Clear();
-            foreach (var entry in RasConnectionClient.GetEntries())
+            if (loading || IsDisposed || Disposing)
+                return;
+            loading = true;
+            try
             {
-                if (dialupList.ContainsKey(entry.Name))
-                    continue;
-                dialupList.Add(entry.Name, entry);
-                ConnectionNames.Add(entry.Name);
+                var entries = await Task.Run(() => RasConnectionClient.GetEntries());
+                if (IsDisposed || Disposing)
+                    return;
+                dialupList.Clear();
+                ConnectionNames.Clear();
+                foreach (var entry in entries)
+                {
+                    if (dialupList.ContainsKey(entry.Name))
+                        continue;
+                    dialupList.Add(entry.Name, entry);
+                    ConnectionNames.Add(entry.Name);
+                }
+                loaded = true;
+                FillRasControls(requestedName);
             }
+            catch (Exception exc)
+            {
+                if (!IsDisposed && !Disposing)
+                {
+                    RASDetailsListBox.Items.Clear();
+                    RASDetailsListBox.Items.Add("RAS phonebook unavailable: " + exc.Message);
+                }
+            }
+            finally { loading = false; }
         }
     }
 }
