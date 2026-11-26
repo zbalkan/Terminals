@@ -2,6 +2,7 @@ name: CI
 
 on:
   # Validate all branch pushes, but not tag pushes.
+  # Temporary synchronization validation.
   push:
     branches: [ '**' ]
     paths-ignore:
