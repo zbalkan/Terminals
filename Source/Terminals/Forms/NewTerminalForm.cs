@@ -200,7 +200,10 @@ namespace Terminals
             {
                 var isValid = this.validator.Validate();
                 if (!isValid)
+                {
+                    this.ShowErrorMessageBox("Unable to save favorite. Check the validation errors on the connection properties pages.");
                     return false;
+                }
 
                 IFavorite favorite = ResolveFavortie();
                 this.FillFavoriteFromControls(favorite);

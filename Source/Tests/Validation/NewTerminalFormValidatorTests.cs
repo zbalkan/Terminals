@@ -30,6 +30,23 @@ namespace Tests.Validation
             AssertServerNameValidation("example.org", false);
         }
 
+        [TestMethod]
+        public void Ssh_InactiveUrlValidation_DoesNotRejectFavorite()
+        {
+            var persistence = TestMocksFactory.CreatePersistence();
+            var form = new Mock<INewTerminalForm>();
+            form.SetupGet(f => f.ProtocolText).Returns("SSH");
+            var sut = new NewTerminalFormValidator(
+                persistence.Object, TestConnectionManager.Instance, form.Object);
+            using (var control = new TextBox())
+            {
+                var args = new CancelEventArgs();
+                sut.OnUrlValidating(control, args);
+                Assert.IsFalse(args.Cancel);
+                form.Verify(f => f.GetFullUrlFromHttpTextBox(), Times.Never());
+            }
+        }
+
         private static void AssertServerNameValidation(string serverName, bool shouldCancel)
         {
             var persistence = TestMocksFactory.CreatePersistence();

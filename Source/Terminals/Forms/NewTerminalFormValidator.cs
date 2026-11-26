@@ -104,7 +104,7 @@ namespace Terminals.Forms
 
         internal void OnUrlValidating(object sender, CancelEventArgs eventArgs)
         {
-            this.IsValid(sender, eventArgs, this.IsUrlValid, "Server URL isnt in valid format.");
+            this.IsValid(sender, eventArgs, () => !this.connectionManager.IsProtocolWebBased(this.form.ProtocolText) || this.IsUrlValid(), "Server URL isnt in valid format.");
         }
 
         internal void OnPortValidating(object sender, CancelEventArgs eventArgs)
