@@ -73,8 +73,9 @@ jobs:
         run: ./Build/Test-WinFormsDesignerOwnership.ps1
       - name: Prepare build environment
         uses: ./.github/actions/prepare-build
-      - name: Build solution
-        run: msbuild ${{ env.SLN_FILE_PATH }} -t:rebuild -property:Configuration=Release
+      - name: Build Release solution
+        shell: pwsh
+        run: ./Build/Invoke-ReleaseBuild.ps1
       - name: Audit shared ZIP and Inno payload
         shell: pwsh
         run: ./Build/Assert-PackagePayload.ps1 -OutputDirectory ./Build/Output/Release
@@ -162,11 +163,9 @@ jobs:
           persist-credentials: false
       - name: Prepare build environment
         uses: ./.github/actions/prepare-build
-      - name: Build application Release
+      - name: Build Release solution
         shell: pwsh
-        run: |
-          msbuild Source/Terminals.sln -t:Rebuild '-p:Configuration=Release' '-p:Platform=Any CPU' -m
-          if ($LASTEXITCODE -ne 0) { throw 'Release build failed' }
+        run: ./Build/Invoke-ReleaseBuild.ps1
       - name: Verify generated MSTSC COM wrappers
         shell: pwsh
         run: ./Build/Test-MstscWrappers.ps1
