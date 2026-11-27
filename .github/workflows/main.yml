@@ -55,7 +55,7 @@ jobs:
       matrix:
         include:
           - suite: file-and-general
-            filter: 'FullyQualifiedName!~Tests.SqlPersisted&TestCategory!=Database&TestCategory!=RasAbi'
+            filter: 'FullyQualifiedName!~Tests.SqlPersisted&TestCategory!=Database'
           - suite: database
             filter: 'FullyQualifiedName~Tests.SqlPersisted|TestCategory=Database'
 
@@ -142,11 +142,6 @@ jobs:
           TEST_FILTER: ${{ matrix.filter }}
           TERMINALS_TEST_SQL_CONNECTION_STRING: ${{ matrix.suite == 'database' && 'Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TERMINALS;Integrated Security=True;' || '' }}
         run: ./Build/Invoke-StandardTests.ps1
-      - name: Validate RAS ABI on x86 and x64
-        timeout-minutes: 10
-        if: ${{ !cancelled() && matrix.suite == 'file-and-general' && steps.standard-tests.outcome != 'skipped' && steps.standard-tests.outcome != '' }}
-        shell: pwsh
-        run: ./Build/Test-RasAbi.ps1
       - name: Upload Test Diagnostics
         if: ${{ !cancelled() && hashFiles('TestResults/*.trx') != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

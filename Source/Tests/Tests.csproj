@@ -134,7 +134,6 @@
     <Compile Include="Network\CaptureSessionLifecycleTests.cs" />
     <Compile Include="Network\LocalNetworkSnapshotTests.cs" />
     <Compile Include="Network\HexBoxProviderTests.cs" />
-    <Compile Include="Network\RasNativeTests.cs" />
     <Compile Include="Network\TcpConnectScannerTests.cs" />
     <Compile Include="Network\PortScanSessionTests.cs" />
     <Compile Include="Network\ServiceDetectorTests.cs" />

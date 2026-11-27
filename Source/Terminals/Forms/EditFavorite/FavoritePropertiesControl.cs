@@ -48,7 +48,6 @@ namespace Terminals.Forms.EditFavorite
         {
             this.InitializeComponent();
 
-            this.generalPanel1.AssignRasControl(this.rasControl1);
         }
 
         internal void LoadContent()
@@ -71,7 +70,6 @@ namespace Terminals.Forms.EditFavorite
             this.generalPanel1.Dock = DockStyle.Fill;
             this.groupsPanel1.Dock = DockStyle.Fill;
             this.executePanel1.Dock = DockStyle.Fill;
-            this.rasControl1.Dock = DockStyle.Fill;
             this.protocolOptionsPanel1.Dock = DockStyle.Fill;
             this.notesControl1.Dock = DockStyle.Fill;
         }
@@ -129,7 +127,6 @@ namespace Terminals.Forms.EditFavorite
             this.generalPanel1.Hide();
             this.groupsPanel1.Hide();
             this.executePanel1.Hide();
-            this.rasControl1.Hide();
             this.notesControl1.Hide();
             this.protocolOptionsPanel1.Hide();
         }

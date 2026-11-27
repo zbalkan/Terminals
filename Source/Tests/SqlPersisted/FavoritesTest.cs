@@ -104,6 +104,12 @@ namespace Tests.SqlPersisted
         {
             DbFavorite retired = this.AddFavoriteToPrimaryPersistence();
             var stored = this.CheckFavorites.Single(f => f.Id == retired.Id);
+            var first = new DbGroup { Name = "Legacy RAS first" };
+            var second = new DbGroup { Name = "Legacy RAS second" };
+            first.Favorites.Add(stored);
+            second.Favorites.Add(stored);
+            this.CheckDatabase.Groups.Add(first);
+            this.CheckDatabase.Groups.Add(second);
             stored.Protocol = "RAS";
             this.CheckDatabase.SaveChanges();
 
@@ -119,6 +125,10 @@ namespace Tests.SqlPersisted
             this.PrimaryFavorites.Add(active);
             Assert.AreEqual("RAS", this.CheckFavorites.Single(f => f.Id == retired.Id).Protocol);
             Assert.AreEqual(legacyOptions, this.CheckDatabase.GetProtocolPropertiesByFavorite(retired.Id));
+            var memberships = this.CheckDatabase.Groups.AsNoTracking()
+                .Where(group => group.Favorites.Any(favorite => favorite.Id == retired.Id))
+                .Select(group => group.Id).ToArray();
+            CollectionAssert.AreEquivalent(new[] { first.Id, second.Id }, memberships);
         }
 
         [TestMethod]

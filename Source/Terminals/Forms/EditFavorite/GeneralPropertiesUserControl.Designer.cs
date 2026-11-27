@@ -162,7 +162,6 @@ namespace Terminals.Forms.EditFavorite
             this.cmbServers.Name = "cmbServers";
             this.cmbServers.Size = new System.Drawing.Size(259, 21);
             this.cmbServers.TabIndex = 24;
-            this.cmbServers.SelectedIndexChanged += new System.EventHandler(this.CmbServers_SelectedIndexChanged);
             this.cmbServers.TextChanged += new System.EventHandler(this.CmbServers_TextChanged);
             this.cmbServers.Leave += new System.EventHandler(this.CmbServers_Leave);
             // 

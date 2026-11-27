@@ -17,7 +17,6 @@ namespace Terminals.Connections
 
         internal ConnectionManager(IPluginsLoader loader)
         {
-            // RAS, // this protocol doesnt fit to the concept and seems to be broken 
             IEnumerable<IConnectionPlugin> loaded = loader.Load();
             this.plugins = SortExternalPlugins(loaded);
         }

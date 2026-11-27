@@ -31,14 +31,13 @@ public static class Fixture {
         }
         if (file == null) return 31;
         string current = filter == null ? "all" :
-            filter == "TestCategory=RasAbi" ? "abi" :
             filter.Contains("SqlPersisted|") ? "database" : "general";
         string testCase = Environment.GetEnvironmentVariable("CI_DISCOVERY_CASE");
         if (testCase == "native-failure" && current == "database") return 17;
         if (testCase == "empty" && current == "general") { File.WriteAllText(file, " "); return 0; }
-        string[] tests = current == "all" ? new[] { "A", "B", "C" } :
+        string[] tests = current == "all" ? new[] { "A", "B" } :
             current == "general" ? new[] { "A" } :
-            current == "database" ? new[] { "B" } : new[] { "C" };
+            new[] { "B" };
         if (testCase == "duplicate" && current == "database") tests = new[] { "A" };
         if (testCase == "missing" && current == "database") tests = new[] { "D" };
         File.WriteAllLines(file, tests);

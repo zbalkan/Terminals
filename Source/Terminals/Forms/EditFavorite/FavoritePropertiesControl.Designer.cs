@@ -45,7 +45,6 @@
             this.lblLine = new System.Windows.Forms.Label();
             this.groupsPanel1 = new GroupsControl();
             this.executePanel1 = new ExecuteControl();
-            this.rasControl1 = new RasControl(); 
             this.panelContainer.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -141,7 +140,6 @@
             this.panelContainer.Controls.Add(this.executePanel1);
             this.panelContainer.Controls.Add(this.generalPanel1);
             this.panelContainer.Controls.Add(this.protocolOptionsPanel1);
-            this.panelContainer.Controls.Add(this.rasControl1);
             this.panelContainer.Location = new System.Drawing.Point(152, 38);
             this.panelContainer.Name = "panelContainer";
             this.panelContainer.Size = new System.Drawing.Size(595, 354);
@@ -160,13 +158,6 @@
             this.executePanel1.Name = "executePanel1";
             this.executePanel1.Size = new System.Drawing.Size(185, 168);
             this.executePanel1.TabIndex = 15;
-            // 
-            // rasControl1
-            // 
-            this.rasControl1.Location = new System.Drawing.Point(214, 164);
-            this.rasControl1.Name = "rasControl1";
-            this.rasControl1.Size = new System.Drawing.Size(202, 202);
-            this.rasControl1.TabIndex = 16;
             // 
             // lblLine
             // 
@@ -203,7 +194,6 @@
         private GeneralPropertiesUserControl generalPanel1;
         private GroupsControl groupsPanel1;
         private ExecuteControl executePanel1;
-        private RasControl rasControl1;
         private System.Windows.Forms.ImageList treeIcons;
         private NotesControl notesControl1;
         private System.Windows.Forms.Panel panelContainer;

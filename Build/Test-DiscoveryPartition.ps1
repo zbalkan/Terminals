@@ -19,12 +19,11 @@ function Get-DiscoveredTests([string]$name, [string]$filter) {
   }
 }
 $all = @(Get-DiscoveredTests 'all' '')
-$general = @(Get-DiscoveredTests 'general' 'FullyQualifiedName!~Tests.SqlPersisted&TestCategory!=Database&TestCategory!=RasAbi')
+$general = @(Get-DiscoveredTests 'general' 'FullyQualifiedName!~Tests.SqlPersisted&TestCategory!=Database')
 $database = @(Get-DiscoveredTests 'database' 'FullyQualifiedName~Tests.SqlPersisted|TestCategory=Database')
-$abi = @(Get-DiscoveredTests 'abi' 'TestCategory=RasAbi')
-$combined = @($general + $database + $abi)
+$combined = @($general + $database)
 $duplicates = @($combined | Group-Object -CaseSensitive | Where-Object Count -gt 1)
 if ($duplicates.Count -gt 0) { throw "Duplicate discovered test names: $($duplicates.Name -join ', ')" }
 $difference = @(Compare-Object -ReferenceObject $all -DifferenceObject $combined -CaseSensitive)
 if ($difference.Count -gt 0) { throw "Test partition mismatch: $($difference | Out-String)" }
-Write-Host "Discovery partition: $($all.Count) total; $($general.Count) general; $($database.Count) database; $($abi.Count) ABI"
+Write-Host "Discovery partition: $($all.Count) total; $($general.Count) general; $($database.Count) database"

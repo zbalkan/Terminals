@@ -309,12 +309,6 @@
     <Compile Include="Forms\EditFavorite\ProtocolOptionsPanel.Designer.cs">
       <DependentUpon>ProtocolOptionsPanel.cs</DependentUpon>
     </Compile>
-    <Compile Include="Connections\Ras\RasControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="Connections\Ras\RasControl.Designer.cs">
-      <DependentUpon>RasControl.cs</DependentUpon>
-    </Compile>
     <Compile Include="Forms\FavoriteViewModel.cs" />
     <Compile Include="Data\Validation\GroupNameValidator.cs" />
     <Compile Include="Forms\INewTerminalForm.cs" />
@@ -517,7 +511,6 @@
     <Compile Include="Network\Tools\NetworkingToolsLayout.Designer.cs">
       <DependentUpon>NetworkingToolsLayout.cs</DependentUpon>
     </Compile>
-    <Compile Include="Connections\Ras\RasNative.cs" />
     <Compile Include="Network\Tools\TabbedTools.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -1041,9 +1034,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\EditFavorite\ProtocolOptionsPanel.resx">
       <DependentUpon>ProtocolOptionsPanel.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Connections\Ras\RasControl.resx">
-      <DependentUpon>RasControl.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\OptionPanels\DefaultPasswordOptionPanel.resx">
       <DependentUpon>DefaultPasswordOptionPanel.cs</DependentUpon>
