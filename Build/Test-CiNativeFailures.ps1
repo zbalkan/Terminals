@@ -40,6 +40,8 @@ public static class Fixture {
         if (Test-Path -LiteralPath 'TestResults/test_results.trx') { throw 'Stale TRX survived execution' }
         $env:CI_FIXTURE_EXIT = '17'
         Assert-Rejected { & $script } 'Standard test execution failed (exit 17)'
+        # The nonzero native exit is expected and has been asserted.
+        $global:LASTEXITCODE = 0
         Remove-Item Env:TEST_FILTER
         Assert-Rejected { & $script } 'Missing TEST_FILTER'
     } finally { Pop-Location }
