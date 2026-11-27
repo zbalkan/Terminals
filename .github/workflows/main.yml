@@ -261,6 +261,7 @@ jobs:
         with:
           artifact-ids: ${{ needs.package.outputs.candidate-id }}
           path: distribution
+          merge-multiple: true
       - name: Verify distribution file set
         shell: bash
         run: |
