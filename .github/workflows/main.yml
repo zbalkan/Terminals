@@ -63,6 +63,10 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+      - name: Exercise publication gate on first attempt
+        if: matrix.suite == 'file-and-general' && github.run_attempt == 1
+        shell: pwsh
+        run: throw 'Intentional publication gate regression probe'
       - name: Validate CI workflow and PowerShell scripts
         if: matrix.suite == 'file-and-general'
         timeout-minutes: 10
