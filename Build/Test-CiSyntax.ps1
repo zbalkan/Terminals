@@ -50,7 +50,24 @@ function Test-CompositeMetadata($metadata) {
     foreach ($step in $metadata.runs.steps) {
         if ([bool]$step.run -eq [bool]$step.uses) { throw 'Composite step must declare exactly one of run or uses' }
         if ($step.run -and -not $step.shell) { throw 'Composite run step requires a shell' }
-        if ($step.uses -and $step.uses -notmatch '^[^@]+@[a-fA-F0-9]{40}
+        if ($step.uses -and $step.uses -notmatch '^[^@]+@[a-fA-F0-9]{40}$') {
+            throw "Composite action reference must be SHA-pinned: $($step.uses)"
+        }
+    }
+}
+$actions = @(git -C $root ls-files -- '.github/actions/**/action.yml' '.github/actions/**/action.yaml')
+if ($LASTEXITCODE -ne 0 -or $actions.Count -eq 0) { throw 'Unable to enumerate local actions' }
+foreach ($action in $actions) {
+    try { Test-CompositeMetadata (ConvertFrom-Yaml (Get-Content -LiteralPath (Join-Path $root $action) -Raw)) }
+    catch { throw "Invalid action ${action}: $_" }
+}
+$rejected = $false
+try { Test-CompositeMetadata @{name='Probe'; description='Probe'; runs=@{using='composite'; steps=@(@{run='echo probe'})}} }
+catch { $rejected = $true }
+if (-not $rejected) { throw 'Composite metadata negative control was not detected' }
+Write-Host "Validated $($actions.Count) local composite actions; negative control detected."
+
+$version = '1.7.12'
 $expected = '6e7241b51e6817ea6a047693d8e6fed13b31819c9a0dd6c5a726e1592d22f6e9'
 $temporary = Join-Path ([IO.Path]::GetTempPath()) ("terminals-actionlint-" + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $temporary | Out-Null
