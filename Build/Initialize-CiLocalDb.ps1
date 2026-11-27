@@ -1,0 +1,52 @@
+$ErrorActionPreference = 'Stop'
+$PSNativeCommandUseErrorActionPreference = $false
+$instance = 'MSSQLLocalDB'
+$directory = Join-Path $env:RUNNER_TEMP 'terminals-localdb'
+New-Item -ItemType Directory -Path $directory -Force | Out-Null
+$msi = Join-Path $directory 'SqlLocalDB.msi'
+$log = Join-Path $directory 'install.log'
+$uri = 'https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi'
+try {
+    Invoke-WebRequest -Uri $uri -OutFile $msi
+    $signature = Get-AuthenticodeSignature -LiteralPath $msi
+    if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch '(?:^|,\s*)O=Microsoft Corporation(?:,|$)') {
+        throw "LocalDB installer signature validation failed: $($signature.Status)"
+    }
+    $install = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/i `"$msi`" /qn /norestart /l*v `"$log`" IACCEPTSQLLOCALDBLICENSETERMS=YES" -Wait -PassThru
+    if ($install.ExitCode -notin @(0, 3010)) { throw "LocalDB MSI installation failed (exit $($install.ExitCode))" }
+    if ($install.ExitCode -eq 3010) { throw 'LocalDB installation requires a restart; CI cannot continue reliably' }
+    $localdb = Join-Path $env:ProgramFiles 'Microsoft SQL Server/150/Tools/Binn/SqlLocalDB.exe'
+    if (-not (Test-Path -LiteralPath $localdb -PathType Leaf)) { throw "Missing SQL Server 2019 LocalDB executable: $localdb" }
+    & $localdb info $instance
+    if ($LASTEXITCODE -ne 0) {
+        & $localdb create $instance 15.0
+        if ($LASTEXITCODE -ne 0) { throw "LocalDB instance creation failed (exit $LASTEXITCODE)" }
+    }
+    & $localdb start $instance
+    if ($LASTEXITCODE -ne 0) { throw "LocalDB instance startup failed (exit $LASTEXITCODE)" }
+    $lastError = $null
+    for ($attempt = 1; $attempt -le 12; $attempt++) {
+        $connection = [System.Data.SqlClient.SqlConnection]::new('Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=master;Integrated Security=True;Connect Timeout=5;Pooling=False;')
+        try {
+            $connection.Open()
+            $command = $connection.CreateCommand()
+            try {
+                $command.CommandText = "SELECT CAST(SERVERPROPERTY('ProductMajorVersion') AS int)"
+                $major = [int]$command.ExecuteScalar()
+            } finally { $command.Dispose() }
+            if ($major -ne 15) { throw "Expected SQL Server 2019 (major 15), found $major" }
+            Write-Host "SQL Server LocalDB 2019 ready on attempt $attempt."
+            return
+        } catch {
+            $lastError = $_
+            Write-Warning "LocalDB readiness attempt $attempt failed: $($_.Exception.Message)"
+        } finally { $connection.Dispose() }
+        if ($attempt -lt 12) { Start-Sleep -Seconds 5 }
+    }
+    throw "LocalDB readiness failed after 12 attempts: $lastError"
+} catch {
+    if (Test-Path -LiteralPath $log) { Get-Content -LiteralPath $log -Tail 100 | Out-Host }
+    throw
+} finally {
+    if (Test-Path -LiteralPath $msi) { Remove-Item -LiteralPath $msi -Force }
+}

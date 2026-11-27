@@ -114,10 +114,8 @@ jobs:
       - name: Install SQL Server LocalDB (database suite only)
         timeout-minutes: 15
         if: matrix.suite == 'database'
-        uses: potatoqualitee/mssqlsuite@9a0136e208df60b8ecb62909f076bc34854fa55a # v1.7
-        with:
-          install: localdb
-          show-log: true
+        shell: pwsh
+        run: ./Build/Initialize-CiLocalDb.ps1
       - name: Create SQL database from source schema (database suite only)
         if: matrix.suite == 'database'
         shell: pwsh
