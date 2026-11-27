@@ -16,6 +16,10 @@ try {
       if (-not (Test-Path -LiteralPath "TestResults/ras_abi_$platform.trx" -PathType Leaf)) { $failures += "Missing expected RAS ABI TRX for $platform" }
     }
 } finally {
-    [Environment]::SetEnvironmentVariable('TERMINALS_RAS_ABI_PLATFORM', $previousPlatform, 'Process')
+    if ($null -eq $previousPlatform) {
+        Remove-Item Env:TERMINALS_RAS_ABI_PLATFORM -ErrorAction SilentlyContinue
+    } else {
+        [Environment]::SetEnvironmentVariable('TERMINALS_RAS_ABI_PLATFORM', $previousPlatform, 'Process')
+    }
 }
 if ($failures.Count -gt 0) { throw ($failures -join "; ") }

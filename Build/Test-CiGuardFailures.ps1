@@ -44,6 +44,10 @@ try {
         Assert-Rejected { & (Join-Path $PSScriptRoot 'Test-TrackedArtifacts.ps1') } 'tracked-artifact guard found 1 violation'
     } finally { Pop-Location }
 } finally {
-    [Environment]::SetEnvironmentVariable('TERMINALS_VSTEST_PATH', $previousPath, 'Process')
+    if ($null -eq $previousPath) {
+        Remove-Item Env:TERMINALS_VSTEST_PATH -ErrorAction SilentlyContinue
+    } else {
+        [Environment]::SetEnvironmentVariable('TERMINALS_VSTEST_PATH', $previousPath, 'Process')
+    }
     if (Test-Path -LiteralPath $fixture) { Remove-Item -LiteralPath $fixture -Recurse -Force }
 }

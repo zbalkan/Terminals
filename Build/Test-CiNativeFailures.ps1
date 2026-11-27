@@ -73,6 +73,12 @@ public static class Fixture {
         Write-Host 'Verified independent ABI execution, fresh output and environment restoration.'
     } finally { Pop-Location }
 } finally {
-    foreach ($name in $names) { [Environment]::SetEnvironmentVariable($name, $previous[$name], 'Process') }
+    foreach ($name in $names) {
+        if ($null -eq $previous[$name]) {
+            Remove-Item -LiteralPath "Env:$name" -ErrorAction SilentlyContinue
+        } else {
+            [Environment]::SetEnvironmentVariable($name, $previous[$name], 'Process')
+        }
+    }
     if (Test-Path -LiteralPath $fixture) { Remove-Item -LiteralPath $fixture -Recurse -Force }
 }
