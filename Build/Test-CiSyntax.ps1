@@ -91,19 +91,3 @@ try {
     finally { Pop-Location }
 }
 finally { Remove-Item -LiteralPath $temporary -Recurse -Force }
-) { throw "Composite action reference must be SHA-pinned: $($step.uses)" }
-    }
-}
-$actions = @(git -C $root ls-files -- '.github/actions/**/action.yml' '.github/actions/**/action.yaml')
-if ($LASTEXITCODE -ne 0 -or $actions.Count -eq 0) { throw 'Unable to enumerate local actions' }
-foreach ($action in $actions) {
-    try { Test-CompositeMetadata (ConvertFrom-Yaml (Get-Content -LiteralPath (Join-Path $root $action) -Raw)) }
-    catch { throw "Invalid action ${action}: $_" }
-}
-$rejected = $false
-try { Test-CompositeMetadata @{name='Probe'; description='Probe'; runs=@{using='composite'; steps=@(@{run='echo probe'})}} }
-catch { $rejected = $true }
-if (-not $rejected) { throw 'Composite metadata negative control was not detected' }
-Write-Host "Validated $($actions.Count) local composite actions; negative control detected."
-
-$version = '1.7.12'
