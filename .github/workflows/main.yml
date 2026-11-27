@@ -213,12 +213,43 @@ jobs:
           name: terminals-inno-logs
           path: Build/Output/InstallerLogs/*.log
           if-no-files-found: warn
-      - name: Upload ZIP and Inno EXE
+      - name: Upload candidate ZIP and Inno EXE
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: terminals-distribution
+          name: terminals-distribution-candidate
+          retention-days: 3
           path: |
             Build/Output/Terminals_v*.zip
             Build/Output/TerminalsSetup_*.exe
+          if-no-files-found: error
+
+  publish:
+    name: Publish validated distribution
+    needs: [build, package]
+    if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Download candidate distribution
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: terminals-distribution-candidate
+          path: distribution
+      - name: Verify distribution file set
+        shell: bash
+        run: |
+          shopt -s nullglob
+          zip=(distribution/Terminals_v*.zip)
+          exe=(distribution/TerminalsSetup_*.exe)
+          files=(distribution/*)
+          [[ ${#zip[@]} -eq 1 && ${#exe[@]} -eq 1 && ${#files[@]} -eq 2 ]]
+          [[ -f "${zip[0]}" && -s "${zip[0]}" && -f "${exe[0]}" && -s "${exe[0]}" ]]
+      - name: Upload validated ZIP and Inno EXE
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: terminals-distribution
+          path: distribution/
           if-no-files-found: error
