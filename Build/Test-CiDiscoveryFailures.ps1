@@ -48,7 +48,8 @@ public static class Fixture {
 '@
     $compiler = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
     $exe = Join-Path $fixture 'vstest.console.exe'
-    & $compiler /nologo /target:exe "/out:$exe" "$fixture/Fixture.cs"
+    $sourceFile = Join-Path $fixture 'Fixture.cs'
+    & $compiler /nologo /target:exe "/out:$exe" $sourceFile
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Discovery fixture compilation failed' }
     $env:TERMINALS_VSTEST_PATH = $exe
     $env:NUGET_PACKAGES = Join-Path $fixture 'packages'
