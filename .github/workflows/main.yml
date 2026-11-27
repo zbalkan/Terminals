@@ -103,7 +103,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Failed to install Microsoft.TestPlatform $env:VSTEST_VERSION" }
           $vstest = Join-Path $packageDir 'Microsoft.TestPlatform/tools/net462/Common7/IDE/Extensions/TestPlatform/vstest.console.exe'
           if (-not (Test-Path -LiteralPath $vstest)) { throw "Missing .NET Framework VSTest: $vstest" }
-          (Split-Path -Path $vstest -Parent) | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          "TERMINALS_VSTEST_PATH=$vstest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Using pinned VSTest from: $vstest"
           # The pinned executable prints its version when tests run. /version is not supported.
       - name: Validate test discovery partition
