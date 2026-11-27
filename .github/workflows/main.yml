@@ -63,51 +63,48 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-      - name: Reject tracked build outputs and obsolete source-control bindings
+      - name: Validate CI Workflow and PowerShell Scripts
+        if: matrix.suite == 'file-and-general'
+        timeout-minutes: 10
+        shell: pwsh
+        run: ./Build/Test-CiSyntax.ps1
+      - name: Test CI Guard Failure Paths
+        if: matrix.suite == 'file-and-general'
+        timeout-minutes: 5
+        shell: pwsh
+        run: ./Build/Test-CiGuardFailures.ps1
+      - name: Test Discovery Failure Paths
+        if: matrix.suite == 'file-and-general'
+        timeout-minutes: 5
+        shell: pwsh
+        run: ./Build/Test-CiDiscoveryFailures.ps1
+      - name: Test Native Execution Failure Paths
+        if: matrix.suite == 'file-and-general'
+        timeout-minutes: 5
+        shell: pwsh
+        run: ./Build/Test-CiNativeFailures.ps1
+      - name: Reject Tracked Build Outputs and Obsolete Source-Control Bindings
         shell: pwsh
         run: ./Build/Test-TrackedArtifacts.ps1
-      - name: Validate WinForms Designer ownership
+      - name: Validate WinForms Designer Ownership
+        if: matrix.suite == 'file-and-general'
         shell: pwsh
         run: ./Build/Test-WinFormsDesignerOwnership.ps1
-      - name: Setup-msbuild
-        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
-      - name: Setup NuGet
-        uses: NuGet/setup-nuget@12c57947e9458a5b976961b08ea0706a17dd71ae # v3
-      - name: Restore packages.config and PackageReference dependencies
-        run: msbuild ${{ env.SLN_FILE_PATH }} -t:Restore -property:RestorePackagesConfig=true -property:Configuration=Release
-      - name: Ensure .NET Framework 4.8.1 targeting assemblies
+      - name: Prepare Build Environment
+        uses: ./.github/actions/prepare-build
+      - name: Build Release Solution
         shell: pwsh
-        run: |
-          $destination = Join-Path ${env:ProgramFiles(x86)} 'Reference Assemblies/Microsoft/Framework/.NETFramework/v4.8.1'
-          if (-not (Test-Path (Join-Path $destination 'mscorlib.dll'))) {
-            $packageDir = Join-Path $env:RUNNER_TEMP 'net481-reference'
-            nuget install Microsoft.NETFramework.ReferenceAssemblies.net481 -Version $env:NET481_REFERENCE_VERSION -Source https://api.nuget.org/v3/index.json -OutputDirectory $packageDir -ExcludeVersion -NonInteractive
-            if ($LASTEXITCODE -ne 0) { throw 'Failed to download .NET Framework 4.8.1 targeting assemblies' }
-            $source = Join-Path $packageDir 'Microsoft.NETFramework.ReferenceAssemblies.net481/build/.NETFramework/v4.8.1'
-            if (-not (Test-Path (Join-Path $source 'mscorlib.dll'))) { throw 'Missing 4.8.1 reference assemblies in package' }
-            New-Item -ItemType Directory -Path $destination -Force | Out-Null
-            Copy-Item (Join-Path $source '*') $destination -Recurse -Force
-          }
-      - name: Build solution
-        run: msbuild ${{ env.SLN_FILE_PATH }} -t:rebuild -property:Configuration=Release
-      - name: Audit shared ZIP and Inno payload
+        run: ./Build/Invoke-ReleaseBuild.ps1
+      - name: Validate Shared ZIP and Inno Payload
         shell: pwsh
         run: ./Build/Assert-PackagePayload.ps1 -OutputDirectory ./Build/Output/Release
-      - name: Verify generated MSTSC COM wrappers
+      - name: Verify Generated MSTSC COM Wrappers
         shell: pwsh
-        run: |
-          $dir = Join-Path $PWD 'Build/Generated/Mstsc'
-          foreach ($name in @('MSTSCLib.dll', 'AxInterop.MSTSCLib.dll')) {
-            $path = Join-Path $dir $name
-            if (-not (Test-Path -LiteralPath $path)) { throw "Expected generated COM wrapper: $path" }
-            Write-Host "Generated: $path"
-          }
-          if (Test-Path 'Resources/Libraries/mstsc/MSTSCLib.dll') { throw 'Vendored MSTSC wrapper still present' }
-          if (Test-Path 'Resources/Libraries/mstsc/AxInterop.MSTSCLib.dll') { throw 'Vendored ActiveX wrapper still present' }
+        run: ./Build/Test-MstscWrappers.ps1
       # The MSTest adapter requires a matching VSTest platform (currently pinned below).
       # The Visual Studio 2022 image includes the older VSTest 17.14, which
       # causes deployment-time CodePages assembly identity conflicts.
-      - name: Install matching VSTest platform
+      - name: Install Matching VSTest Platform
         shell: pwsh
         run: |
           [xml]$project = Get-Content -LiteralPath 'Source/Tests/Tests.csproj' -Raw
@@ -120,99 +117,44 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Failed to install Microsoft.TestPlatform $env:VSTEST_VERSION" }
           $vstest = Join-Path $packageDir 'Microsoft.TestPlatform/tools/net462/Common7/IDE/Extensions/TestPlatform/vstest.console.exe'
           if (-not (Test-Path -LiteralPath $vstest)) { throw "Missing .NET Framework VSTest: $vstest" }
-          (Split-Path -Path $vstest -Parent) | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          "TERMINALS_VSTEST_PATH=$vstest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Using pinned VSTest from: $vstest"
           # The pinned executable prints its version when tests run. /version is not supported.
-      - name: Validate test discovery partition
+      - name: Validate Test Discovery Partition
         if: matrix.suite == 'file-and-general'
         timeout-minutes: 10
         shell: pwsh
-        run: |
-          $packageRoot = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget/packages' }
-          $adapter = Get-ChildItem -LiteralPath (Join-Path $packageRoot "mstest.testadapter/$env:MSTEST_VERSION") -Filter MSTest.TestAdapter.dll -Recurse -File |
-            Where-Object { $_.FullName -match '[\\/]net462[\\/]' } | Select-Object -First 1
-          if (-not $adapter) { throw 'MSTest adapter not found' }
-          function Get-DiscoveredTests([string]$name, [string]$filter) {
-            $file = Join-Path $env:RUNNER_TEMP "discovery-$name.txt"
-            $arguments = @('Source\Tests\bin\Release\Tests.dll', "/TestAdapterPath:$($adapter.DirectoryName)", '/ListFullyQualifiedTests', "/ListTestsTargetPath:$file")
-            if ($filter) { $arguments += "/TestCaseFilter:$filter" }
-            & vstest.console.exe @arguments | Out-Host
-            if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $file)) { throw "Discovery failed: $name" }
-            $tests = @(Get-Content -LiteralPath $file | Where-Object { $_.Trim() } | ForEach-Object { $_.Trim() })
-            if ($tests.Count -eq 0) { throw "Empty discovery: $name" }
-            return $tests
-          }
-          $all = @(Get-DiscoveredTests 'all' '')
-          $general = @(Get-DiscoveredTests 'general' 'FullyQualifiedName!~Tests.SqlPersisted&TestCategory!=Database&TestCategory!=RasAbi')
-          $database = @(Get-DiscoveredTests 'database' 'FullyQualifiedName~Tests.SqlPersisted|TestCategory=Database')
-          $abi = @(Get-DiscoveredTests 'abi' 'TestCategory=RasAbi')
-          $combined = @($general + $database + $abi)
-          $duplicates = @($combined | Group-Object -CaseSensitive | Where-Object Count -gt 1)
-          if ($duplicates.Count -gt 0) { throw "Duplicate discovered test names: $($duplicates.Name -join ', ')" }
-          $difference = @(Compare-Object -ReferenceObject $all -DifferenceObject $combined -CaseSensitive)
-          if ($difference.Count -gt 0) { throw "Test partition mismatch: $($difference | Out-String)" }
-          Write-Host "Discovery partition: $($all.Count) total; $($general.Count) general; $($database.Count) database; $($abi.Count) ABI"
-      - name: Install SQL Server LocalDB (database suite only)
+        run: ./Build/Test-DiscoveryPartition.ps1
+      - name: Initialize SQL Server LocalDB
         timeout-minutes: 15
         if: matrix.suite == 'database'
-        uses: potatoqualitee/mssqlsuite@9a0136e208df60b8ecb62909f076bc34854fa55a # v1.7
-        with:
-          install: localdb
-          show-log: true
-      - name: Create SQL database from source schema (database suite only)
+        shell: pwsh
+        run: ./Build/Initialize-CiLocalDb.ps1
+      - name: Initialize Database Schema
         if: matrix.suite == 'database'
         shell: pwsh
         run: ./Source/Tests/SqlPersisted/Initialize-LocalDb.ps1
-      - name: Execute ${{ matrix.suite }} tests
+      - name: Execute Standard Tests
         id: standard-tests
         timeout-minutes: 20
         shell: pwsh
         env:
           TEST_FILTER: ${{ matrix.filter }}
           TERMINALS_TEST_SQL_CONNECTION_STRING: ${{ matrix.suite == 'database' && 'Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TERMINALS;Integrated Security=True;' || '' }}
-        run: |
-          [xml]$project = Get-Content -LiteralPath 'Source/Tests/Tests.csproj' -Raw
-          $reference = $project.SelectSingleNode("//*[local-name()='PackageReference' and @Include='MSTest.TestAdapter']")
-          if (-not $reference -or -not $reference.Version) { throw 'MSTest.TestAdapter version is missing from Tests.csproj' }
-          $packageRoot = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget/packages' }
-          $adapterRoot = Join-Path $packageRoot "mstest.testadapter/$($reference.Version)"
-          if (-not (Test-Path -LiteralPath $adapterRoot -PathType Container)) {
-            throw "MSTest.TestAdapter $($reference.Version) was not restored to $adapterRoot"
-          }
-          $adapter = Get-ChildItem -LiteralPath $adapterRoot -Filter MSTest.TestAdapter.dll -Recurse -File |
-            Where-Object { $_.FullName -match '[\\/]net462[\\/]' } | Select-Object -First 1
-          if (-not $adapter) { throw "MSTest .NET Framework adapter not found under $adapterRoot" }
-          vstest.console.exe "Source\Tests\bin\Release\Tests.dll" "/TestAdapterPath:$($adapter.DirectoryName)" "/TestCaseFilter:$env:TEST_FILTER" '/logger:trx;LogFileName=test_results.trx' -- RunConfiguration.TreatNoTestsAsError=true
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if (-not (Test-Path -LiteralPath 'TestResults/test_results.trx' -PathType Leaf)) { throw 'Missing expected test_results.trx' }
+        run: ./Build/Invoke-StandardTests.ps1
       - name: Validate RAS ABI on x86 and x64
         timeout-minutes: 10
         if: ${{ !cancelled() && matrix.suite == 'file-and-general' && steps.standard-tests.outcome != 'skipped' && steps.standard-tests.outcome != '' }}
         shell: pwsh
-        run: |
-          [xml]$project = Get-Content -LiteralPath 'Source/Tests/Tests.csproj' -Raw
-          $reference = $project.SelectSingleNode("//*[local-name()='PackageReference' and @Include='MSTest.TestAdapter']")
-          $packageRoot = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget/packages' }
-          $adapterRoot = Join-Path $packageRoot "mstest.testadapter/$($reference.Version)"
-          $adapter = Get-ChildItem -LiteralPath $adapterRoot -Filter MSTest.TestAdapter.dll -Recurse -File |
-            Where-Object { $_.FullName -match '[\\/]net462[\\/]' } | Select-Object -First 1
-          if (-not $adapter) { throw "MSTest .NET Framework adapter not found under $adapterRoot" }
-          $failures = @()
-          foreach ($platform in @('x86', 'x64')) {
-            $env:TERMINALS_RAS_ABI_PLATFORM = $platform
-            vstest.console.exe "Source\Tests\bin\Release\Tests.dll" "/TestAdapterPath:$($adapter.DirectoryName)" "/Platform:$platform" '/TestCaseFilter:TestCategory=RasAbi' "/logger:trx;LogFileName=ras_abi_$platform.trx" -- RunConfiguration.TreatNoTestsAsError=true
-            if ($LASTEXITCODE -ne 0) { $failures += "RAS ABI validation failed on $platform (exit $LASTEXITCODE)" }
-            if (-not (Test-Path -LiteralPath "TestResults/ras_abi_$platform.trx" -PathType Leaf)) { $failures += "Missing expected RAS ABI TRX for $platform" }
-          }
-          if ($failures.Count -gt 0) { throw ($failures -join "; ") }
-      - name: Upload test diagnostic results
+        run: ./Build/Test-RasAbi.ps1
+      - name: Upload Test Diagnostics
         if: ${{ !cancelled() && hashFiles('TestResults/*.trx') != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: terminals-${{ matrix.suite }}-trx
+          name: terminals-${{ matrix.suite }}-trx-attempt-${{ github.run_attempt }}
           path: TestResults/*.trx
           if-no-files-found: error
-      - name: Test Report
+      - name: Publish Test Report
         id: test-report
         uses: dorny/test-reporter@d1b5dff021aa968b288b02285a8bf47471c5928a # v3
         if: ${{ !cancelled() && hashFiles('TestResults/test_results.trx') != '' && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
@@ -222,7 +164,7 @@ jobs:
           path: TestResults/test_results.trx
           reporter: dotnet-trx
           fail-on-error: 'false'
-      - name: Warn on test report publication failure
+      - name: Warn on Test Report Publication Failure
         if: ${{ !cancelled() && steps.test-report.outcome == 'failure' }}
         shell: pwsh
         run: Write-Output '::warning::Test report publication failed; consult the TRX artifacts and test execution outcome.'
@@ -230,45 +172,29 @@ jobs:
   package:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository }}
     name: Build and test Inno Setup and portable ZIP
+    outputs:
+      candidate-id: ${{ steps.candidate.outputs.artifact-id }}
     runs-on: windows-2022
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-      - name: Reject tracked build outputs and obsolete source-control bindings
+      - name: Reject Tracked Build Outputs and Obsolete Source-Control Bindings
         shell: pwsh
         run: ./Build/Test-TrackedArtifacts.ps1
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
-      - name: Setup NuGet
-        uses: NuGet/setup-nuget@12c57947e9458a5b976961b08ea0706a17dd71ae # v3
-      - name: Restore solution dependencies
-        run: msbuild Source/Terminals.sln -t:Restore -property:RestorePackagesConfig=true -property:Configuration=Release
-      - name: Ensure .NET Framework 4.8.1 targeting assemblies
+      - name: Prepare Build Environment
+        uses: ./.github/actions/prepare-build
+      - name: Build Release Solution
         shell: pwsh
-        run: |
-          $destination = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Reference Assemblies/Microsoft/Framework/.NETFramework/v4.8.1'
-          if (-not (Test-Path (Join-Path $destination 'mscorlib.dll'))) {
-            $packageDir = Join-Path $env:RUNNER_TEMP 'net481-reference'
-            nuget install Microsoft.NETFramework.ReferenceAssemblies.net481 -Version $env:NET481_REFERENCE_VERSION -Source https://api.nuget.org/v3/index.json -OutputDirectory $packageDir -ExcludeVersion -NonInteractive
-            if ($LASTEXITCODE -ne 0) { throw 'Failed to download net481 reference assemblies' }
-            $source = Join-Path $packageDir 'Microsoft.NETFramework.ReferenceAssemblies.net481/build/.NETFramework/v4.8.1'
-            if (-not (Test-Path (Join-Path $source 'mscorlib.dll'))) { throw 'Missing net481 reference assemblies' }
-            New-Item -ItemType Directory -Path $destination -Force | Out-Null
-            Copy-Item (Join-Path $source '*') $destination -Recurse -Force
-          }
-      - name: Build application Release
+        run: ./Build/Invoke-ReleaseBuild.ps1
+      - name: Verify Generated MSTSC COM Wrappers
         shell: pwsh
-        run: |
-          msbuild Source/Terminals.sln -t:Rebuild '-p:Configuration=Release' '-p:Platform=Any CPU' -m
-          if ($LASTEXITCODE -ne 0) { throw 'Release build failed' }
-      - name: Prepare ZIP and installer payload twice
+        run: ./Build/Test-MstscWrappers.ps1
+      - name: Verify Packaging Idempotency
         shell: pwsh
-        run: |
-          ./Build/PackOutput.ps1
-          ./Build/PackOutput.ps1
-      - name: Install verified Inno Setup 7.1.1 compiler
+        run: ./Build/Test-PackagingIdempotency.ps1
+      - name: Install Verified Inno Setup Compiler
         timeout-minutes: 15
         shell: pwsh
         run: |
@@ -284,32 +210,70 @@ jobs:
           $compiler = Join-Path $directory 'ISCC.exe'
           if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) { throw "ISCC missing: $compiler" }
           "INNO_ISCC_PATH=$compiler" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-      - name: Compile Inno Setup EXE
+      - name: Compile Inno Setup Installer
         shell: pwsh
         run: ./Build/Build-Inno.ps1
-      - name: Validate Inno distribution and ZIP file integrity
+      - name: Validate Installer and ZIP Integrity
         shell: pwsh
         run: ./Build/Assert-InnoDistribution.ps1
-      - name: Silent install and uninstall smoke test
+      - name: Test Silent Installation and Uninstallation
         timeout-minutes: 15
         shell: pwsh
         run: ./Build/Test-InnoInstall.ps1
-      - name: Reject legacy MSI and portable-data collisions
+      - name: Reject Legacy MSI and Portable Data Collisions
         shell: pwsh
         run: ./Build/Test-InnoSafety.ps1
-      - name: Upload installer diagnostic logs
+      - name: Upload Installer Diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: terminals-inno-logs
+          name: terminals-inno-logs-attempt-${{ github.run_attempt }}
           path: Build/Output/InstallerLogs/*.log
           if-no-files-found: warn
-      - name: Upload ZIP and Inno EXE
+      - name: Upload Candidate Distribution
+        id: candidate
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: terminals-distribution
+          name: terminals-distribution-candidate-attempt-${{ github.run_attempt }}
+          retention-days: 3
           path: |
             Build/Output/Terminals_v*.zip
             Build/Output/TerminalsSetup_*.exe
+          if-no-files-found: error
+
+  publish:
+    name: Publish validated distribution
+    needs: [build, package]
+    if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Verify Candidate Artifact Identifier
+        shell: bash
+        env:
+          CANDIDATE_ID: ${{ needs.package.outputs.candidate-id }}
+        run: '[[ "$CANDIDATE_ID" =~ ^[1-9][0-9]*$ ]]'
+      - name: Download Candidate Distribution
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: ${{ needs.package.outputs.candidate-id }}
+          path: distribution
+          merge-multiple: true
+      - name: Verify Distribution File Set
+        shell: bash
+        run: |
+          shopt -s nullglob
+          zip=(distribution/Terminals_v*.zip)
+          exe=(distribution/TerminalsSetup_*.exe)
+          files=(distribution/*)
+          [[ ${#zip[@]} -eq 1 && ${#exe[@]} -eq 1 && ${#files[@]} -eq 2 ]]
+          [[ -f "${zip[0]}" && -s "${zip[0]}" && -f "${exe[0]}" && -s "${exe[0]}" ]]
+      - name: Upload Validated Distribution
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: terminals-distribution-attempt-${{ github.run_attempt }}
+          path: distribution/
           if-no-files-found: error
