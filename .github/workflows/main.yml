@@ -170,11 +170,9 @@ jobs:
       - name: Verify generated MSTSC COM wrappers
         shell: pwsh
         run: ./Build/Test-MstscWrappers.ps1
-      - name: Prepare ZIP and installer payload twice
+      - name: Verify packaging idempotency
         shell: pwsh
-        run: |
-          ./Build/PackOutput.ps1
-          ./Build/PackOutput.ps1
+        run: ./Build/Test-PackagingIdempotency.ps1
       - name: Install verified Inno Setup 7.1.1 compiler
         timeout-minutes: 15
         shell: pwsh
