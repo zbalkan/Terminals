@@ -60,7 +60,7 @@ namespace Terminals.Forms.EditFavorite
             loading = true;
             try
             {
-                var entries = await Task.Run(() => RasConnectionClient.GetEntries());
+                var entries = await Task.Run(() => RasNativeMethods.GetEntries());
                 if (IsDisposed || Disposing)
                     return;
                 dialupList.Clear();

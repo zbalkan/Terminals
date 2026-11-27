@@ -518,15 +518,6 @@
       <DependentUpon>NetworkingToolsLayout.cs</DependentUpon>
     </Compile>
     <Compile Include="Connections\Ras\RasNative.cs" />
-    <Compile Include="Connections\Ras\RASConnection.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="Connections\Ras\RASProperties.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="Connections\Ras\RASProperties.Designer.cs">
-      <DependentUpon>RASProperties.cs</DependentUpon>
-    </Compile>
     <Compile Include="Network\Tools\TabbedTools.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -1010,10 +1001,6 @@
     <EmbeddedResource Include="Network\Tools\NetworkingToolsLayout.resx">
       <SubType>Designer</SubType>
       <DependentUpon>NetworkingToolsLayout.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Connections\Ras\RASProperties.resx">
-      <SubType>Designer</SubType>
-      <DependentUpon>RASProperties.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Network\Tools\TabbedTools.resx">
       <SubType>Designer</SubType>

@@ -531,39 +531,17 @@ namespace Terminals
                 this.tcTerminals.ShowTabs = false;
         }
 
-        private bool rasShutdownPending;
-        private async void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             favsList1.SaveState();
 
             if (this.FullScreen)
                 this.FullScreen = false;
 
-            this.MainWindowNotifyIcon.Visible = false;
-            if (rasShutdownPending)
-            {
-                e.Cancel = true;
-                return;
-            }
             CloseOpenedConnections(e);
-            if (!e.Cancel && RasBackgroundSession.HasActiveSessions)
-            {
-                e.Cancel = true;
-                rasShutdownPending = true;
-                try
-                {
-                    await RasBackgroundSession.CloseAll();
-                    rasShutdownPending = false;
-                    Close();
-                }
-                catch (Exception exc)
-                {
-                    rasShutdownPending = false;
-                    Logging.Error("RAS shutdown cleanup failed", exc);
-                    MessageBox.Show(this, exc.Message, "RAS cleanup incomplete");
-                }
+            if (e.Cancel)
                 return;
-            }
+            this.MainWindowNotifyIcon.Visible = false;
             this.toolStripContainer.SaveLayout();
 
             if (!e.Cancel)
@@ -1427,23 +1405,12 @@ namespace Terminals
             this.Reconnect();
         }
 
-        public async void Reconnect()
+        public void Reconnect()
         {
             IConnection currentConnection = this.terminalsControler.CurrentConnection;
             if (currentConnection != null)
             {
                 IFavorite favorite = currentConnection.Favorite;
-                var ras = currentConnection as RASConnection;
-                if (ras != null)
-                {
-                    if (!await ras.CloseAsync() || IsDisposed || Disposing)
-                        return;
-                    if (this.terminalsControler.CurrentConnection != ras)
-                        return;
-                    this.tcTerminals.ForceCloseTab(this.tcTerminals.SelectedItem);
-                    this.connectionsUiFactory.Connect(favorite);
-                    return;
-                }
                 this.tabControlRemover.Disconnect();
                 this.connectionsUiFactory.Connect(favorite);
             }

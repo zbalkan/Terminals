@@ -100,6 +100,28 @@ namespace Tests.SqlPersisted
         }
 
         [TestMethod]
+        public void DisabledRas_RowAndOptionsSurviveActiveFavoriteChanges()
+        {
+            DbFavorite retired = this.AddFavoriteToPrimaryPersistence();
+            var stored = this.CheckFavorites.Single(f => f.Id == retired.Id);
+            stored.Protocol = "RAS";
+            this.CheckDatabase.SaveChanges();
+
+            const string legacyOptions = "<RASOptions><LegacyPhonebookEntry>Example VPN</LegacyPhonebookEntry></RASOptions>";
+            this.CheckDatabase.UpdateFavoriteProtocolProperties(retired.Id, legacyOptions);
+
+            // The unsupported favorite is filtered from the active view, never deleted or converted.
+            SqlPersistence reloaded = TestsLab.CreateSqlPersistence(TestConnectionManager.Instance);
+            Assert.IsFalse(reloaded.Favorites.Any(f => f.Protocol == "RAS"));
+
+            DbFavorite active = this.CreateTestFavorite();
+            active.Name = "ActiveRdp";
+            this.PrimaryFavorites.Add(active);
+            Assert.AreEqual("RAS", this.CheckFavorites.Single(f => f.Id == retired.Id).Protocol);
+            Assert.AreEqual(legacyOptions, this.CheckDatabase.GetProtocolPropertiesByFavorite(retired.Id));
+        }
+
+        [TestMethod]
         public void StoredFavorite_Delete_RemovesFromDatabaseTablesAndFiresEvent()
         {
             DbFavorite favorite = this.AddFavoriteToPrimaryPersistence();

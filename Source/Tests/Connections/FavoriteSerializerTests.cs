@@ -201,6 +201,60 @@ namespace Tests.Connections
         }
 
         [TestMethod]
+        public void DisabledRas_SaveReload_PreservesOriginalXmlAndTwoGroupMemberships()
+        {
+            var manager = TestConnectionManager.CreateRdpOnlyManager();
+            var serializer = new FavoritesFileSerializer(manager);
+            var legacyId = new Guid("ab610012-0bd0-4c39-93ca-f50c00405e0a");
+            var otherGroup = new Guid("83cfc1e0-72e5-44bd-a8ee-6bfaec36cf02");
+            var baseline = CreateTestFile(RDP_FAVORITE);
+            baseline.Groups = new[]
+            {
+                new Group("first") { Id = GROUP_GUID },
+                new Group("second") { Id = otherGroup }
+            };
+            baseline.FavoritesInGroups = new[]
+            {
+                new FavoritesInGroup { GroupId = GROUP_GUID, Favorites = new[] { RDP_GUID, legacyId } },
+                new FavoritesInGroup { GroupId = otherGroup, Favorites = new[] { legacyId } }
+            };
+            serializer.Serialize(new SerializationContext(baseline, new UnknonwPluginElements()), FILE_NAME);
+
+            XNamespace ns = FavoritesFile.SERIALIZATION_DEFAULT_NAMESPACE;
+            var document = XDocument.Load(FILE_NAME);
+            var retired = new XElement(document.Descendants(ns + "Favorite").Single());
+            retired.SetAttributeValue("id", legacyId.ToString());
+            retired.Element(ns + "Protocol").Value = "RAS";
+            foreach (var options in retired.Elements().Where(e => e.Name.LocalName.EndsWith("Options")).ToList())
+                options.Remove();
+            retired.Add(new XElement(ns + "RASOptions",
+                new XElement(ns + "LegacyPhonebookEntry", "Example VPN")));
+            document.Descendants(ns + "Favorites").First().Add(retired);
+            document.Save(FILE_NAME);
+
+            SerializationContext loaded = serializer.Deserialize(FILE_NAME);
+            Assert.AreEqual(1, loaded.File.Favorites.Length, "Active RDP favorite must remain available.");
+            Assert.AreEqual(1, loaded.Unknown.Favorites.Count, "RAS must be preserved as unknown XML.");
+            Assert.IsTrue(XNode.DeepEquals(retired, loaded.Unknown.Favorites.Single()),
+                "Legacy protocol options and all other XML fields must be preserved.");
+
+            serializer.Serialize(loaded, FILE_NAME);
+            var saved = XDocument.Load(FILE_NAME);
+            var restored = saved.Descendants(ns + "Favorite")
+                .Single(e => (string)e.Element(ns + "Protocol") == "RAS");
+            Assert.IsTrue(XNode.DeepEquals(retired, restored), "RAS XML changed on save/reload.");
+
+            var memberships = saved.Descendants(ns + "FavoritesInGroup").ToDictionary(
+                group => (string)group.Attribute("groupId"),
+                group => group.Descendants(ns + "guid").Select(id => (string)id).ToList());
+            Assert.IsTrue(memberships[GROUP_GUID.ToString()].Contains(legacyId.ToString()));
+            Assert.IsTrue(memberships[otherGroup.ToString()].Contains(legacyId.ToString()));
+            Assert.IsTrue(memberships[GROUP_GUID.ToString()].Contains(RDP_GUID.ToString()));
+            Assert.AreEqual(1, memberships[otherGroup.ToString()].Count,
+                "Unknown memberships must not leak into other groups.");
+        }
+
+        [TestMethod]
         public void RdpOnlyPluginAndCachedVncXml_Serialize_SavesUnknonwCachedFavorite()
         {
             string saved = SerializeAndLoadSavedContent();
