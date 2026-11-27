@@ -68,6 +68,11 @@ jobs:
         timeout-minutes: 10
         shell: pwsh
         run: ./Build/Test-CiSyntax.ps1
+      - name: Validate CI guard failure paths
+        if: matrix.suite == 'file-and-general'
+        timeout-minutes: 5
+        shell: pwsh
+        run: ./Build/Test-CiGuardFailures.ps1
       - name: Reject tracked build outputs and obsolete source-control bindings
         shell: pwsh
         run: ./Build/Test-TrackedArtifacts.ps1
