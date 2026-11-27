@@ -84,8 +84,15 @@ namespace Terminals
             this.Close();
         }
 
-        private void PopupTerminal_FormClosing(object sender, FormClosingEventArgs e)
+        private void PopupTerminal_FormClosed(object sender, FormClosedEventArgs e)
         {
+            if (this.closeTimer != null)
+            {
+                this.closeTimer.Stop();
+                this.closeTimer.Dispose();
+                this.closeTimer = null;
+            }
+
             TerminalTabControlItem activeTab = this.tabControl1.SelectedItem as TerminalTabControlItem;
             this.mainTabsControler.UnRegisterPopUp(this);
             if (activeTab != null)

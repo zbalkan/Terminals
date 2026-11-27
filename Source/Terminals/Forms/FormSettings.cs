@@ -186,6 +186,10 @@ namespace Terminals.Forms
             if (!this.saveSettings || !this.Enabled)
                 return;
 
+            var mainForm = this.form as MainForm;
+            if (mainForm != null && (mainForm.FullScreen || mainForm.SwitchingFullScreen))
+                return;
+
             FormStateConfigElement formSettings = this.PrepareStateToSave();
             this.Settings.AddForm(formSettings);
             settings.SaveAndFinishDelayedUpdate();

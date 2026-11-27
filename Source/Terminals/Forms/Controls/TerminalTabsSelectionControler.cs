@@ -47,6 +47,17 @@ namespace Terminals
             get { return this.filter.HasSelected; }
         }
 
+        internal bool HasOpenTabs
+        {
+            get { return this.mainTabControl.Items.Count != 0 || this.detachedWindows.Count != 0; }
+        }
+
+        internal string[] GetOpenTabNames()
+        {
+            return this.mainTabControl.Items.Cast<TabControlItem>().Select(tab => tab.Title)
+                .Concat(this.detachedWindows.Select(window => window.Text)).ToArray();
+        }
+
         internal TerminalTabsSelectionControler(TabControl.TabControl tabControl, IPersistence persistence)
         {
             this.mainTabControl = tabControl;

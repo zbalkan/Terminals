@@ -49,6 +49,7 @@ namespace Terminals
 
         private bool firstInstance;
         private CommandLineServer server;
+        private bool closed;
 
         /// <summary>
         /// generates mutexee per user names with global prefix to control also sessions on Terminal server
@@ -78,18 +79,19 @@ namespace Terminals
         }
 
         /// <summary>
-        /// close the server as soon as, when closing the main form,
-        /// because othewise the form can be already dead and it cant process notification requests
+        /// Stop accepting commands once the main form has committed to closing.
+        /// Do not wait for a forwarding client that may need the UI thread.
         /// </summary>
         internal void Close()
         {
-            if (!this.firstInstance)
+            if (this.closed)
                 return;
+
+            this.closed = true;
             try
             {
-                this.startupLock.WaitOne();
-                if(server != null)
-                    this.server.Close();
+                if (this.server != null)
+                    this.server.Abort();
             }
             finally
             {
@@ -112,10 +114,18 @@ namespace Terminals
 
         private bool ForwardCommand(CommandLineArgs args)
         {
+            bool acquired = false;
             try
             {
-                // wait until the main instance startup/shutdown ends
-                this.startupLock.WaitOne();
+                // An abandoned mutex is acquired by the waiting thread.
+                try
+                {
+                    acquired = this.startupLock.WaitOne();
+                }
+                catch (AbandonedMutexException)
+                {
+                    acquired = true;
+                }
                 ICommandLineService client = CommandLineServer.CreateClient();
                 client.ForwardCommand(args);
                 return true;
@@ -126,7 +136,8 @@ namespace Terminals
             }
             finally
             {
-                this.startupLock.ReleaseMutex();
+                if (acquired)
+                    this.startupLock.ReleaseMutex();
             }
         }
     }

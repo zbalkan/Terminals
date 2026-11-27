@@ -56,6 +56,8 @@ namespace Terminals
         private readonly ConnectionManager connectionManager;
 
         private FavoriteIcons favoriteIcons;
+        private string[] connectionsToRestore;
+        private bool? promptOnNextClose;
 
         #endregion
 
@@ -71,7 +73,7 @@ namespace Terminals
         /// </summary>
         internal bool FullScreen
         {
-            private get { return this.fullScreenSwitch.FullScreen; }
+            get { return this.fullScreenSwitch != null && this.fullScreenSwitch.FullScreen; }
             set { this.fullScreenSwitch.FullScreen = value; }
         }
 
@@ -440,17 +442,6 @@ namespace Terminals
             }
         }
 
-        private void SaveActiveConnections()
-        {
-            var activeConnections = new List<string>();
-            foreach (TabControlItem item in tcTerminals.Items)
-            {
-                activeConnections.Add(item.Title);
-            }
-
-            settings.CreateSavedConnectionsList(activeConnections.ToArray());
-        }
-
         private void CheckForNewRelease()
         {
             var updateManager = new UpdateManager();
@@ -533,44 +524,53 @@ namespace Terminals
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            favsList1.SaveState();
-
-            if (this.FullScreen)
-                this.FullScreen = false;
-
-            CloseOpenedConnections(e);
-            if (e.Cancel)
+            this.connectionsToRestore = null;
+            this.promptOnNextClose = null;
+            if (e.Cancel || !this.terminalsControler.HasOpenTabs)
                 return;
-            this.MainWindowNotifyIcon.Visible = false;
-            this.toolStripContainer.SaveLayout();
 
-            if (!e.Cancel)
+            bool saveConnections = settings.SaveConnectionsOnClose;
+            if (settings.ShowConfirmDialog && e.CloseReason != CloseReason.WindowsShutDown
+                && e.CloseReason != CloseReason.TaskManagerClosing)
+            {
+                using (var dialog = new SaveActiveConnectionsForm())
+                {
+                    if (dialog.ShowDialog(this) != DialogResult.OK)
+                    {
+                        e.Cancel = true;
+                        return;
+                    }
+
+                    this.promptOnNextClose = dialog.PromptNextTime;
+                    saveConnections |= dialog.OpenConnectionsNextTime;
+                }
+            }
+
+            if (saveConnections)
+            {
+                this.connectionsToRestore = this.terminalsControler.GetOpenTabNames();
+            }
+        }
+
+        private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            try
+            {
+                if (this.promptOnNextClose.HasValue)
+                    settings.ShowConfirmDialog = this.promptOnNextClose.Value;
+                if (this.connectionsToRestore != null)
+                    settings.CreateSavedConnectionsList(this.connectionsToRestore);
+
+                favsList1.SaveState();
+                // Fullscreen entry already saved the normal toolbar layout and geometry.
+                if (!this.FullScreen)
+                    this.toolStripContainer.SaveLayout();
+            }
+            finally
+            {
+                this.MainWindowNotifyIcon.Visible = false;
                 SingleInstanceApplication.Instance.Close();
-        }
-
-        private void CloseOpenedConnections(FormClosingEventArgs args)
-        {
-            if (this.terminalsControler.HasSelected)
-            {
-                if (settings.ShowConfirmDialog)
-                    SaveConnectonsIfRequested(args);
-
-                if (settings.SaveConnectionsOnClose)
-                    this.SaveActiveConnections();
             }
-        }
-
-        private void SaveConnectonsIfRequested(FormClosingEventArgs args)
-        {
-            var frmSaveActiveConnections = new SaveActiveConnectionsForm();
-            if (frmSaveActiveConnections.ShowDialog() == DialogResult.OK)
-            {
-                settings.ShowConfirmDialog = frmSaveActiveConnections.PromptNextTime;
-                if (frmSaveActiveConnections.OpenConnectionsNextTime)
-                    this.SaveActiveConnections();
-            }
-            else
-                args.Cancel = true;
         }
 
         private void MainForm_Resize(object sender, EventArgs e)

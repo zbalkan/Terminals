@@ -97,7 +97,7 @@
             this.KeyPreview = true;
             this.Name = "PopupTerminal";
             this.Text = "Terminal Window";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.PopupTerminal_FormClosing);
+            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.PopupTerminal_FormClosed);
             this.Load += new System.EventHandler(this.PopupTerminal_Load);
             this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.PopupTerminal_KeyUp);
             ((System.ComponentModel.ISupportInitialize)(this.tabControl1)).EndInit();
