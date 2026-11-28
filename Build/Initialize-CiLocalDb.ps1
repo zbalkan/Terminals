@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 $instance = 'MSSQLLocalDB'
+$provisioningStarted = Get-Date
 $directory = Join-Path $env:RUNNER_TEMP 'terminals-localdb'
 New-Item -ItemType Directory -Path $directory -Force | Out-Null
 $msi = Join-Path $directory 'SqlLocalDB.msi'
@@ -22,8 +23,12 @@ try {
         & $localdb create $instance 15.0
         if ($LASTEXITCODE -ne 0) { throw "LocalDB instance creation failed (exit $LASTEXITCODE)" }
     }
-    & $localdb start $instance
-    if ($LASTEXITCODE -ne 0) { throw "LocalDB instance startup failed (exit $LASTEXITCODE)" }
+    $startOutput = & $localdb start $instance 2>&1
+    $startExitCode = $LASTEXITCODE
+    $startOutput | Out-Host
+    if ($startExitCode -ne 0 -or ($startOutput -join ' ') -match 'failed|cannot create') {
+        throw "LocalDB instance startup failed (exit $startExitCode): $($startOutput -join ' ')"
+    }
     $lastError = $null
     for ($attempt = 1; $attempt -le 12; $attempt++) {
         $connection = [System.Data.SqlClient.SqlConnection]::new('Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=master;Integrated Security=True;Connect Timeout=5;Pooling=False;')
@@ -61,6 +66,16 @@ try {
         }
     } catch {
         Write-Warning "LocalDB runtime diagnostic collection failed: $($_.Exception.Message)"
+    }
+    try {
+        $events = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $provisioningStarted } -ErrorAction Stop |
+            Where-Object { $_.ProviderName -match 'SQL|LocalDB' -or $_.Message -match 'sqlservr|LocalDB' } |
+            Select-Object -First 50)
+        if ($events.Count -gt 0) {
+            $events | Format-List TimeCreated, Id, ProviderName, LevelDisplayName, Message | Out-Host
+        } else { Write-Warning 'No matching LocalDB Application events found.' }
+    } catch {
+        Write-Warning "LocalDB Application event collection failed: $($_.Exception.Message)"
     }
     if (Test-Path -LiteralPath $log) { Get-Content -LiteralPath $log -Tail 100 | Out-Host }
     throw
