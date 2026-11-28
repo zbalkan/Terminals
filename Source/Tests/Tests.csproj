@@ -57,9 +57,6 @@
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="AxWFICALib">
-      <HintPath>..\..\Resources\Libraries\Citrix\AxWFICALib.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.configuration" />
