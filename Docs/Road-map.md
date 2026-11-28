@@ -1,12 +1,7 @@
-Because each product needs its vision here is our plan for next releases, so called long term vision.
-These features are "big rocks" and they explain long period between some previous releases, where such large features required lot of design changes...
+# Long-term roadmap
 
-* Putty integration - putty as defacto industry standard allows integration into other products and provides lot of features and supported protocols, which allow terminals to extend range of supported protocols with minimum effort. This is the most requested feature ever and will also fix lot of issues in current ssh and terminal UI.
+The [Terminals 5.0.0 modernization work matrix](Dependency-modernization-roadmap.md) is the **only status and priority tracker**. It records completed changes, pending work and interactive/release acceptance criteria. This file is intentionally a short entry point, not a second tracker.
 
-* UI tabs enhancements - Current UI is limited with possible customization and will allow new features like dock the tabs, dock favorites to other sides, close button directly on the tab etc.
+**Current implementation priority:** CI-01–CI-06 implementation complete; Phases A and B accepted for progression on user-reported interactive results; continue Phase C dependency provenance and orphan cleanup. Actual Windows shutdown remains untested. See the consolidated matrix.
 
-* Database optimizations - Database was implemented with low performance and to allow larger environments we will need to enhance its implementation.
-
-* External credentials providers integrations - Keepass and Windows credentials store are logical extension of credentials providers.
-
-* Citrix Workspace modernization (CITRIX-01–07): **implemented on the feature branch; manual compatibility acceptance pending**. Replace legacy embedded ICA ActiveX with a launch-only Citrix Workspace protocol, preserve historical ICA favorites for inspection, and remove bundled Receiver and COM dependencies. See [Citrix Workspace integration](Citrix-Workspace.md). Validation gates: Windows CI (file and SQL), Workspace current/LTSR Cloud SSO and StoreFront, UI behavior, and MSI upgrade checks.
+**PR #6 remains the permanent, documentation-only roadmap and must never be merged.** RDP PR #5 remains deferred. The 5.0.0 release still requires the applicable security, compatibility, packaging and migration gates listed in the matrix.
