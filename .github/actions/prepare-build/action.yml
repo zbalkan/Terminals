@@ -8,6 +8,13 @@ runs:
     - name: Ensure .NET Framework 4.8.1 targeting assemblies
       shell: pwsh
       run: ./Build/Ensure-Net481ReferenceAssemblies.ps1
+    - name: Cache NuGet packages
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: |
+          ~/.nuget/packages
+          Source/packages
+        key: nuget-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.csproj', '**/*.vbproj', '**/*.fsproj', '**/packages.config', '**/packages.lock.json', '**/*.props', '**/*.targets', '**/[Nn]u[Gg]et.[Cc]onfig', '**/*.sln', '**/global.json', '.github/actions/prepare-build/action.yml') }}
     - name: Restore solution dependencies
       shell: pwsh
       run: msbuild $env:SLN_FILE_PATH -t:Restore -property:RestorePackagesConfig=true -property:Configuration=Release

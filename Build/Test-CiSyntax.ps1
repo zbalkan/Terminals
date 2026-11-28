@@ -17,7 +17,9 @@ Write-Host "Parsed $($files.Count) tracked PowerShell scripts."
 
 # Restrict analysis to correctness-oriented rules; do not enforce legacy formatting.
 $analyzerVersion = '1.25.0'
-Install-Module -Name PSScriptAnalyzer -RequiredVersion $analyzerVersion -Repository PSGallery -Scope CurrentUser -Force -ErrorAction Stop
+if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer | Where-Object Version -eq ([version]$analyzerVersion))) {
+    Install-Module -Name PSScriptAnalyzer -RequiredVersion $analyzerVersion -Repository PSGallery -Scope CurrentUser -Force -ErrorAction Stop
+}
 Import-Module PSScriptAnalyzer -RequiredVersion $analyzerVersion -Force
 $rules = @('PSAvoidUsingInvokeExpression', 'PSAvoidDefaultValueForMandatoryParameter', 'PSAvoidReservedWordsAsFunctionNames')
 $available = @(Get-ScriptAnalyzerRule | ForEach-Object RuleName)
@@ -41,7 +43,9 @@ if ($probeErrors.Count -eq 0) { throw 'PowerShell parser negative control was no
 Write-Host "PowerShell analysis passed ($($rules.Count) rules); negative controls detected."
 
 # Validate the repository's supported local composite-action contract.
-Install-Module -Name powershell-yaml -RequiredVersion '0.4.12' -Repository PSGallery -Scope CurrentUser -Force -ErrorAction Stop
+if (-not (Get-Module -ListAvailable -Name powershell-yaml | Where-Object Version -eq ([version]'0.4.12'))) {
+    Install-Module -Name powershell-yaml -RequiredVersion '0.4.12' -Repository PSGallery -Scope CurrentUser -Force -ErrorAction Stop
+}
 Import-Module powershell-yaml -RequiredVersion '0.4.12' -Force
 function Test-CompositeMetadata($metadata) {
     if (-not $metadata.name -or -not $metadata.description -or $metadata.runs.using -ne 'composite' -or -not $metadata.runs.steps) {
